@@ -17,7 +17,7 @@ Demo logins (password `demo1234`): `sme@demo.my` (SME dashboard), `buyer@demo.my
 Then start the frontend in another terminal:
 
 ```bash
-cd ../apps/frontend && npx ng serve --port 4210   # open http://localhost:4210
+cd ../frontend && npx ng serve --port 4210   # open http://localhost:4210
 ```
 
 ## Config — all in `src/main/resources/application.properties`

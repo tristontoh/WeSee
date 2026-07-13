@@ -7,7 +7,7 @@ backend:       ## main API — Java Spring Boot on :8000 (auth, dashboard, Engin
 	cd backend && mvn spring-boot:run
 
 frontend:      ## Angular app on :4210
-	cd apps/frontend && npx ng serve --port 4210
+	cd frontend && npx ng serve --port 4210
 
 dev:          ## reminder of the two processes to run
 	@echo "Run in separate terminals: make backend  (:8000, Java) / make frontend  (:4210)"

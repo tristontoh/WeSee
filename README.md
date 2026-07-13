@@ -22,13 +22,13 @@ feeding the free official **Bursa CSI Platform** — it does *not* reinvent the 
 ## Architecture
 
 ```
-Angular (apps/frontend :4210)  ──►  Java Spring Boot backend (backend/ :8000)  ──►  PostgreSQL
+Angular (frontend :4210)  ──►  Java Spring Boot backend (backend/ :8000)  ──►  PostgreSQL
                                              │
                           Gemini (Engine 01, in-process)  ·  carbon ledger
 ```
 
 The **Java Spring Boot backend** (`backend/`) is the whole backend — auth, dashboard, and
-bill ingestion (Engine 01 / Gemini) in one process on :8000. The **Angular** app (`apps/frontend`)
+bill ingestion (Engine 01 / Gemini) in one process on :8000. The **Angular** app (`frontend`)
 is the whole UI on :4210. That's it — a two-part, pure Java + Angular stack.
 
 ## Requirements
@@ -41,7 +41,7 @@ is the whole UI on :4210. That's it — a two-part, pure Java + Angular stack.
 
 ```bash
 cd backend && mvn spring-boot:run              # backend on :8000 (auto-creates tables + seeds)
-cd apps/frontend && npx ng serve --port 4210   # UI on :4210
+cd frontend && npx ng serve --port 4210   # UI on :4210
 ```
 
 Open http://localhost:4210 and log in as `sme@demo.my` / `demo1234`.
@@ -56,6 +56,6 @@ Backend config (DB + Gemini key): `backend/src/main/resources/application.proper
 
 ```
 backend/         Java Spring Boot — the backend (auth, dashboard, Engine 01 ingest)
-apps/frontend/   Angular 19 — the UI (SME/PLC/Admin, Command Center)
+frontend/   Angular 19 — the UI (SME/PLC/Admin, Command Center)
 infra/           docker-compose (Postgres, optional)
 ```
