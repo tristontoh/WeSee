@@ -1,6 +1,7 @@
 package com.wesee.web;
 
 import com.wesee.model.Organization;
+import com.wesee.model.OrgType;
 import com.wesee.model.User;
 import com.wesee.repo.OrganizationRepository;
 import com.wesee.repo.UserRepository;
@@ -34,14 +35,20 @@ public class AuthController {
         return Map.of("status", "ok", "service", "gateway-java");
     }
 
-    /** OAuth2 password flow — the frontend posts form-encoded username/password. */
+    /**
+     * OAuth2 password flow — the frontend posts form-encoded username/password.
+     * Demo mode: any email/password combination signs in. Unrecognized emails get a
+     * fresh Workspace org auto-provisioned on the spot; no password is checked.
+     */
     @PostMapping(value = "/auth/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Dtos.LoginResponse login(@RequestParam String username, @RequestParam String password) {
-        User user = users.findByEmail(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bad credentials"));
-        if (!encoder.matches(password, user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bad credentials");
-        }
+        User user = users.findByEmail(username).orElseGet(() -> {
+            Organization org = new Organization();
+            org.setName(username);
+            org.setOrgType(OrgType.WORKSPACE);
+            orgs.save(org);
+            return users.save(new User(org.getId(), username, encoder.encode(password), "admin"));
+        });
         Organization org = orgs.findById(user.getOrgId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Org missing"));
         String token = jwt.issue(user, org);
