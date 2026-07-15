@@ -4,7 +4,7 @@ import { UiService } from '../../../core/ui.service';
 import { FRAMEWORKS, VERSIONS } from '../../../core/mock-data';
 
 @Component({
-  selector: 'app-plc-compliance',
+  selector: 'app-compliance-hub-compliance',
   standalone: true,
   imports: [CommonModule],
   template: `
@@ -39,7 +39,7 @@ import { FRAMEWORKS, VERSIONS } from '../../../core/mock-data';
     </div>
   `,
 })
-export class PlcComplianceComponent {
+export class ComplianceHubComplianceComponent {
   private ui = inject(UiService);
   frameworks = FRAMEWORKS;
   versions = VERSIONS;

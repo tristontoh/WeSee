@@ -9,7 +9,7 @@ export const GATEWAY_URL = 'http://localhost:8000';
 export interface LoginResponse {
   access_token: string;
   token_type: string;
-  org_type: 'sme' | 'plc' | 'admin';
+  org_type: 'workspace' | 'compliance-hub' | 'admin';
 }
 
 export interface EmissionRecord {

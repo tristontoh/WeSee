@@ -44,7 +44,7 @@ cd backend && mvn spring-boot:run              # backend on :8000 (auto-creates 
 cd frontend && npx ng serve --port 4210   # UI on :4210
 ```
 
-Open http://localhost:4210 and log in as `sme@demo.my` / `demo1234`.
+Open http://localhost:4210 and log in as `workspace@demo.my` / `demo1234`.
 Backend config (DB + Gemini key): `backend/src/main/resources/application.properties`.
 
 | Part | Port | Stack |
@@ -56,6 +56,6 @@ Backend config (DB + Gemini key): `backend/src/main/resources/application.proper
 
 ```
 backend/         Java Spring Boot — the backend (auth, dashboard, Engine 01 ingest)
-frontend/   Angular 19 — the UI (SME/PLC/Admin, Command Center)
+frontend/   Angular 19 — the UI (Workspace/Compliance Hub/Admin, Command Center)
 infra/           docker-compose (Postgres, optional)
 ```

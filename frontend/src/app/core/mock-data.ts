@@ -222,17 +222,17 @@ const T_STATUS = {
   susp: { status: 'Suspended', stFg: '#F1A6CC' },
 };
 const T_TYPE = {
-  sme: { type: 'SME', typeBg: '#E4EEF0', typeFg: '#4C96B3' },
-  plc: { type: 'PLC', typeBg: '#F9E6EF', typeFg: '#D96BA1' },
+  workspace: { type: 'Workspace', typeBg: '#E4EEF0', typeFg: '#4C96B3' },
+  'compliance-hub': { type: 'Compliance Hub', typeBg: '#F9E6EF', typeFg: '#D96BA1' },
 };
 
 export const TENANT_ROWS = [
-  { name: 'Sunway Group Bhd', ...T_TYPE.plc, plan: 'PLC Enterprise', suppliers: '38', ...T_STATUS.active },
-  { name: 'Rimba Electronics Sdn', ...T_TYPE.sme, plan: 'SME Starter', suppliers: '—', ...T_STATUS.active },
-  { name: 'Green Harvest Palm', ...T_TYPE.sme, plan: 'SME Starter', suppliers: '—', ...T_STATUS.trial },
-  { name: 'IOI Corporation Bhd', ...T_TYPE.plc, plan: 'PLC Enterprise', suppliers: '124', ...T_STATUS.active },
-  { name: 'Delta Freight Sdn', ...T_TYPE.sme, plan: 'SME Starter', suppliers: '—', ...T_STATUS.susp },
-  { name: 'Petronas Chemicals', ...T_TYPE.plc, plan: 'PLC Enterprise', suppliers: '206', ...T_STATUS.active },
+  { name: 'Sunway Group Bhd', ...T_TYPE['compliance-hub'], plan: 'Compliance Hub Enterprise', suppliers: '38', ...T_STATUS.active },
+  { name: 'Rimba Electronics Sdn', ...T_TYPE.workspace, plan: 'Workspace Starter', suppliers: '—', ...T_STATUS.active },
+  { name: 'Green Harvest Palm', ...T_TYPE.workspace, plan: 'Workspace Starter', suppliers: '—', ...T_STATUS.trial },
+  { name: 'IOI Corporation Bhd', ...T_TYPE['compliance-hub'], plan: 'Compliance Hub Enterprise', suppliers: '124', ...T_STATUS.active },
+  { name: 'Delta Freight Sdn', ...T_TYPE.workspace, plan: 'Workspace Starter', suppliers: '—', ...T_STATUS.susp },
+  { name: 'Petronas Chemicals', ...T_TYPE['compliance-hub'], plan: 'Compliance Hub Enterprise', suppliers: '206', ...T_STATUS.active },
 ];
 
 export const MAPPING_ROWS = [

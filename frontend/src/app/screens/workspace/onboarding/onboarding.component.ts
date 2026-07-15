@@ -29,7 +29,7 @@ import { SECTORS } from '../../../core/mock-data';
       <!-- BuyerLinkForm -->
       <div class="glass" style="border-radius:14px;padding:22px;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:600;margin-bottom:3px;">2 · Connect your buyer</div>
-        <div style="font-size:12.5px;color:#8A968F;margin-bottom:16px;">Link to a PLC buyer to stream verified emissions directly into their ledger.</div>
+        <div style="font-size:12.5px;color:#8A968F;margin-bottom:16px;">Link to a Compliance Hub buyer to stream verified emissions directly into their ledger.</div>
         <div style="display:flex;gap:10px;">
           <div style="flex:1;display:flex;align-items:center;gap:10px;border:1px solid #D9DDD4;border-radius:10px;padding:11px 14px;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A968F" stroke-width="1.8"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"></path></svg>

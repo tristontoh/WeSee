@@ -15,7 +15,7 @@ export class AppStateService {
 
   /** Independent client state, but kept in sync with the route below — /settings is the
    * one route reachable from any tenant, so it deliberately leaves `tenant` untouched. */
-  tenant = signal<TenantKey>('sme');
+  tenant = signal<TenantKey>('workspace');
   private usernameOverride = signal<string>(this.readUsername());
 
   currentUrl = toSignal(
@@ -30,9 +30,9 @@ export class AppStateService {
   constructor() {
     effect(() => {
       const url = this.currentUrl();
-      if (url.startsWith('/plc')) this.tenant.set('plc');
+      if (url.startsWith('/compliance-hub')) this.tenant.set('compliance-hub');
       else if (url.startsWith('/admin')) this.tenant.set('admin');
-      else if (url !== '/settings') this.tenant.set('sme');
+      else if (url !== '/settings') this.tenant.set('workspace');
     });
   }
 

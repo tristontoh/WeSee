@@ -5,7 +5,7 @@ import { UiService } from '../../../core/ui.service';
 import { CLAIMS_SEED } from '../../../core/mock-data';
 
 @Component({
-  selector: 'app-plc-report',
+  selector: 'app-compliance-hub-report',
   standalone: true,
   imports: [CommonModule],
   template: `
@@ -46,7 +46,7 @@ import { CLAIMS_SEED } from '../../../core/mock-data';
     </div>
   `,
 })
-export class PlcReportComponent {
+export class ComplianceHubReportComponent {
   private ui = inject(UiService);
   private router = inject(Router);
   claims = CLAIMS_SEED;

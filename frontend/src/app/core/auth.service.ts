@@ -4,7 +4,7 @@ const EMAIL_KEY = 'wesee_login_email';
 const TOKEN_KEY = 'wesee_token';
 const ORG_TYPE_KEY = 'wesee_org_type';
 
-export type OrgType = 'sme' | 'plc' | 'admin';
+export type OrgType = 'workspace' | 'compliance-hub' | 'admin';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

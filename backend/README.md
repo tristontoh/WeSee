@@ -12,7 +12,7 @@ mvn spring-boot:run      # starts on http://localhost:8000
 ```
 
 On first run Hibernate creates the tables and a seeder inserts demo data.
-Demo logins (password `demo1234`): `sme@demo.my` (SME dashboard), `buyer@demo.my` (PLC).
+Demo logins (password `demo1234`): `workspace@demo.my` (Workspace dashboard), `buyer@demo.my` (Compliance Hub).
 
 Then start the frontend in another terminal:
 

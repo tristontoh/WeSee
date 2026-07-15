@@ -163,7 +163,7 @@ export class LoginComponent {
       next: (res) => {
         this.auth.setSession(email, res.access_token, res.org_type);
         const next =
-          res.org_type === 'plc' ? '/plc/overview' : res.org_type === 'admin' ? '/admin/tenants' : '/dashboard';
+          res.org_type === 'compliance-hub' ? '/compliance-hub/overview' : res.org_type === 'admin' ? '/admin/tenants' : '/dashboard';
         this.router.navigateByUrl('/loading?next=' + encodeURIComponent(next));
       },
       error: (err) => {

@@ -64,7 +64,7 @@ import { UiService } from '../../core/ui.service';
           <div class="glass" style="border-radius:16px;padding:24px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span style="font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;">CURRENT PLAN</span><span style="font-size:11px;font-weight:600;color:#4C96B3;background:#E4EEF0;padding:4px 10px;border-radius:12px;">Active</span></div>
             <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px;"><span style="font-family:'Work Sans',serif;font-size:40px;">RM19</span><span style="color:#8A968F;font-size:14px;">/month</span></div>
-            <div style="font-size:13px;font-weight:600;margin-bottom:2px;">SME Starter</div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Workspace Starter</div>
             <div style="font-size:12.5px;color:#8A968F;margin-bottom:20px;">Renews 1 Aug 2026 · Visa ···· 4291</div>
             <button (click)="manageSubscription()" class="btn-frost" style="width:100%;justify-content:center;">Manage subscription</button>
           </div>
@@ -79,8 +79,8 @@ import { UiService } from '../../core/ui.service';
         </div>
         <!-- UpgradePrompt -->
         <div style="background:linear-gradient(140deg,#4D7E86,#3a5f66);border-radius:16px;padding:26px 28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px;">
-          <div><div style="font-size:12px;font-weight:600;color:#C3B9F0;letter-spacing:.4px;margin-bottom:8px;">UNLOCK PLC COMMAND CENTER</div><div style="font-family:'Work Sans',serif;font-size:26px;margin-bottom:6px;">Ready to assure your own supply chain?</div><div style="font-size:13.5px;color:#A9C2B6;max-width:520px;line-height:1.5;">Upgrade to the PLC tier for supplier ledgers, AI sourcing arbitrage and multi-framework compliance exports.</div></div>
-          <button (click)="seePlcPricing()" style="border:none;background:#fff;color:#4C96B3;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:inherit;">See PLC pricing</button>
+          <div><div style="font-size:12px;font-weight:600;color:#C3B9F0;letter-spacing:.4px;margin-bottom:8px;">UNLOCK COMPLIANCE HUB</div><div style="font-family:'Work Sans',serif;font-size:26px;margin-bottom:6px;">Ready to assure your own supply chain?</div><div style="font-size:13.5px;color:#A9C2B6;max-width:520px;line-height:1.5;">Upgrade to the Compliance Hub tier for supplier ledgers, AI sourcing arbitrage and multi-framework compliance exports.</div></div>
+          <button (click)="seeComplianceHubPricing()" style="border:none;background:#fff;color:#4C96B3;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:inherit;">See Compliance Hub pricing</button>
         </div>
       </div>
     </div>
@@ -110,7 +110,7 @@ export class SettingsComponent {
     this.ui.showToast('Opening billing portal…');
   }
 
-  seePlcPricing() {
-    this.ui.showToast('PLC pricing details coming soon');
+  seeComplianceHubPricing() {
+    this.ui.showToast('Compliance Hub pricing details coming soon');
   }
 }

@@ -2,8 +2,8 @@ package com.wesee.model;
 
 /** Tenant type. The lowercase value is what the frontend uses to route after login. */
 public enum OrgType {
-    SME("sme"),
-    PLC("plc"),
+    WORKSPACE("workspace"),
+    COMPLIANCE_HUB("compliance-hub"),
     ADMIN("admin");
 
     private final String value;

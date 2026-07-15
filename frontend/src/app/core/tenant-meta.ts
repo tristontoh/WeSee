@@ -8,16 +8,16 @@ export interface TenantMeta {
 }
 
 export const TENANT_META: Record<TenantKey, TenantMeta> = {
-  sme: {
-    label: 'SME Workspace',
+  workspace: {
+    label: 'Workspace',
     sub: 'Rimba Electronics Sdn Bhd',
-    plan: { name: 'SME Starter', detail: 'RM19 / month', mark: 'S', badgeBg: '#4D7E86', badgeFg: '#fff', pill: 'Starter', pillBg: '#E4EEF0', pillFg: '#4C96B3' },
+    plan: { name: 'Workspace Starter', detail: 'RM19 / month', mark: 'S', badgeBg: '#4D7E86', badgeFg: '#fff', pill: 'Starter', pillBg: '#E4EEF0', pillFg: '#4C96B3' },
     user: { name: 'Aisyah R.', initials: 'AR', email: 'aisyah.r@rimba.com' },
   },
-  plc: {
-    label: 'PLC Command Center',
+  'compliance-hub': {
+    label: 'Compliance Hub',
     sub: 'Sunway Group Bhd',
-    plan: { name: 'PLC Enterprise', detail: 'Unlimited suppliers', mark: 'P', badgeBg: '#D96BA1', badgeFg: '#fff', pill: 'Enterprise', pillBg: '#F9E6EF', pillFg: '#D96BA1' },
+    plan: { name: 'Compliance Hub Enterprise', detail: 'Unlimited suppliers', mark: 'P', badgeBg: '#D96BA1', badgeFg: '#fff', pill: 'Enterprise', pillBg: '#F9E6EF', pillFg: '#D96BA1' },
     user: { name: 'Daniel T.', initials: 'DT', email: 'daniel.t@sunway.com' },
   },
   admin: {

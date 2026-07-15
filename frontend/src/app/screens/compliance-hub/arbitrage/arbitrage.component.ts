@@ -3,7 +3,7 @@ import { Component, computed, signal } from '@angular/core';
 import { ARBITRAGE_SEED } from '../../../core/mock-data';
 
 @Component({
-  selector: 'app-plc-arbitrage',
+  selector: 'app-compliance-hub-arbitrage',
   standalone: true,
   imports: [CommonModule],
   template: `
@@ -32,7 +32,7 @@ import { ARBITRAGE_SEED } from '../../../core/mock-data';
     </div>
   `,
 })
-export class PlcArbitrageComponent {
+export class ComplianceHubArbitrageComponent {
   private accepted = signal<Record<string, boolean>>({});
 
   cards = computed(() =>

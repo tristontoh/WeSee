@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-plc-overview',
+  selector: 'app-compliance-hub-overview',
   standalone: true,
   template: `
     <div style="animation:vfade .3s ease both;">
@@ -19,7 +19,7 @@ import { Component } from '@angular/core';
         </div>
       </div>
 
-      <div class="grid-plc-overview" style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+      <div class="grid-compliance-hub-overview" style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
         <!-- CarbonScopeDonut -->
         <div style="background:#3a5f66;color:#fff;border-radius:16px;padding:22px 24px;grid-row:span 2;">
           <div style="font-size:13px;font-weight:600;margin-bottom:2px;color:#EAF1EC;">Scope breakdown</div>
@@ -67,4 +67,4 @@ import { Component } from '@angular/core';
     </div>
   `,
 })
-export class PlcOverviewComponent {}
+export class ComplianceHubOverviewComponent {}

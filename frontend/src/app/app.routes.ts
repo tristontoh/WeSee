@@ -14,23 +14,23 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
 
-      // SME
-      { path: 'dashboard', loadComponent: () => import('./screens/sme/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
-      { path: 'onboarding', loadComponent: () => import('./screens/sme/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
-      { path: 'upload', loadComponent: () => import('./screens/sme/upload/upload.component').then((m) => m.UploadComponent) },
-      { path: 'review', loadComponent: () => import('./screens/sme/review/review.component').then((m) => m.ReviewComponent) },
-      { path: 'trust', loadComponent: () => import('./screens/sme/trust/trust.component').then((m) => m.TrustComponent) },
-      { path: 'export', loadComponent: () => import('./screens/sme/export/export.component').then((m) => m.ExportComponent) },
+      // Workspace
+      { path: 'dashboard', loadComponent: () => import('./screens/workspace/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
+      { path: 'onboarding', loadComponent: () => import('./screens/workspace/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
+      { path: 'upload', loadComponent: () => import('./screens/workspace/upload/upload.component').then((m) => m.UploadComponent) },
+      { path: 'review', loadComponent: () => import('./screens/workspace/review/review.component').then((m) => m.ReviewComponent) },
+      { path: 'trust', loadComponent: () => import('./screens/workspace/trust/trust.component').then((m) => m.TrustComponent) },
+      { path: 'export', loadComponent: () => import('./screens/workspace/export/export.component').then((m) => m.ExportComponent) },
 
       // Settings (shared)
       { path: 'settings', loadComponent: () => import('./screens/settings/settings.component').then((m) => m.SettingsComponent) },
 
-      // PLC
-      { path: 'plc/overview', loadComponent: () => import('./screens/plc/overview/overview.component').then((m) => m.PlcOverviewComponent) },
-      { path: 'plc/ledger', loadComponent: () => import('./screens/plc/ledger/ledger.component').then((m) => m.PlcLedgerComponent) },
-      { path: 'plc/arbitrage', loadComponent: () => import('./screens/plc/arbitrage/arbitrage.component').then((m) => m.PlcArbitrageComponent) },
-      { path: 'plc/report', loadComponent: () => import('./screens/plc/report/report.component').then((m) => m.PlcReportComponent) },
-      { path: 'plc/compliance', loadComponent: () => import('./screens/plc/compliance/compliance.component').then((m) => m.PlcComplianceComponent) },
+      // Compliance Hub
+      { path: 'compliance-hub/overview', loadComponent: () => import('./screens/compliance-hub/overview/overview.component').then((m) => m.ComplianceHubOverviewComponent) },
+      { path: 'compliance-hub/ledger', loadComponent: () => import('./screens/compliance-hub/ledger/ledger.component').then((m) => m.ComplianceHubLedgerComponent) },
+      { path: 'compliance-hub/arbitrage', loadComponent: () => import('./screens/compliance-hub/arbitrage/arbitrage.component').then((m) => m.ComplianceHubArbitrageComponent) },
+      { path: 'compliance-hub/report', loadComponent: () => import('./screens/compliance-hub/report/report.component').then((m) => m.ComplianceHubReportComponent) },
+      { path: 'compliance-hub/compliance', loadComponent: () => import('./screens/compliance-hub/compliance/compliance.component').then((m) => m.ComplianceHubComplianceComponent) },
 
       // Admin
       { path: 'admin/tenants', loadComponent: () => import('./screens/admin/tenants/tenants.component').then((m) => m.AdminTenantsComponent) },

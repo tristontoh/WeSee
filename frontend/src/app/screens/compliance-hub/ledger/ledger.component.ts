@@ -4,7 +4,7 @@ import { UiService } from '../../../core/ui.service';
 import { LEDGER_ROWS } from '../../../core/mock-data';
 
 @Component({
-  selector: 'app-plc-ledger',
+  selector: 'app-compliance-hub-ledger',
   standalone: true,
   imports: [CommonModule],
   template: `
@@ -33,7 +33,7 @@ import { LEDGER_ROWS } from '../../../core/mock-data';
     </div>
   `,
 })
-export class PlcLedgerComponent {
+export class ComplianceHubLedgerComponent {
   ui = inject(UiService);
   rows = LEDGER_ROWS;
 

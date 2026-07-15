@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
-/** B2B exchange edge: a PLC buyer ↔ SME supplier relationship + assurance state. */
+/** B2B exchange edge: a Compliance Hub buyer ↔ Workspace supplier relationship + assurance state. */
 @Entity
 @Table(name = "supplier_links")
 public class SupplierLink {
