@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>IFRS S2 Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.4cm 1.8cm 2.2cm 1.8cm;
+            @bottom-left {
+                content: "WeSee ESG Reporting Platform";
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+        }
+
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            color: #1e293b;
+            font-size: 10.5pt;
+            line-height: 1.5;
+        }
+
+        .cover {
+            padding-bottom: 18pt;
+            border-bottom: 3px solid #0f172a;
+            margin-bottom: 20pt;
+        }
+
+        .brand {
+            font-size: 11pt;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-bottom: 4pt;
+        }
+
+        .doc-title {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 6pt 0 4pt 0;
+        }
+
+        .doc-subtitle {
+            font-size: 12pt;
+            color: #475569;
+        }
+
+        .confidential-pill {
+            display: inline-block;
+            white-space: nowrap;
+            font-size: 8.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3pt 9pt;
+            border-radius: 10pt;
+            margin-top: 8pt;
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        table.meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14pt 0 18pt 0;
+        }
+
+        table.meta-table td {
+            padding: 5pt 0;
+            font-size: 9.5pt;
+            vertical-align: top;
+        }
+
+        table.meta-table td.label {
+            width: 26%;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        h2.section-title {
+            font-size: 13pt;
+            color: #0f172a;
+            border-left: 4pt solid #0f172a;
+            padding-left: 8pt;
+            margin: 20pt 0 8pt 0;
+        }
+
+        h3.subsection-title {
+            font-size: 10.5pt;
+            color: #334155;
+            margin: 14pt 0 6pt 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        p.section-intro {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 0 0 10pt 0;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6pt;
+        }
+
+        table.data-table th {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            text-align: left;
+            padding: 6pt 7pt;
+        }
+
+        table.data-table td {
+            font-size: 9pt;
+            padding: 6pt 7pt;
+            border-bottom: 0.75pt solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        table.data-table tr.row-alt td {
+            background-color: #f8fafc;
+        }
+
+        .col-center {
+            text-align: center;
+        }
+
+        .empty-note {
+            font-size: 9.5pt;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .footer-note {
+            margin-top: 22pt;
+            padding-top: 10pt;
+            border-top: 0.75pt solid #e2e8f0;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="brand">WeSee &#8212; ESG Reporting Platform</div>
+    <div class="doc-title">IFRS S2 &#8212; Climate Disclosures Report</div>
+    <div class="doc-subtitle" th:text="${company.name}">Company Name</div>
+    <span class="confidential-pill">Confidential &#8212; FY<span th:text="${fiscalYear}">2026</span></span>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label">Entity Name</td>
+        <td th:text="${company.name}">Entity</td>
+        <td class="label">Sector</td>
+        <td th:text="${company.sector != null ? company.sector.name : 'Not set'}">Sector</td>
+    </tr>
+    <tr>
+        <td class="label">Market Classification</td>
+        <td th:text="${company.marketClassification}">Market</td>
+        <td class="label">Subscription Plan</td>
+        <td th:text="${company.subscriptionPlan}">Plan</td>
+    </tr>
+    <tr>
+        <td class="label">Reporting Cycle</td>
+        <td th:text="'Annual (Fiscal Period FY' + ${fiscalYear} + ')'">Annual</td>
+        <td class="label">Authorized Reviewer</td>
+        <td th:text="${reviewerName}">Reviewer</td>
+    </tr>
+</table>
+
+<h2 class="section-title">IFRS S2 &#8212; Climate-Related Disclosures</h2>
+<div th:if="${s2 != null}">
+    <h3 class="subsection-title">Governance</h3>
+    <p class="section-intro" th:text="${s2.oversightDescription != null ? s2.oversightDescription : 'Not disclosed.'}">Oversight</p>
+    <table class="meta-table">
+        <tr>
+            <td class="label">Review Frequency</td>
+            <td th:text="${s2.reviewFrequency != null ? s2.reviewFrequency : 'Not set'}">Frequency</td>
+            <td class="label">Responsible Committee</td>
+            <td th:text="${s2.responsibleCommittee != null ? s2.responsibleCommittee : 'Not set'}">Committee</td>
+        </tr>
+    </table>
+
+    <h3 class="subsection-title">Strategy</h3>
+    <p class="section-intro" th:text="'Physical Risks: ' + (${s2.physicalRisks} != null ? ${s2.physicalRisks} : 'Not disclosed.')">Physical risks</p>
+    <p class="section-intro" th:text="'Transition Plan: ' + (${s2.transitionPlan} != null ? ${s2.transitionPlan} : 'Not disclosed.')">Transition plan</p>
+    <p class="section-intro" th:text="'Climate Resilience: ' + (${s2.climateResilience} != null ? ${s2.climateResilience} : 'Not disclosed.')">Climate resilience</p>
+
+    <h3 class="subsection-title">Risk Management</h3>
+    <p class="section-intro" th:text="'Risk Identification Process: ' + (${s2.identificationProcess} != null ? ${s2.identificationProcess} : 'Not disclosed.')">Identification process</p>
+    <p class="section-intro" th:text="'Integration Level: ' + (${s2.integrationLevel} != null ? ${s2.integrationLevel} : 'Not set')">Integration level</p>
+
+    <h3 class="subsection-title">Metrics &amp; Targets</h3>
+    <p class="section-intro" th:text="'Tracked Metrics: ' + (${s2.trackedMetrics} != null ? ${s2.trackedMetrics} : 'Not disclosed.')">Tracked metrics</p>
+    <p class="section-intro" th:text="'Reduction Targets: ' + (${s2.reductionTargets} != null ? ${s2.reductionTargets} : 'Not disclosed.')">Reduction targets</p>
+    <p class="section-intro" th:text="'Internal Carbon Price: ' + (${s2.carbonPriceValue} != null ? (${s2.carbonPriceValue} + ' ' + ${s2.carbonPriceCurrency} + ' per tCO2e') : 'Not disclosed')">Carbon price</p>
+    <p class="section-intro" th:text="'Carbon Pricing in Decision-Making: ' + (${s2.carbonPricing} != null ? ${s2.carbonPricing} : 'Not disclosed.')">Carbon pricing narrative</p>
+
+    <h4 class="subsection-title" style="font-size: 11px;">Cross-Industry Metrics</h4>
+    <table class="meta-table">
+        <tr>
+            <td class="label">% Assets Vulnerable — Transition Risk</td>
+            <td th:text="${s2.transitionRiskAssetPct != null ? s2.transitionRiskAssetPct + '%' : 'Not disclosed'}">%</td>
+            <td class="label">% Assets Vulnerable — Physical Risk</td>
+            <td th:text="${s2.physicalRiskAssetPct != null ? s2.physicalRiskAssetPct + '%' : 'Not disclosed'}">%</td>
+        </tr>
+        <tr>
+            <td class="label">% Assets Aligned with Climate Opportunities</td>
+            <td th:text="${s2.climateOpportunityAssetPct != null ? s2.climateOpportunityAssetPct + '%' : 'Not disclosed'}">%</td>
+            <td class="label">Capex/Financing Toward Climate</td>
+            <td th:text="${s2.climateCapex != null ? (s2.climateCapex + ' ' + s2.climateCapexCurrency) : 'Not disclosed'}">Capex</td>
+        </tr>
+        <tr>
+            <td class="label">Executive Remuneration Linked to Climate</td>
+            <td colspan="3" th:text="${s2.executiveRemunerationLinked != null and s2.executiveRemunerationLinked ? (s2.executiveRemunerationDescription != null ? s2.executiveRemunerationDescription : 'Yes') : 'Not linked'}">Remuneration</td>
+        </tr>
+    </table>
+
+    <h3 class="subsection-title" th:text="'Greenhouse Gas Emissions &#8212; FY' + ${fiscalYear}">GHG Emissions</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Scope</th>
+                <th class="col-center">Value (tCO2e)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Scope 1 &#8212; Direct Emissions</td>
+                <td class="col-center" th:text="${scope1Value != null ? scope1Value : 'N/A'}">N/A</td>
+            </tr>
+            <tr class="row-alt">
+                <td>Scope 2 &#8212; Indirect (Purchased Energy)</td>
+                <td class="col-center" th:text="${scope2Value != null ? scope2Value : 'N/A'}">N/A</td>
+            </tr>
+            <tr>
+                <td>Scope 3 &#8212; Value Chain (All Categories)</td>
+                <td class="col-center" th:text="${scope3Total != null ? scope3Total : 'N/A'}">N/A</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="data-table" th:if="${!#lists.isEmpty(scope3Categories)}">
+        <thead>
+            <tr>
+                <th style="width: 60%;">Scope 3 Category</th>
+                <th class="col-center">Value (tCO2e), FY<span th:text="${fiscalYear}">2026</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="cat, iter : ${scope3Categories}" th:class="${iter.odd} ? 'row-alt' : ''">
+                <td th:text="${cat.name}">Category</td>
+                <td class="col-center" th:text="${scope3ValueByCategoryId.get(cat.id) != null ? scope3ValueByCategoryId.get(cat.id) : 'N/A'}">N/A</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="footer-note">
+    Generated by WeSee on <span th:text="${#temporals.format(generatedAt, 'dd MMMM yyyy, HH:mm')}">date</span>
+    for <span th:text="${reviewerName}">Reviewer</span>. This report reflects data recorded in the platform as of the
+    generation timestamp above and is intended for Bursa Malaysia sustainability reporting purposes.
+</div>
+
+</body>
+</html>

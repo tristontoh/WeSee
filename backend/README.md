@@ -1,66 +1,127 @@
-# WeSee Backend — Java Spring Boot
+# WeSee ESG Backend
 
-A Spring Boot (Java 21) port of the FastAPI gateway. It exposes the **same endpoints** the
-Angular frontend calls, so the frontend needs no changes. This replaces the Python backend —
-you no longer need FastAPI or the separate `carbon-intel` engine (Gemini is called directly).
+Java 21 + Spring Boot 3 + PostgreSQL backend for the WeSee ESG reporting platform. Implements the
+multi-tenant data model, JWT auth, and REST API described in the project's BRD/PRD/SRS documents,
+covering all three subscription tiers (`STARTER`, `GROWTH`, `ISSUER_READY`).
 
-## Run
+The React frontend in `../frontend/` is fully wired to this API (no mocked data) — see the root
+[`README.md`](../README.md) for how the two run together.
+
+## Requirements
+
+- Java 21 (Temurin recommended)
+- Maven 3.9+
+- PostgreSQL 15+ (a local Homebrew install works fine — Docker is not required for local dev)
+
+## Local setup
 
 ```bash
+createdb wesee_esg          # one-time
+createdb wesee_esg_test     # only needed if you add Testcontainers-free integration tests
+
 cd backend
-mvn spring-boot:run      # starts on http://localhost:8000
+mvn spring-boot:run           # runs with the 'dev' profile by default, http://localhost:8080
 ```
 
-On first run Hibernate creates the tables and a seeder inserts demo data.
-Demo logins (password `demo1234`): `workspace@demo.my` (Workspace dashboard), `buyer@demo.my` (Compliance Hub).
+Override `DB_USERNAME` / `DB_PASSWORD` / `JWT_SECRET` / `CORS_ALLOWED_ORIGINS` as environment
+variables if your local Postgres isn't peer-auth with your OS user, or before deploying anywhere
+that isn't localhost. `application-dev.yml` defaults to connecting as the current OS user with no
+password, matching a typical Homebrew Postgres install.
 
-Then start the frontend in another terminal:
+Flyway migrations run automatically on startup (`src/main/resources/db/migration`). Nothing needs
+to be seeded manually — reference data (sustainability matters, indicator definitions, feature
+flags) ships in `V4__reference_seed_data.sql`.
+
+### Default login
+
+`V14__seed_platform_admin.sql` seeds the only way in to `/admin` (there's no invite/role-assignment
+flow yet — self-registration always creates `COMPANY_ADMIN`):
+
+```
+email:    platform.admin@wesee.my
+password: PlatformAdmin#2026
+role:     PLATFORM_ADMIN
+```
+
+Sandbox credentials only — change the password (or delete the seed) before this schema is used
+anywhere reachable outside local dev.
+
+## API docs
+
+Once running: Swagger UI at `http://localhost:8080/swagger-ui.html`, raw OpenAPI JSON at
+`/v3/api-docs`. Authenticate with the "Authorize" button using a JWT from `POST /api/v1/auth/login`.
+
+## Docker (optional, for later deployment)
 
 ```bash
-cd ../frontend && npx ng serve --port 4210   # open http://localhost:4210
+docker compose up --build
 ```
 
-## Config — all in `src/main/resources/application.properties`
+Runs Postgres + the backend together via `docker-compose.yml` / `Dockerfile`. Not required or
+exercised for local development — this machine doesn't have Docker installed, so these files are
+unverified; sanity-check them before relying on them in production.
 
-**Which database** (native JDBC — no translation needed). Keep your real password out of
-`application.properties` — put it in `application-local.properties` (gitignored) or `DB_PASSWORD`:
-```
-# application.properties (committed)
-spring.datasource.url=jdbc:postgresql://localhost:5432/wesee
-spring.datasource.username=postgres
-spring.datasource.password=${DB_PASSWORD:postgres}
+## Architecture
 
-# application-local.properties (gitignored — your real secret)
-spring.datasource.password=your-local-password
-```
+Package root `com.wesee.esg`. See the plan/design notes for the full rationale; the short version:
 
-**Your Gemini key** (Engine 01 bill parsing). Blank = built-in mock extractor (no key needed):
-```
-wesee.gemini-api-key=AIza...your-key...
-wesee.gemini-model=gemini-2.0-flash
-```
-A real key makes `POST /carbon/ingest` parse the actual uploaded bill via Gemini; otherwise a
-deterministic demo bill (~+2.5 tCO₂e) is returned.
+- **`common`** — `BaseEntity` (UUID PK + audit timestamps), `TenantOwnedEntity` (adds `companyId`
+  + a Hibernate `@Filter` enabled per-request as a tenant-isolation safety net), exceptions, global
+  error handling.
+- **`security`** / **`auth`** — stateless JWT (HMAC, `io.jsonwebtoken`), `tokenVersion` column for
+  cheap session invalidation, BCrypt passwords. Plan is never embedded in the JWT — every
+  plan-gated endpoint re-reads `Company.subscriptionPlan` fresh from the DB via `PlanGateService`
+  (`@PreAuthorize("@planGate.check('feature-key')")`), so a downgrade takes effect immediately.
+  `emailverification` (registration tokens), `mfa` (TOTP enrollment + backup codes), and `session`
+  (active-session list/revocation under `/api/v1/sessions`) round out the login flow.
+- **`tenant`** / **`user`** — `Company` (the tenant), `AppUser`, `Sector`.
+- **`reference`** — `SustainabilityMatter`, `IndicatorDefinition`, `FeatureFlag`, `MatterSetRule`,
+  `TransitionReliefRule` — all seeded, configurable data (not hard-coded logic), so SEDG/Bursa
+  framework changes don't require a redeploy. Also home to `MatterSetResolverService`, which
+  decides which matter set (SEDG / BURSA_MAIN / BURSA_ACE / SECTOR) applies to a given company
+  from its plan + market classification.
+- **`indicators`** — per-company indicator values, target overrides, and an append-only audit
+  trail (who/when/source per FR-5.5).
+- **`materiality`** — versioned assessment snapshots (never mutated after creation) plus a
+  separately-editable stakeholder list.
+- **`governance`** — the 3 fixed oversight levels + per-matter ownership assignment.
+- **`targets`** — standalone strategic targets, distinct from per-indicator targets.
+- **`climate`** — IFRS S1 (business segments + risk/opportunity register) and IFRS S2 (governance/
+  strategy/risk-management/metrics narrative + Scope 1/2/3 GHG ledger). Scope 3 transition-relief
+  status is computed server-side from a seeded rule table + the company's market classification,
+  never stored as an editable flag (SRS FR-6.3/6.4).
+- **`assurance`** — fiscal-year sign-off workflow gated on 100% indicator completion, with its own
+  audit trail mirroring the indicators module's pattern.
+- **`export`** — raw indicator CSV, a CSI-compatible CSV (readiness aid only, never a real
+  submission to Bursa's CSI platform), a server-rendered Integrated ESG Disclosure PDF
+  (Thymeleaf + OpenHTMLtoPDF), and an export history log. Materiality and Governance modules each
+  render their own PDF report the same way.
+- **`email`** — best-effort transactional email (team invites, SMTP test-send). Resolves a
+  per-company SMTP configuration first, falling back to a platform-wide default; SMTP passwords
+  are AES/GCM-encrypted at rest.
+- **`platform`** — the singleton `platform_settings` row: platform name/support email/app base
+  URL, the default SMTP sender above, the platform-wide "require 2FA" toggle, and Stripe API keys
+  for subscription billing. Secrets (SMTP password, Stripe secret key, Stripe webhook secret) are
+  AES/GCM-encrypted at rest and only ever exposed to the client as a `*Set` boolean, never in
+  plaintext; the Stripe publishable key is the one field returned as-is, since it's meant to ship
+  to a client anyway. Admin-only (`PLATFORM_ADMIN` / `SUPERADMIN`) via `/api/v1/admin/platform-settings`.
+- **`billing`** — per-company `Invoice` records and the admin view over them
+  (`InvoiceAdminController`). Not yet wired to a payment processor — the Stripe keys in `platform`
+  are configured but no charge/webhook flow calls them yet.
+- **`apiaccess`** — long-lived API tokens (`ApiToken`, scoped via `ApiScope`) that let a company
+  pull its own indicator data externally through `ExternalIndicatorController`, separate from the
+  user-facing JWT auth used by the frontend.
+- **`privacy`** — GDPR-style self-service: consent tracking, a company data export, and account
+  closure.
+- **`support`** — in-app support tickets (`SupportTicket` + threaded `TicketMessage`), with
+  separate tenant-facing (`SupportTicketController`) and admin (`SupportTicketAdminController`)
+  endpoints for status/priority/notes.
 
-## Endpoints (match the frontend contract)
+## Known simplifications (documented, not accidental)
 
-| Endpoint | Method | Notes |
-|---|---|---|
-| `/auth/login` | POST (form) | `username`,`password` → `{ access_token, token_type, org_type }` |
-| `/dashboard/carbon` | GET (Bearer) | `{ total_tco2e, scope1, scope2, scope3, target_progress_pct, records[] }` |
-| `/carbon/ingest` | POST (multipart, Bearer) | upload a bill → one certified emission record |
-| `/health` | GET | liveness |
-
-## Layout
-
-```
-model/     JPA entities (Organization, User, EmissionRecord, SupplierLink) + enums
-repo/      Spring Data repositories
-factors/   Malaysian emission-factor engine (malaysia_factors.json + FactorService)
-llm/       Engine 01 extractor — mock + real Gemini over HTTP
-ledger/    Decentralized carbon ledger (dev hash stub)
-security/  JwtService (issue/verify)
-web/       AuthController, DashboardController, CarbonController, DTOs
-seed/      DataSeeder (demo orgs + emission records)
-config/    CORS + BCrypt bean
-```
+- No refresh tokens — a bumped `tokenVersion` invalidates all of a user's existing tokens instead.
+- No Word (.docx) export generation — PDF (via Thymeleaf) and CSV are covered; Word export is
+  client-side plain text today.
+- Consultant multi-tenant access is not built — one `AppUser` belongs to exactly one `Company`.
+- No Testcontainers — dev/manual testing runs against a real local Postgres; the `test` Spring
+  profile uses H2 in PostgreSQL-compatibility mode for any future slice tests.

@@ -2,9 +2,11 @@ services:
   postgres:
     image: postgres:16
     environment:
+      # Defaults must match application-dev.yml (DB_USERNAME:postgres / DB_PASSWORD:root)
+      # so `make infra && make backend` works with no env vars set.
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-wesee}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_DB: ${POSTGRES_DB:-wesee_esg}
     ports:
       - "5432:5432"
     volumes:

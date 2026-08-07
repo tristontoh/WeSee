@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>IFRS S1 Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.4cm 1.8cm 2.2cm 1.8cm;
+            @bottom-left {
+                content: "WeSee ESG Reporting Platform";
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+        }
+
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            color: #1e293b;
+            font-size: 10.5pt;
+            line-height: 1.5;
+        }
+
+        .cover {
+            padding-bottom: 18pt;
+            border-bottom: 3px solid #0f172a;
+            margin-bottom: 20pt;
+        }
+
+        .brand {
+            font-size: 11pt;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-bottom: 4pt;
+        }
+
+        .doc-title {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 6pt 0 4pt 0;
+        }
+
+        .doc-subtitle {
+            font-size: 12pt;
+            color: #475569;
+        }
+
+        .confidential-pill {
+            display: inline-block;
+            white-space: nowrap;
+            font-size: 8.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3pt 9pt;
+            border-radius: 10pt;
+            margin-top: 8pt;
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        table.meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14pt 0 18pt 0;
+        }
+
+        table.meta-table td {
+            padding: 5pt 0;
+            font-size: 9.5pt;
+            vertical-align: top;
+        }
+
+        table.meta-table td.label {
+            width: 26%;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        h2.section-title {
+            font-size: 13pt;
+            color: #0f172a;
+            border-left: 4pt solid #0f172a;
+            padding-left: 8pt;
+            margin: 20pt 0 8pt 0;
+        }
+
+        h3.subsection-title {
+            font-size: 10.5pt;
+            color: #334155;
+            margin: 14pt 0 6pt 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        p.section-intro {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 0 0 10pt 0;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6pt;
+        }
+
+        table.data-table th {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            text-align: left;
+            padding: 6pt 7pt;
+        }
+
+        table.data-table td {
+            font-size: 9pt;
+            padding: 6pt 7pt;
+            border-bottom: 0.75pt solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        table.data-table tr.row-alt td {
+            background-color: #f8fafc;
+        }
+
+        .col-center {
+            text-align: center;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 2pt 6pt;
+            border-radius: 8pt;
+        }
+
+        .tier-high { background-color: #fee2e2; color: #991b1b; }
+        .status-current { background-color: #d1fae5; color: #065f46; }
+
+        .empty-note {
+            font-size: 9.5pt;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .footer-note {
+            margin-top: 22pt;
+            padding-top: 10pt;
+            border-top: 0.75pt solid #e2e8f0;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="brand">WeSee &#8212; ESG Reporting Platform</div>
+    <div class="doc-title">IFRS S1 &#8212; General Disclosures Report</div>
+    <div class="doc-subtitle" th:text="${company.name}">Company Name</div>
+    <span class="confidential-pill">Confidential &#8212; FY<span th:text="${fiscalYear}">2026</span></span>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label">Entity Name</td>
+        <td th:text="${company.name}">Entity</td>
+        <td class="label">Sector</td>
+        <td th:text="${company.sector != null ? company.sector.name : 'Not set'}">Sector</td>
+    </tr>
+    <tr>
+        <td class="label">Market Classification</td>
+        <td th:text="${company.marketClassification}">Market</td>
+        <td class="label">Subscription Plan</td>
+        <td th:text="${company.subscriptionPlan}">Plan</td>
+    </tr>
+    <tr>
+        <td class="label">Reporting Cycle</td>
+        <td th:text="'Annual (Fiscal Period FY' + ${fiscalYear} + ')'">Annual</td>
+        <td class="label">Authorized Reviewer</td>
+        <td th:text="${reviewerName}">Reviewer</td>
+    </tr>
+</table>
+
+<h2 class="section-title">IFRS S1 &#8212; General Sustainability-related Disclosures</h2>
+<div th:if="${s1 != null}">
+    <h3 class="subsection-title">Governance</h3>
+    <p class="section-intro" th:text="${s1.oversightDescription != null ? s1.oversightDescription : 'Not disclosed.'}">Oversight</p>
+    <table class="meta-table">
+        <tr>
+            <td class="label">Review Frequency</td>
+            <td th:text="${s1.reviewFrequency != null ? s1.reviewFrequency : 'Not set'}">Frequency</td>
+            <td class="label">Responsible Committee</td>
+            <td th:text="${s1.responsibleCommittee != null ? s1.responsibleCommittee : 'Not set'}">Committee</td>
+        </tr>
+    </table>
+
+    <h3 class="subsection-title">Risk Management</h3>
+    <p class="section-intro" th:text="'Identification & Prioritisation Process: ' + (${s1.identificationProcess} != null ? ${s1.identificationProcess} : 'Not disclosed.')">Identification process</p>
+    <p class="section-intro" th:text="'Integration Level: ' + (${s1.integrationLevel} != null ? ${s1.integrationLevel} : 'Not set')">Integration level</p>
+
+    <h3 class="subsection-title">Metrics, Targets &amp; Connected Information</h3>
+    <p class="section-intro" th:text="'Tracked Metrics: ' + (${s1.trackedMetrics} != null ? ${s1.trackedMetrics} : 'Not disclosed.')">Tracked metrics</p>
+    <p class="section-intro" th:text="'Targets Summary: ' + (${s1.targetsSummary} != null ? ${s1.targetsSummary} : 'Not disclosed.')">Targets summary</p>
+    <p class="section-intro" th:text="'Connected Information: ' + (${s1.connectedInformation} != null ? ${s1.connectedInformation} : 'Not disclosed.')">Connected information</p>
+</div>
+
+<h3 class="subsection-title">Strategy &#8212; Risks &amp; Opportunities by Business Segment</h3>
+<p class="section-intro">Material sustainability-related risks and opportunities that could reasonably be expected to affect the entity's business model, strategy, and financial planning, walked through systematically across principal business segments.</p>
+<div th:each="segment : ${segments}">
+    <h3 class="subsection-title" th:text="${segment.name}">Segment</h3>
+    <table class="data-table" th:if="${!#lists.isEmpty(segment.items)}">
+        <thead>
+            <tr>
+                <th style="width: 26%;">Title</th>
+                <th style="width: 10%;">Type</th>
+                <th style="width: 12%;">Horizon</th>
+                <th style="width: 32%;">Description</th>
+                <th class="col-center">Financial Impact</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="item, iter : ${segment.items}" th:class="${iter.odd} ? 'row-alt' : ''">
+                <td th:text="${item.title}">Title</td>
+                <td>
+                    <span th:if="${item.type.name() == 'RISK'}" class="tier-badge tier-high" th:text="${item.type.name()}">RISK</span>
+                    <span th:if="${item.type.name() == 'OPPORTUNITY'}" class="tier-badge status-current" th:text="${item.type.name()}">OPPORTUNITY</span>
+                </td>
+                <td th:text="${item.horizon}">Horizon</td>
+                <td th:text="${item.description}">Description</td>
+                <td class="col-center" th:text="${item.financialImpact != null ? item.financialImpact + ' ' + item.currency : 'N/A'}">N/A</td>
+            </tr>
+        </tbody>
+    </table>
+    <p th:if="${#lists.isEmpty(segment.items)}" class="empty-note">No risks or opportunities logged for this segment.</p>
+</div>
+<p th:if="${#lists.isEmpty(segments)}" class="empty-note">No business segments configured yet.</p>
+
+<div class="footer-note">
+    Generated by WeSee on <span th:text="${#temporals.format(generatedAt, 'dd MMMM yyyy, HH:mm')}">date</span>
+    for <span th:text="${reviewerName}">Reviewer</span>. This report reflects data recorded in the platform as of the
+    generation timestamp above and is intended for Bursa Malaysia sustainability reporting purposes.
+</div>
+
+</body>
+</html>

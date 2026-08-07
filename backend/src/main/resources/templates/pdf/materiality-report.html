@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Materiality Assessment Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.4cm 1.8cm 2.2cm 1.8cm;
+            @bottom-left {
+                content: "WeSee ESG Reporting Platform";
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+        }
+
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            color: #1e293b;
+            font-size: 10.5pt;
+            line-height: 1.5;
+        }
+
+        .cover {
+            padding-bottom: 18pt;
+            border-bottom: 3px solid #0f172a;
+            margin-bottom: 20pt;
+        }
+
+        .brand {
+            font-size: 11pt;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-bottom: 4pt;
+        }
+
+        .doc-title {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 6pt 0 4pt 0;
+        }
+
+        .doc-subtitle {
+            font-size: 12pt;
+            color: #475569;
+        }
+
+        .status-pill {
+            display: inline-block;
+            font-size: 8.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3pt 9pt;
+            border-radius: 10pt;
+            margin-top: 8pt;
+        }
+
+        .status-validated {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-draft {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        table.meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14pt 0 18pt 0;
+        }
+
+        table.meta-table td {
+            padding: 5pt 0;
+            font-size: 9.5pt;
+            vertical-align: top;
+        }
+
+        table.meta-table td.label {
+            width: 34%;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        h2.section-title {
+            font-size: 13pt;
+            color: #0f172a;
+            border-left: 4pt solid #0f172a;
+            padding-left: 8pt;
+            margin: 20pt 0 8pt 0;
+        }
+
+        p.section-intro {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 0 0 10pt 0;
+        }
+
+        .stakeholder-list {
+            margin: 0 0 4pt 0;
+        }
+
+        .stakeholder-chip {
+            display: inline-block;
+            font-size: 9pt;
+            background-color: #f1f5f9;
+            border: 0.75pt solid #cbd5e1;
+            border-radius: 9pt;
+            padding: 3pt 9pt;
+            margin: 0 6pt 6pt 0;
+            color: #334155;
+        }
+
+        table.matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6pt;
+        }
+
+        table.matrix-table th {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            text-align: left;
+            padding: 6pt 7pt;
+        }
+
+        table.matrix-table td {
+            font-size: 9pt;
+            padding: 6pt 7pt;
+            border-bottom: 0.75pt solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        table.matrix-table tr.row-alt td {
+            background-color: #f8fafc;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 2pt 6pt;
+            border-radius: 8pt;
+        }
+
+        .tier-high {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .tier-medium {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .tier-low {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .col-score {
+            text-align: center;
+            width: 8%;
+        }
+
+        .col-tier {
+            width: 14%;
+        }
+
+        .empty-note {
+            font-size: 9.5pt;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .footer-note {
+            margin-top: 22pt;
+            padding-top: 10pt;
+            border-top: 0.75pt solid #e2e8f0;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="brand">WeSee &#8212; ESG Reporting Platform</div>
+    <div class="doc-title">Materiality Assessment Report</div>
+    <div class="doc-subtitle" th:text="${company.name}">Company Name</div>
+    <span th:if="${assessment.status.name() == 'VALIDATED'}" class="status-pill status-validated">Validated</span>
+    <span th:if="${assessment.status.name() != 'VALIDATED'}" class="status-pill status-draft">Draft</span>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label">Assessment Name</td>
+        <td th:text="${assessment.name}">Assessment Name</td>
+        <td class="label">Assessment Date</td>
+        <td th:text="${#temporals.format(assessment.assessmentDate, 'dd MMMM yyyy')}">1 Jan 2026</td>
+    </tr>
+    <tr>
+        <td class="label">Market Classification</td>
+        <td th:text="${assessment.marketAtCapture != null ? assessment.marketAtCapture : 'Not specified'}">Market</td>
+        <td class="label">Subscription Plan</td>
+        <td th:text="${assessment.planAtCapture}">Plan</td>
+    </tr>
+    <tr>
+        <td class="label">Prepared By</td>
+        <td th:text="${assessment.createdByName != null ? assessment.createdByName : 'Unknown'}">Preparer</td>
+        <td class="label">Validated By</td>
+        <td th:text="${assessment.validatedByName != null ? assessment.validatedByName + ' on ' + #temporals.format(assessment.validatedAt, 'dd MMM yyyy') : 'Pending validation'}">Validator</td>
+    </tr>
+</table>
+
+<h2 class="section-title">Stakeholder Engagement Scope</h2>
+<p class="section-intro">Stakeholder groups consulted or considered when identifying and prioritising sustainability matters for this assessment.</p>
+<div class="stakeholder-list">
+    <span th:each="stakeholder : ${stakeholders}" class="stakeholder-chip" th:text="${stakeholder}">Stakeholder</span>
+    <p th:if="${#lists.isEmpty(stakeholders)}" class="empty-note">No stakeholder groups recorded.</p>
+</div>
+
+<h2 class="section-title">Materiality Matrix</h2>
+<p class="section-intro">Sustainability matters scored on Financial Materiality (effect on the business) and Impact Materiality (effect on economy, environment &amp; people), 1&#8211;5 scale, in Bursa Malaysia's Identify -&gt; Prioritise -&gt; Validate methodology.</p>
+
+<table class="matrix-table">
+    <thead>
+        <tr>
+            <th style="width: 26%;">Sustainability Matter</th>
+            <th style="width: 16%;">Category</th>
+            <th class="col-score">Financial</th>
+            <th class="col-score">Impact</th>
+            <th class="col-tier">Priority</th>
+            <th>Rationale</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="score, iter : ${scores}" th:class="${iter.odd} ? 'row-alt' : ''">
+            <td th:text="${score.matterName}">Matter</td>
+            <td th:text="${score.category}">Category</td>
+            <td class="col-score" th:text="${score.impact}">3</td>
+            <td class="col-score" th:text="${score.influence}">3</td>
+            <td class="col-tier">
+                <span th:if="${score.priorityTier == 'High Priority'}" class="tier-badge tier-high" th:text="${score.priorityTier}">High</span>
+                <span th:if="${score.priorityTier == 'Medium Priority'}" class="tier-badge tier-medium" th:text="${score.priorityTier}">Medium</span>
+                <span th:if="${score.priorityTier == 'Low Priority'}" class="tier-badge tier-low" th:text="${score.priorityTier}">Low</span>
+            </td>
+            <td th:text="${score.rationale != null ? score.rationale : '&#8212;'}">Rationale</td>
+        </tr>
+    </tbody>
+</table>
+<p th:if="${#lists.isEmpty(scores)}" class="empty-note">No sustainability matters were scored in this assessment.</p>
+
+<div class="footer-note">
+    Generated by WeSee on <span th:text="${#temporals.format(generatedAt, 'dd MMMM yyyy, HH:mm')}">date</span>.
+    This report reflects the materiality assessment as validated internally and is intended for Bursa Malaysia
+    sustainability reporting purposes. It is not an assured or audited document unless separately indicated.
+</div>
+
+</body>
+</html>

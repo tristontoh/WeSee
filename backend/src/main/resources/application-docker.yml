@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:db}:5432/${DB_NAME:wesee_esg}
+    username: ${DB_USERNAME:wesee}
+    password: ${DB_PASSWORD:wesee}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration

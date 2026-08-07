@@ -1,0 +1,611 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Integrated ESG Disclosure Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.4cm 1.8cm 2.2cm 1.8cm;
+            @bottom-left {
+                content: "WeSee ESG Reporting Platform";
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+        }
+
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            color: #1e293b;
+            font-size: 10.5pt;
+            line-height: 1.5;
+        }
+
+        .cover {
+            padding-bottom: 18pt;
+            border-bottom: 3px solid #0f172a;
+            margin-bottom: 20pt;
+        }
+
+        .brand {
+            font-size: 11pt;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-bottom: 4pt;
+        }
+
+        .cover-row {
+            width: 100%;
+        }
+
+        .doc-title {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 6pt 0 4pt 0;
+        }
+
+        .doc-subtitle {
+            font-size: 12pt;
+            color: #475569;
+        }
+
+        .confidential-pill {
+            display: inline-block;
+            white-space: nowrap;
+            font-size: 8.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3pt 9pt;
+            border-radius: 10pt;
+            margin-top: 8pt;
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        table.meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14pt 0 18pt 0;
+        }
+
+        table.meta-table td {
+            padding: 5pt 0;
+            font-size: 9.5pt;
+            vertical-align: top;
+        }
+
+        table.meta-table td.label {
+            width: 26%;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        h2.section-title {
+            font-size: 13pt;
+            color: #0f172a;
+            border-left: 4pt solid #0f172a;
+            padding-left: 8pt;
+            margin: 20pt 0 8pt 0;
+        }
+
+        h3.subsection-title {
+            font-size: 10.5pt;
+            color: #334155;
+            margin: 14pt 0 6pt 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        p.section-intro {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 0 0 10pt 0;
+        }
+
+        /* Disclosure completion stat tiles */
+        table.stat-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8pt 0;
+            margin-top: 4pt;
+        }
+
+        table.stat-table td {
+            width: 33.33%;
+            text-align: center;
+            background-color: #f8fafc;
+            border: 0.75pt solid #e2e8f0;
+            border-radius: 8pt;
+            padding: 12pt 6pt;
+        }
+
+        .stat-value {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #0f172a;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            display: block;
+            margin-top: 3pt;
+        }
+
+        .level-block {
+            margin-bottom: 10pt;
+            padding: 9pt 12pt;
+            border: 0.75pt solid #e2e8f0;
+            border-radius: 6pt;
+            background-color: #f8fafc;
+        }
+
+        .level-tag {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2pt 7pt;
+            border-radius: 8pt;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin-bottom: 5pt;
+        }
+
+        .level-role {
+            font-size: 10.5pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6pt;
+        }
+
+        table.data-table th {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            text-align: left;
+            padding: 6pt 7pt;
+        }
+
+        table.data-table td {
+            font-size: 9pt;
+            padding: 6pt 7pt;
+            border-bottom: 0.75pt solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        table.data-table tr.row-alt td {
+            background-color: #f8fafc;
+        }
+
+        .col-score, .col-center {
+            text-align: center;
+        }
+
+        .tier-badge, .status-badge {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 2pt 6pt;
+            border-radius: 8pt;
+        }
+
+        .tier-high { background-color: #fee2e2; color: #991b1b; }
+        .tier-medium { background-color: #fef3c7; color: #92400e; }
+        .tier-low { background-color: #e2e8f0; color: #475569; }
+
+        .status-current { background-color: #d1fae5; color: #065f46; }
+        .status-due-soon { background-color: #fef3c7; color: #92400e; }
+        .status-overdue { background-color: #fee2e2; color: #991b1b; }
+        .status-not-established { background-color: #e2e8f0; color: #475569; }
+
+        .empty-note {
+            font-size: 9.5pt;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .ownership-note {
+            font-size: 9.5pt;
+            color: #334155;
+            margin: 8pt 0;
+            padding: 8pt 10pt;
+            background-color: #f1f5f9;
+            border-radius: 6pt;
+        }
+
+        .assurance-block {
+            margin-top: 10pt;
+            padding: 12pt 14pt;
+            background-color: #0f172a;
+            border-radius: 8pt;
+            color: #f8fafc;
+        }
+
+        .assurance-block .checksum {
+            font-family: "Courier New", monospace;
+            font-size: 10pt;
+            color: #86efac;
+            font-weight: bold;
+        }
+
+        .assurance-block .status-line {
+            font-size: 9pt;
+            color: #cbd5e1;
+            margin-top: 6pt;
+        }
+
+        .footer-note {
+            margin-top: 22pt;
+            padding-top: 10pt;
+            border-top: 0.75pt solid #e2e8f0;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="brand">WeSee &#8212; ESG Reporting Platform</div>
+    <div class="doc-title">Integrated ESG Disclosure Report</div>
+    <div class="doc-subtitle" th:text="${company.name}">Company Name</div>
+    <span class="confidential-pill">Confidential &#8212; FY<span th:text="${fiscalYear}">2026</span></span>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label">Entity Name</td>
+        <td th:text="${company.name}">Entity</td>
+        <td class="label">Sector</td>
+        <td th:text="${company.sector != null ? company.sector.name : 'Not set'}">Sector</td>
+    </tr>
+    <tr>
+        <td class="label">Market Classification</td>
+        <td th:text="${company.marketClassification}">Market</td>
+        <td class="label">Subscription Plan</td>
+        <td th:text="${company.subscriptionPlan}">Plan</td>
+    </tr>
+    <tr>
+        <td class="label">Reporting Cycle</td>
+        <td th:text="'Annual (Fiscal Period FY' + ${fiscalYear} + ')'">Annual</td>
+        <td class="label">Authorized Reviewer</td>
+        <td th:text="${reviewerName}">Reviewer</td>
+    </tr>
+</table>
+
+<h2 class="section-title">1. Disclosure Completion Overview</h2>
+<p class="section-intro" th:text="'Data integrity readiness across the three fundamental pillars of the ' + ${frameworkLabel} + '.'">Data integrity readiness across the three fundamental pillars.</p>
+<table class="stat-table">
+    <tr>
+        <td>
+            <span class="stat-value" th:text="${materialityPercentage} + '%'">0%</span>
+            <span class="stat-label">Materiality Matrix</span>
+        </td>
+        <td>
+            <span class="stat-value" th:text="${governancePercentage} + '%'">0%</span>
+            <span class="stat-label">Board Oversight</span>
+        </td>
+        <td>
+            <span class="stat-value" th:text="${indicatorsPercentage} + '%'">0%</span>
+            <span class="stat-label" th:text="${filledIndicators} + ' of ' + ${#lists.size(indicators)} + ' Indicators Logged'">Indicators Logged</span>
+        </td>
+    </tr>
+</table>
+
+<h2 class="section-title">2. Prioritized Materiality Matters</h2>
+<p class="section-intro" th:if="${latestAssessment != null}"
+   th:text="'Sourced from assessment &#8220;' + ${latestAssessment.name} + '&#8221; (' + ${latestAssessment.status} + '), scored on Financial Materiality and Impact Materiality (1&#8211;5 scale).'">
+    Assessment summary
+</p>
+<table class="data-table" th:if="${!#lists.isEmpty(materialityScores)}">
+    <thead>
+        <tr>
+            <th style="width: 30%;">Sustainability Matter</th>
+            <th style="width: 18%;">Category</th>
+            <th class="col-score" style="width: 12%;">Financial</th>
+            <th class="col-score" style="width: 12%;">Impact</th>
+            <th>Priority</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="score, iter : ${materialityScores}" th:class="${iter.odd} ? 'row-alt' : ''">
+            <td th:text="${score.matterName}">Matter</td>
+            <td th:text="${score.category}">Category</td>
+            <td class="col-score" th:text="${score.impact}">3</td>
+            <td class="col-score" th:text="${score.influence}">3</td>
+            <td>
+                <span th:if="${score.priorityTier == 'High Priority'}" class="tier-badge tier-high" th:text="${score.priorityTier}">High</span>
+                <span th:if="${score.priorityTier == 'Medium Priority'}" class="tier-badge tier-medium" th:text="${score.priorityTier}">Medium</span>
+                <span th:if="${score.priorityTier == 'Low Priority'}" class="tier-badge tier-low" th:text="${score.priorityTier}">Low</span>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<p th:if="${#lists.isEmpty(materialityScores)}" class="empty-note">No materiality assessment completed yet.</p>
+
+<h2 class="section-title">3. Governance &amp; Policy Status</h2>
+<div th:if="${governanceUnlocked}">
+    <h3 class="subsection-title">Corporate Oversight Structure</h3>
+    <div th:each="level : ${structure}" class="level-block">
+        <span class="level-tag" th:text="${level.level.name()}">OVERSIGHT</span>
+        <div class="level-role" th:text="${level.roleTitle != null ? level.roleTitle : 'Not yet assigned'}">Role</div>
+    </div>
+    <p th:if="${#lists.isEmpty(structure)}" class="empty-note">No oversight structure recorded.</p>
+
+    <p class="ownership-note" th:text="${#lists.size(ownership)} + ' sustainability matter(s) have assigned ownership.'">
+        Ownership summary
+    </p>
+
+    <h3 class="subsection-title">Statutory Compliance Policies</h3>
+    <table class="data-table" th:if="${!#lists.isEmpty(policies)}">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Policy</th>
+                <th style="width: 20%;">Last Reviewed</th>
+                <th style="width: 20%;">Next Due</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="policy, iter : ${policies}" th:class="${iter.odd} ? 'row-alt' : ''">
+                <td th:text="${policy.name}">Policy</td>
+                <td th:text="${policy.lastReviewedAt != null ? #temporals.format(policy.lastReviewedAt, 'dd MMM yyyy') : 'Never'}">Never</td>
+                <td th:text="${policy.nextReviewDueAt != null ? #temporals.format(policy.nextReviewDueAt, 'dd MMM yyyy') : 'N/A'}">N/A</td>
+                <td>
+                    <span th:if="${policy.status.name() == 'CURRENT'}" class="status-badge status-current" th:text="${policy.status.name()}">CURRENT</span>
+                    <span th:if="${policy.status.name() == 'DUE_SOON'}" class="status-badge status-due-soon" th:text="${policy.status.name()}">DUE_SOON</span>
+                    <span th:if="${policy.status.name() == 'OVERDUE'}" class="status-badge status-overdue" th:text="${policy.status.name()}">OVERDUE</span>
+                    <span th:if="${policy.status.name() == 'NOT_ESTABLISHED'}" class="status-badge status-not-established" th:text="${policy.status.name()}">NOT_ESTABLISHED</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <p th:if="${#lists.isEmpty(policies)}" class="empty-note">No compliance policies recorded.</p>
+</div>
+<p th:unless="${governanceUnlocked}" class="empty-note">Governance module requires the Growth plan or above &#8212; not included in this disclosure cycle.</p>
+
+<h2 class="section-title">4. Key ESG Indicators Performance</h2>
+<p class="section-intro" th:text="'Reported values against target for Fiscal Year ' + ${fiscalYear} + '.'">Indicators summary</p>
+<table class="data-table" th:if="${!#lists.isEmpty(indicators)}">
+    <thead>
+        <tr>
+            <th style="width: 34%;">Indicator</th>
+            <th style="width: 18%;">Category</th>
+            <th class="col-center" style="width: 24%;">Value</th>
+            <th class="col-center">Target</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="ind, iter : ${indicators}" th:class="${iter.odd} ? 'row-alt' : ''"
+            th:with="value=${indicatorValueById.get(ind.id)}">
+            <td th:text="${ind.name}">Indicator</td>
+            <td th:text="${ind.category}">Category</td>
+            <td class="col-center" th:text="${value != null ? value + ' ' + (ind.unit != null ? ind.unit : '') : 'N/A'}">N/A</td>
+            <td class="col-center" th:text="${ind.effectiveTarget != null ? ind.effectiveTarget + ' ' + (ind.unit != null ? ind.unit : '') : 'N/A'}">N/A</td>
+        </tr>
+    </tbody>
+</table>
+<p th:if="${#lists.isEmpty(indicators)}" class="empty-note">No indicators logged yet.</p>
+
+<h2 class="section-title">5. IFRS S1 &#8212; General Sustainability-related Disclosures</h2>
+<div th:if="${climateUnlocked}">
+    <div th:if="${s1 != null}">
+        <h3 class="subsection-title">Governance</h3>
+        <p class="section-intro" th:text="${s1.oversightDescription != null ? s1.oversightDescription : 'Not disclosed.'}">Oversight</p>
+        <table class="meta-table">
+            <tr>
+                <td class="label">Review Frequency</td>
+                <td th:text="${s1.reviewFrequency != null ? s1.reviewFrequency : 'Not set'}">Frequency</td>
+                <td class="label">Responsible Committee</td>
+                <td th:text="${s1.responsibleCommittee != null ? s1.responsibleCommittee : 'Not set'}">Committee</td>
+            </tr>
+        </table>
+
+        <h3 class="subsection-title">Risk Management</h3>
+        <p class="section-intro" th:text="'Identification & Prioritisation Process: ' + (${s1.identificationProcess} != null ? ${s1.identificationProcess} : 'Not disclosed.')">Identification process</p>
+        <p class="section-intro" th:text="'Integration Level: ' + (${s1.integrationLevel} != null ? ${s1.integrationLevel} : 'Not set')">Integration level</p>
+
+        <h3 class="subsection-title">Metrics, Targets &amp; Connected Information</h3>
+        <p class="section-intro" th:text="'Tracked Metrics: ' + (${s1.trackedMetrics} != null ? ${s1.trackedMetrics} : 'Not disclosed.')">Tracked metrics</p>
+        <p class="section-intro" th:text="'Targets Summary: ' + (${s1.targetsSummary} != null ? ${s1.targetsSummary} : 'Not disclosed.')">Targets summary</p>
+        <p class="section-intro" th:text="'Connected Information: ' + (${s1.connectedInformation} != null ? ${s1.connectedInformation} : 'Not disclosed.')">Connected information</p>
+    </div>
+
+    <h3 class="subsection-title">Strategy &#8212; Risks &amp; Opportunities by Business Segment</h3>
+    <p class="section-intro">Financially material sustainability risks and opportunities identified per principal business segment.</p>
+    <div th:each="segment : ${segments}">
+        <h3 class="subsection-title" th:text="${segment.name}">Segment</h3>
+        <table class="data-table" th:if="${!#lists.isEmpty(segment.items)}">
+            <thead>
+                <tr>
+                    <th style="width: 26%;">Title</th>
+                    <th style="width: 10%;">Type</th>
+                    <th style="width: 12%;">Horizon</th>
+                    <th style="width: 32%;">Description</th>
+                    <th class="col-center">Financial Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="item, iter : ${segment.items}" th:class="${iter.odd} ? 'row-alt' : ''">
+                    <td th:text="${item.title}">Title</td>
+                    <td>
+                        <span th:if="${item.type.name() == 'RISK'}" class="tier-badge tier-high" th:text="${item.type.name()}">RISK</span>
+                        <span th:if="${item.type.name() == 'OPPORTUNITY'}" class="tier-badge status-current" th:text="${item.type.name()}">OPPORTUNITY</span>
+                    </td>
+                    <td th:text="${item.horizon}">Horizon</td>
+                    <td th:text="${item.description}">Description</td>
+                    <td class="col-center" th:text="${item.financialImpact != null ? item.financialImpact + ' ' + item.currency : 'N/A'}">N/A</td>
+                </tr>
+            </tbody>
+        </table>
+        <p th:if="${#lists.isEmpty(segment.items)}" class="empty-note">No risks or opportunities logged for this segment.</p>
+    </div>
+    <p th:if="${#lists.isEmpty(segments)}" class="empty-note">No business segments configured yet.</p>
+</div>
+<p th:unless="${climateUnlocked}" class="empty-note">IFRS S1/S2 climate disclosures require the Issuer-Ready plan &#8212; not included in this disclosure cycle.</p>
+
+<h2 class="section-title">6. IFRS S2 &#8212; Climate-Related Disclosures</h2>
+<div th:if="${climateUnlocked and s2 != null}">
+    <h3 class="subsection-title">Governance</h3>
+    <p class="section-intro" th:text="${s2.oversightDescription != null ? s2.oversightDescription : 'Not disclosed.'}">Oversight</p>
+    <table class="meta-table">
+        <tr>
+            <td class="label">Review Frequency</td>
+            <td th:text="${s2.reviewFrequency != null ? s2.reviewFrequency : 'Not set'}">Frequency</td>
+            <td class="label">Responsible Committee</td>
+            <td th:text="${s2.responsibleCommittee != null ? s2.responsibleCommittee : 'Not set'}">Committee</td>
+        </tr>
+    </table>
+
+    <h3 class="subsection-title">Strategy</h3>
+    <p class="section-intro" th:text="'Physical Risks: ' + (${s2.physicalRisks} != null ? ${s2.physicalRisks} : 'Not disclosed.')">Physical risks</p>
+    <p class="section-intro" th:text="'Transition Plan: ' + (${s2.transitionPlan} != null ? ${s2.transitionPlan} : 'Not disclosed.')">Transition plan</p>
+    <p class="section-intro" th:text="'Climate Resilience: ' + (${s2.climateResilience} != null ? ${s2.climateResilience} : 'Not disclosed.')">Climate resilience</p>
+
+    <h3 class="subsection-title">Risk Management</h3>
+    <p class="section-intro" th:text="'Risk Identification Process: ' + (${s2.identificationProcess} != null ? ${s2.identificationProcess} : 'Not disclosed.')">Identification process</p>
+    <p class="section-intro" th:text="'Integration Level: ' + (${s2.integrationLevel} != null ? ${s2.integrationLevel} : 'Not set')">Integration level</p>
+
+    <h3 class="subsection-title">Metrics &amp; Targets</h3>
+    <p class="section-intro" th:text="'Tracked Metrics: ' + (${s2.trackedMetrics} != null ? ${s2.trackedMetrics} : 'Not disclosed.')">Tracked metrics</p>
+    <p class="section-intro" th:text="'Reduction Targets: ' + (${s2.reductionTargets} != null ? ${s2.reductionTargets} : 'Not disclosed.')">Reduction targets</p>
+    <p class="section-intro" th:text="'Internal Carbon Price: ' + (${s2.carbonPriceValue} != null ? (${s2.carbonPriceValue} + ' ' + ${s2.carbonPriceCurrency} + ' per tCO2e') : 'Not disclosed')">Carbon price</p>
+    <p class="section-intro" th:text="'Carbon Pricing in Decision-Making: ' + (${s2.carbonPricing} != null ? ${s2.carbonPricing} : 'Not disclosed.')">Carbon pricing narrative</p>
+
+    <h4 class="subsection-title" style="font-size: 11px;">Cross-Industry Metrics</h4>
+    <table class="meta-table">
+        <tr>
+            <td class="label">% Assets Vulnerable — Transition Risk</td>
+            <td th:text="${s2.transitionRiskAssetPct != null ? s2.transitionRiskAssetPct + '%' : 'Not disclosed'}">%</td>
+            <td class="label">% Assets Vulnerable — Physical Risk</td>
+            <td th:text="${s2.physicalRiskAssetPct != null ? s2.physicalRiskAssetPct + '%' : 'Not disclosed'}">%</td>
+        </tr>
+        <tr>
+            <td class="label">% Assets Aligned with Climate Opportunities</td>
+            <td th:text="${s2.climateOpportunityAssetPct != null ? s2.climateOpportunityAssetPct + '%' : 'Not disclosed'}">%</td>
+            <td class="label">Capex/Financing Toward Climate</td>
+            <td th:text="${s2.climateCapex != null ? (s2.climateCapex + ' ' + s2.climateCapexCurrency) : 'Not disclosed'}">Capex</td>
+        </tr>
+        <tr>
+            <td class="label">Executive Remuneration Linked to Climate</td>
+            <td colspan="3" th:text="${s2.executiveRemunerationLinked != null and s2.executiveRemunerationLinked ? (s2.executiveRemunerationDescription != null ? s2.executiveRemunerationDescription : 'Yes') : 'Not linked'}">Remuneration</td>
+        </tr>
+    </table>
+
+    <h3 class="subsection-title" th:text="'Greenhouse Gas Emissions &#8212; FY' + ${fiscalYear}">GHG Emissions</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Scope</th>
+                <th class="col-center">Value (tCO2e)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Scope 1 &#8212; Direct Emissions</td>
+                <td class="col-center" th:text="${scope1Value != null ? scope1Value : 'N/A'}">N/A</td>
+            </tr>
+            <tr class="row-alt">
+                <td>Scope 2 &#8212; Indirect (Purchased Energy)</td>
+                <td class="col-center" th:text="${scope2Value != null ? scope2Value : 'N/A'}">N/A</td>
+            </tr>
+            <tr>
+                <td>Scope 3 &#8212; Value Chain (All Categories)</td>
+                <td class="col-center" th:text="${scope3Total != null ? scope3Total : 'N/A'}">N/A</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="data-table" th:if="${!#lists.isEmpty(scope3Categories)}">
+        <thead>
+            <tr>
+                <th style="width: 60%;">Scope 3 Category</th>
+                <th class="col-center">Value (tCO2e), FY<span th:text="${fiscalYear}">2026</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="cat, iter : ${scope3Categories}" th:class="${iter.odd} ? 'row-alt' : ''">
+                <td th:text="${cat.name}">Category</td>
+                <td class="col-center" th:text="${scope3ValueByCategoryId.get(cat.id) != null ? scope3ValueByCategoryId.get(cat.id) : 'N/A'}">N/A</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p th:unless="${climateUnlocked}" class="empty-note">IFRS S1/S2 climate disclosures require the Issuer-Ready plan &#8212; not included in this disclosure cycle.</p>
+
+<h2 class="section-title">7. Assurance &amp; Verification</h2>
+<p class="section-intro">This document is prepared via the WeSee ESG compliance platform.</p>
+
+<table class="meta-table" th:if="${signOff != null}">
+    <tr>
+        <td class="label">Sign-Off Status</td>
+        <td>
+            <span th:if="${signOff.status().name() == 'SIGNED'}" class="status-badge status-current">Signed</span>
+            <span th:if="${signOff.status().name() == 'REVOKED'}" class="status-badge status-overdue">Revoked</span>
+        </td>
+        <td class="label">Assurance Level</td>
+        <td th:switch="${signOff.assuranceLevel() != null ? signOff.assuranceLevel().name() : 'NONE'}">
+            <span th:case="'INTERNAL_REVIEW'">Internal Review</span>
+            <span th:case="'EXTERNAL_LIMITED'">External Limited Assurance</span>
+            <span th:case="'EXTERNAL_REASONABLE'">External Reasonable Assurance</span>
+            <span th:case="*">Not set</span>
+        </td>
+    </tr>
+    <tr>
+        <td class="label">Signed By</td>
+        <td th:text="${signOff.signerName() != null ? signOff.signerName() + (signOff.signerTitle() != null ? ' (' + signOff.signerTitle() + ')' : '') : 'Not yet signed'}">Signer</td>
+        <td class="label">Signed On</td>
+        <td th:text="${signOff.signedAt() != null ? #temporals.format(signOff.signedAt(), 'dd MMMM yyyy') : 'N/A'}">Date</td>
+    </tr>
+    <tr>
+        <td class="label">External Assurer</td>
+        <td th:text="${signOff.externalAssurerName() != null ? signOff.externalAssurerName() : 'Not disclosed'}">Assurer</td>
+        <td class="label">Standard Referenced</td>
+        <td th:text="${signOff.standardReferenced() != null ? signOff.standardReferenced() : 'Not disclosed'}">Standard</td>
+    </tr>
+    <tr th:if="${signOff.nextExternalAssuranceDeadline() != null}">
+        <td class="label">Mandatory External Assurance Due</td>
+        <td colspan="3" th:text="${#temporals.format(signOff.nextExternalAssuranceDeadline(), 'dd MMMM yyyy')} + ' — Bursa Malaysia phased requirement for reasonable assurance over Scope 1/2 emissions.'">Deadline</td>
+    </tr>
+</table>
+<p th:if="${signOff == null}" class="empty-note">No sign-off record exists for FY<span th:text="${fiscalYear}">2026</span> yet &#8212; this disclosure has not been through corporate sign-off.</p>
+
+<div class="assurance-block">
+    <div>Verification Checksum: <span class="checksum" th:text="'WESEE-SHA256-' + ${checksum}">WESEE-SHA256-XXXXXXXXXXXX</span></div>
+    <div class="status-line" th:text="${signOff != null and signOff.status().name() == 'SIGNED'} ? 'Status: Signed and verified &#8212; see Export History for the full sign-off audit trail.' : 'Status: Draft &#8212; Ready for Corporate Sign-Off (see Export History for sign-off record)'">Status</div>
+</div>
+
+<div class="footer-note">
+    Generated by WeSee on <span th:text="${#temporals.format(generatedAt, 'dd MMMM yyyy, HH:mm')}">date</span>
+    for <span th:text="${reviewerName}">Reviewer</span>. This report reflects data recorded in the platform as of the
+    generation timestamp above and is intended for Bursa Malaysia sustainability reporting purposes.
+</div>
+
+</body>
+</html>

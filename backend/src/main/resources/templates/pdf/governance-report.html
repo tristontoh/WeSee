@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Governance &amp; Compliance Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.4cm 1.8cm 2.2cm 1.8cm;
+            @bottom-left {
+                content: "WeSee ESG Reporting Platform";
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+        }
+
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            color: #1e293b;
+            font-size: 10.5pt;
+            line-height: 1.5;
+        }
+
+        .cover {
+            padding-bottom: 18pt;
+            border-bottom: 3px solid #0f172a;
+            margin-bottom: 20pt;
+        }
+
+        .brand {
+            font-size: 11pt;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-bottom: 4pt;
+        }
+
+        .doc-title {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 6pt 0 4pt 0;
+        }
+
+        .doc-subtitle {
+            font-size: 12pt;
+            color: #475569;
+        }
+
+        table.meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14pt 0 18pt 0;
+        }
+
+        table.meta-table td {
+            padding: 5pt 0;
+            font-size: 9.5pt;
+            vertical-align: top;
+        }
+
+        table.meta-table td.label {
+            width: 34%;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+        }
+
+        h2.section-title {
+            font-size: 13pt;
+            color: #0f172a;
+            border-left: 4pt solid #0f172a;
+            padding-left: 8pt;
+            margin: 20pt 0 8pt 0;
+        }
+
+        p.section-intro {
+            font-size: 9.5pt;
+            color: #475569;
+            margin: 0 0 10pt 0;
+        }
+
+        .level-block {
+            margin-bottom: 12pt;
+            padding: 10pt 12pt;
+            border: 0.75pt solid #e2e8f0;
+            border-radius: 6pt;
+            background-color: #f8fafc;
+        }
+
+        .level-tag {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2pt 7pt;
+            border-radius: 8pt;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin-bottom: 5pt;
+        }
+
+        .level-role {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 3pt;
+        }
+
+        .level-description {
+            font-size: 9pt;
+            color: #475569;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6pt;
+        }
+
+        table.data-table th {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            text-align: left;
+            padding: 6pt 7pt;
+        }
+
+        table.data-table td {
+            font-size: 9pt;
+            padding: 6pt 7pt;
+            border-bottom: 0.75pt solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        table.data-table tr.row-alt td {
+            background-color: #f8fafc;
+        }
+
+        .status-badge {
+            display: inline-block;
+            font-size: 7.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 2pt 6pt;
+            border-radius: 8pt;
+        }
+
+        .status-current {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-due-soon {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-overdue {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-not-established {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .empty-note {
+            font-size: 9.5pt;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .footer-note {
+            margin-top: 22pt;
+            padding-top: 10pt;
+            border-top: 0.75pt solid #e2e8f0;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <div class="brand">WeSee &#8212; ESG Reporting Platform</div>
+    <div class="doc-title">Governance &amp; Compliance Report</div>
+    <div class="doc-subtitle" th:text="${company.name}">Company Name</div>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label">Market Classification</td>
+        <td th:text="${company.marketClassification}">Market</td>
+        <td class="label">Subscription Plan</td>
+        <td th:text="${company.subscriptionPlan}">Plan</td>
+    </tr>
+    <tr>
+        <td class="label">Report Generated</td>
+        <td th:text="${#temporals.format(generatedAt, 'dd MMMM yyyy, HH:mm')}">1 Jan 2026</td>
+        <td class="label"></td>
+        <td></td>
+    </tr>
+</table>
+
+<h2 class="section-title">Corporate Oversight Structure</h2>
+<p class="section-intro">Three-tier governance hierarchy responsible for ESG strategy, oversight, and operational implementation.</p>
+<div th:each="level : ${structure}" class="level-block">
+    <span class="level-tag" th:text="${level.level.name()}">OVERSIGHT</span>
+    <div class="level-role" th:text="${level.roleTitle != null ? level.roleTitle : 'Not yet assigned'}">Role</div>
+    <div class="level-description" th:text="${level.description != null ? level.description : 'No charter recorded.'}">Description</div>
+</div>
+<p th:if="${#lists.isEmpty(structure)}" class="empty-note">No oversight structure recorded.</p>
+
+<h2 class="section-title">Sustainability Matter Ownership</h2>
+<p class="section-intro">Assigned owners and escalation level for each applicable sustainability matter.</p>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 28%;">Sustainability Matter</th>
+            <th style="width: 24%;">Owner</th>
+            <th style="width: 16%;">Oversight Level</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="row, iter : ${ownership}" th:class="${iter.odd} ? 'row-alt' : ''">
+            <td th:text="${row.matterName}">Matter</td>
+            <td th:text="${row.ownerName}">Owner</td>
+            <td th:text="${row.oversightLevel.name()}">OVERSIGHT</td>
+            <td th:text="${row.notes != null ? row.notes : '&#8212;'}">Notes</td>
+        </tr>
+    </tbody>
+</table>
+<p th:if="${#lists.isEmpty(ownership)}" class="empty-note">No sustainability matters recorded.</p>
+
+<h2 class="section-title">Statutory Compliance Policies</h2>
+<p class="section-intro">Bursa Malaysia and MACC Act mandated policies, review cycles, and current status.</p>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 36%;">Policy</th>
+            <th style="width: 14%;">Review Cycle</th>
+            <th style="width: 18%;">Last Reviewed</th>
+            <th style="width: 18%;">Next Due</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="policy, iter : ${policies}" th:class="${iter.odd} ? 'row-alt' : ''">
+            <td th:text="${policy.name}">Policy</td>
+            <td th:text="${policy.reviewCycleMonths} + ' months'">36 months</td>
+            <td th:text="${policy.lastReviewedAt != null ? #temporals.format(policy.lastReviewedAt, 'dd MMM yyyy') : 'Never'}">Never</td>
+            <td th:text="${policy.nextReviewDueAt != null ? #temporals.format(policy.nextReviewDueAt, 'dd MMM yyyy') : 'N/A'}">N/A</td>
+            <td>
+                <span th:if="${policy.status.name() == 'CURRENT'}" class="status-badge status-current" th:text="${policy.status.name()}">CURRENT</span>
+                <span th:if="${policy.status.name() == 'DUE_SOON'}" class="status-badge status-due-soon" th:text="${policy.status.name()}">DUE_SOON</span>
+                <span th:if="${policy.status.name() == 'OVERDUE'}" class="status-badge status-overdue" th:text="${policy.status.name()}">OVERDUE</span>
+                <span th:if="${policy.status.name() == 'NOT_ESTABLISHED'}" class="status-badge status-not-established" th:text="${policy.status.name()}">NOT_ESTABLISHED</span>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<p th:if="${#lists.isEmpty(policies)}" class="empty-note">No compliance policies recorded.</p>
+
+<div class="footer-note">
+    Generated by WeSee on <span th:text="${#temporals.format(generatedAt, 'dd MMMM yyyy, HH:mm')}">date</span>.
+    This report reflects the governance and compliance data as currently recorded in the platform and is intended
+    for Bursa Malaysia sustainability reporting purposes.
+</div>
+
+</body>
+</html>

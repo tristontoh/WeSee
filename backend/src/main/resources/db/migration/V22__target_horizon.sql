@@ -1,0 +1,1 @@
+ALTER TABLE performance_target ADD COLUMN horizon VARCHAR(20) NOT NULL DEFAULT 'NEAR_TERM' CHECK (horizon IN ('NEAR_TERM', 'LONG_TERM'));

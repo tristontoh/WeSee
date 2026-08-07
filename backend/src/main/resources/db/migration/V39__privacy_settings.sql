@@ -1,0 +1,4 @@
+ALTER TABLE company ADD COLUMN marketing_consent BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE company ADD COLUMN analytics_consent BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE company ADD COLUMN consent_updated_at TIMESTAMPTZ NULL;
+ALTER TABLE company ADD COLUMN closed_at TIMESTAMPTZ NULL;
