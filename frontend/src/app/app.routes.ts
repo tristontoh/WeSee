@@ -4,6 +4,10 @@ import { authGuard, guestGuard } from './core/auth.guard';
 
 export const routes: Routes = [
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./screens/auth/login/login.component').then((m) => m.LoginComponent) },
+  { path: 'register', canActivate: [guestGuard], loadComponent: () => import('./screens/auth/register/register.component').then((m) => m.RegisterComponent) },
+  // Deliberately unguarded: a logged-in user clicking a verification link should see the
+  // result rather than be bounced to the dashboard.
+  { path: 'verify-email', loadComponent: () => import('./screens/auth/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent) },
   { path: 'loading', loadComponent: () => import('./screens/loading/loading.component').then((m) => m.LoadingComponent) },
   { path: 'puzzle', loadComponent: () => import('./screens/puzzle/puzzle.component').then((m) => m.PuzzleComponent) },
 
