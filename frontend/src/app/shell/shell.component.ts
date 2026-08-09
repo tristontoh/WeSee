@@ -3,9 +3,8 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { AppStateService } from '../core/app-state.service';
 import { UiService } from '../core/ui.service';
-import { AuthService } from '../core/auth.service';
+import { SessionService } from '../core/auth/session.service';
 import { NOTIFICATIONS } from '../core/mock-data';
-import { TenantKey } from '../core/nav';
 import { ToastComponent } from '../overlays/toast.component';
 import { SupplierDrawerComponent } from '../overlays/supplier-drawer.component';
 import { EvidenceDrawerComponent } from '../overlays/evidence-drawer.component';
@@ -29,7 +28,7 @@ import { ConfirmDialogComponent } from '../overlays/confirm-dialog.component';
 export class ShellComponent {
   state = inject(AppStateService);
   ui = inject(UiService);
-  private auth = inject(AuthService);
+  private auth = inject(SessionService);
   private router = inject(Router);
 
   notifications = NOTIFICATIONS;
@@ -46,10 +45,6 @@ export class ShellComponent {
 
   isActive(path: string) {
     return this.state.currentUrl() === path;
-  }
-
-  setTenant(t: TenantKey) {
-    this.state.setTenant(t);
   }
 
   go(path: string) {
@@ -77,7 +72,7 @@ export class ShellComponent {
 
   signOut() {
     this.ui.closeProfile();
-    this.auth.logout();
+    this.auth.clear();
     this.router.navigateByUrl('/login');
   }
 }

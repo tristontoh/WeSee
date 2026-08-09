@@ -2,16 +2,16 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
-import { DEFAULT_ROUTE, NAV, SCREEN_TITLES, TenantKey } from './nav';
+import { NAV, SCREEN_TITLES, TenantKey } from './nav';
 import { TENANT_META, initialsOf } from './tenant-meta';
-import { AuthService } from './auth.service';
+import { SessionService } from './auth/session.service';
 
 const USERNAME_KEY = 'wesee_username';
 
 @Injectable({ providedIn: 'root' })
 export class AppStateService {
   private router = inject(Router);
-  private auth = inject(AuthService);
+  private auth = inject(SessionService);
 
   /** Independent client state, but kept in sync with the route below — /settings is the
    * one route reachable from any tenant, so it deliberately leaves `tenant` untouched. */
@@ -28,19 +28,16 @@ export class AppStateService {
   );
 
   constructor() {
-    effect(() => {
-      const url = this.currentUrl();
-      if (url.startsWith('/compliance-hub')) this.tenant.set('compliance-hub');
-      else if (url.startsWith('/admin')) this.tenant.set('admin');
-      else if (url !== '/settings') this.tenant.set('workspace');
-    });
+    // Derived from the session, not from the URL: the backend decides what this user may
+    // see via role and subscription plan, so the nav follows that rather than the route.
+    effect(() => this.tenant.set(this.auth.navKey()));
   }
 
   meta = computed(() => TENANT_META[this.tenant()]);
 
   /** Tenant's placeholder user, overridden by whatever email was used to log in. */
   private baseUser = computed(() => {
-    const email = this.auth.loggedInEmail();
+    const email = this.auth.email();
     const fallback = this.meta().user;
     if (!email) return fallback;
     const localPart = email.split('@')[0] || '';
@@ -59,11 +56,6 @@ export class AppStateService {
 
   navItems = computed(() => NAV[this.tenant()]);
   screenTitle = computed(() => SCREEN_TITLES[this.currentUrl()] ?? '');
-
-  setTenant(t: TenantKey) {
-    this.tenant.set(t);
-    this.router.navigateByUrl(DEFAULT_ROUTE[t]);
-  }
 
   setUsername(v: string) {
     const trimmed = v.trim();

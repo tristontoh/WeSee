@@ -2,8 +2,17 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { UiService } from '../../../core/ui.service';
-import { ApiService, CarbonOverview } from '../../../core/api.service';
 import { CAT_BARS } from '../../../core/mock-data';
+
+/** Shapes the M3 milestone will fetch from /api/v1/indicators and /api/v1/climate.
+ * Declared locally so nothing imports the deleted FastAPI-era ApiService. */
+interface CarbonOverview {
+  total_tco2e: number;
+  scope1: number;
+  scope2: number;
+  scope3: number;
+  target_progress_pct: number;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -101,13 +110,13 @@ import { CAT_BARS } from '../../../core/mock-data';
 })
 export class DashboardComponent implements OnInit {
   private ui = inject(UiService);
-  private api = inject(ApiService);
   private router = inject(Router);
   catBars = CAT_BARS;
 
   @ViewChild('billInput') billInput!: ElementRef<HTMLInputElement>;
 
-  /** Live overview from the gateway; null until loaded → design values shown as fallback. */
+  /** Live emissions data returns in M3 (indicators + climate). Until then this stays null
+   * and the screen renders the design fallbacks below. */
   private carbon = signal<CarbonOverview | null>(null);
   busy = signal(false);
 
@@ -129,12 +138,7 @@ export class DashboardComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.api.getCarbon().subscribe({
-      next: (c) => this.carbon.set(c),
-      error: () => {
-        /* keep design fallbacks if the gateway is unreachable */
-      },
-    });
+    // Emissions ingest and dashboard data land in M3. Nothing to fetch yet.
   }
 
   private denom(): number {
@@ -160,22 +164,9 @@ export class DashboardComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    this.busy.set(true);
-    this.ui.showToast('Extracting emissions from ' + file.name + '…');
-    this.api.ingestBill(file).subscribe({
-      next: (rec) => {
-        // Pull the refreshed overview so the new record is reflected in the totals.
-        this.api.getCarbon().subscribe({ next: (c) => this.carbon.set(c), error: () => {} });
-        this.busy.set(false);
-        this.ui.showToast(
-          `Certified ${rec.activity_type} · +${rec.tco2e.toFixed(1)} tCO₂e (ledger ${(rec.ledger_tx_id || '').slice(0, 8)}…)`,
-        );
-      },
-      error: () => {
-        this.busy.set(false);
-        this.ui.showToast('Ingestion failed — is the backend running on :8000?');
-      },
-    });
+    // Bill ingestion has no endpoint on the ESG backend; it returns with M3.
+    this.busy.set(false);
+    this.ui.showToast('Document ingestion arrives in a later milestone.');
     input.value = ''; // allow re-picking the same file
   }
 

@@ -1,10 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { AuthService } from '../../../core/auth.service';
-import { ApiService } from '../../../core/api.service';
+import { Router, RouterLink } from '@angular/router';
+import { AuthApiService } from '../../../core/auth/auth-api.service';
+import { SessionService } from '../../../core/auth/session.service';
+import { MeResponse } from '../../../core/auth/session.model';
+import { PlanGateService } from '../../../core/plan/plan-gate.service';
+import { toApiError } from '../../../core/http/api-error';
 
-type Step = 'email' | 'password';
+type Step = 'email' | 'password' | 'mfa';
 type Focus = 'email' | 'pw' | null;
 
 const ACTIVE_BORDER = 'rgba(255,255,255,.7)';
@@ -15,7 +18,7 @@ const EYE_CLOSED = 'M17.9 17.9A9.8 9.8 0 0112 20c-6.5 0-10-8-10-8a17 17 0 013.2-
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div style="position:relative;width:100%;height:100vh;min-height:660px;overflow:hidden;background:#0A0E27;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-family:'Inter Tight',system-ui,sans-serif;-webkit-font-smoothing:antialiased;">
 
@@ -56,24 +59,7 @@ const EYE_CLOSED = 'M17.9 17.9A9.8 9.8 0 0112 20c-6.5 0-10-8-10-8a17 17 0 013.2-
             <span>Next</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0A0E27" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
           </button>
 
-          <div style="display:flex;align-items:center;gap:14px;margin:24px 0 18px;">
-            <div style="flex:1;height:1px;background:rgba(255,255,255,.18);"></div>
-            <span style="font-size:11.5px;color:rgba(255,255,255,.55);letter-spacing:.5px;">OR CONTINUE WITH</span>
-            <div style="flex:1;height:1px;background:rgba(255,255,255,.18);"></div>
-          </div>
-
-          <div style="display:flex;gap:10px;">
-            <button class="hover-frost2" style="flex:1;height:46px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;font-size:13.5px;font-weight:500;transition:background .15s;">
-              <span style="width:22px;height:22px;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.18);flex-shrink:0;"><img src="assets/google-logo.png" alt="Google" width="15" height="15" style="display:block;object-fit:contain;"></span>
-              Google
-            </button>
-            <button class="hover-frost2" style="flex:1;height:46px;border-radius:12px;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;gap:9px;color:#fff;font-size:13.5px;font-weight:500;transition:background .15s;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" style="width:26px;height:25px;"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.15-2.8.85-3.5.85-.7 0-1.85-.83-3-.8-1.55.02-3 .9-3.8 2.3-1.6 2.8-.4 7 1.15 9.3.76 1.1 1.66 2.35 2.85 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2-1.12 2.75-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.4-3.62zM14.1 5.9c.63-.77 1.06-1.83.94-2.9-.9.04-2 .6-2.66 1.36-.58.68-1.1 1.77-.96 2.8 1 .08 2.03-.5 2.68-1.26z"></path></svg>
-              Apple
-            </button>
-          </div>
-
-          <p style="text-align:center;margin:26px 0 0;font-size:13px;color:rgba(255,255,255,.68);"><a href="#" style="font-weight:600;color:#fff;">Create an account</a></p>
+          <p style="text-align:center;margin:26px 0 0;font-size:13px;color:rgba(255,255,255,.68);"><a routerLink="/register" style="font-weight:600;color:#fff;">Create an account</a></p>
         </div>
 
         <!-- ================= STEP 2 · PASSWORD ================= -->
@@ -98,10 +84,25 @@ const EYE_CLOSED = 'M17.9 17.9A9.8 9.8 0 0112 20c-6.5 0-10-8-10-8a17 17 0 013.2-
 
           <div *ngIf="error()" style="margin-top:14px;font-size:12.5px;color:#FFD8D2;background:rgba(192,69,59,.2);border:1px solid rgba(255,120,100,.4);padding:10px 13px;border-radius:11px;line-height:1.4;">{{ error() }}</div>
 
+          <button *ngIf="needsVerification()" (click)="resend()" type="button" style="margin-top:10px;width:100%;height:42px;border-radius:11px;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:13.5px;">Resend verification email</button>
+
           <button (click)="submit()" class="hover-lift" style="margin-top:22px;width:100%;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.5);cursor:pointer;font-family:'Sora',sans-serif;font-weight:600;font-size:15px;color:#0A0E27;background:linear-gradient(180deg,#ffffff,#E9EEFF);box-shadow:0 10px 26px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .12s,box-shadow .18s;">
             <svg *ngIf="loading()" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0E27" stroke-width="2.4" style="animation:wsspin .8s linear infinite;"><path d="M21 12a9 9 0 11-6.2-8.5"></path></svg>
             <ng-container *ngIf="!loading()"><span>Sign in</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0A0E27" stroke-width="2.2"><path d="M20 6L9 17l-5-5"></path></svg></ng-container>
           </button>
+        </div>
+
+        <!-- ================= STEP 3 · MFA ================= -->
+        <div *ngIf="atMfa()" style="animation:wsstep .35s cubic-bezier(.2,.8,.2,1) both;">
+          <div style="text-align:center;margin-bottom:26px;">
+            <h1 style="font-family:'Sora',sans-serif;font-weight:600;font-size:27px;margin:0;letter-spacing:-.6px;">Two-factor code</h1>
+            <p style="margin:9px 0 0;font-size:14px;color:rgba(255,255,255,.82);line-height:1.5;">Enter the 6-digit code from your authenticator app.</p>
+          </div>
+          <div style="display:flex;align-items:center;border-radius:13px;padding:0 15px;height:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);">
+            <input [value]="mfaCode()" (input)="mfaCode.set($any($event.target).value)" (keydown.enter)="submitMfa()" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:18px;letter-spacing:6px;text-align:center;height:100%;">
+          </div>
+          <div *ngIf="error()" style="margin-top:14px;font-size:12.5px;color:#FFD8D2;background:rgba(192,69,59,.2);border:1px solid rgba(255,120,100,.4);padding:10px 13px;border-radius:11px;line-height:1.4;">{{ error() }}</div>
+          <button (click)="submitMfa()" class="hover-lift" style="margin-top:22px;width:100%;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.5);cursor:pointer;font-family:'Sora',sans-serif;font-weight:600;font-size:15px;color:#0A0E27;background:linear-gradient(180deg,#ffffff,#E9EEFF);box-shadow:0 10px 26px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.9);">Verify</button>
         </div>
 
       </div>
@@ -121,20 +122,25 @@ const EYE_CLOSED = 'M17.9 17.9A9.8 9.8 0 0112 20c-6.5 0-10-8-10-8a17 17 0 013.2-
   ],
 })
 export class LoginComponent {
-  private auth = inject(AuthService);
-  private api = inject(ApiService);
+  private session = inject(SessionService);
+  private api = inject(AuthApiService);
+  private gate = inject(PlanGateService);
   private router = inject(Router);
 
   step = signal<Step>('email');
   email = signal('');
   pw = signal('');
+  mfaCode = signal('');
+  private mfaToken = signal('');
   showPw = signal(false);
   focus = signal<Focus>(null);
   loading = signal(false);
   error = signal('');
+  needsVerification = signal(false);
 
   atEmail = computed(() => this.step() === 'email');
   atPassword = computed(() => this.step() === 'password');
+  atMfa = computed(() => this.step() === 'mfa');
   emailBorder = computed(() => (this.focus() === 'email' ? ACTIVE_BORDER : IDLE_BORDER));
   pwBorder = computed(() => (this.focus() === 'pw' ? ACTIVE_BORDER : IDLE_BORDER));
   eyeOpenPath = EYE_OPEN;
@@ -151,6 +157,7 @@ export class LoginComponent {
     this.pw.set('');
     this.showPw.set(false);
     this.error.set('');
+    this.needsVerification.set(false);
   }
 
   submit() {
@@ -159,21 +166,66 @@ export class LoginComponent {
     if (!pw || this.loading()) return;
     this.loading.set(true);
     this.error.set('');
+    this.needsVerification.set(false);
+
     this.api.login(email, pw).subscribe({
       next: (res) => {
-        this.auth.setSession(email, res.access_token, res.org_type);
-        const next =
-          res.org_type === 'compliance-hub' ? '/compliance-hub/overview' : res.org_type === 'admin' ? '/admin/tenants' : '/dashboard';
-        this.router.navigateByUrl('/loading?next=' + encodeURIComponent(next));
+        if (res.emailVerificationRequired) {
+          this.loading.set(false);
+          this.needsVerification.set(true);
+          this.error.set('Verify your email address before signing in.');
+          return;
+        }
+        if (res.mfaRequired && res.mfaToken) {
+          this.loading.set(false);
+          this.mfaToken.set(res.mfaToken);
+          this.step.set('mfa');
+          return;
+        }
+        if (res.auth) this.establish(res.auth.token, res.auth.user);
       },
       error: (err) => {
         this.loading.set(false);
+        const e = toApiError(err);
         this.error.set(
-          err?.status === 401
+          e.status === 401 || e.status === 400
             ? 'Incorrect email or password.'
-            : 'Could not reach the server. Is the gateway running on :8000?',
+            : e.status === 0
+              ? 'Could not reach the server. Is the backend running on :8080?'
+              : e.message,
         );
       },
     });
+  }
+
+  submitMfa() {
+    const code = this.mfaCode().trim();
+    if (!code || this.loading()) return;
+    this.loading.set(true);
+    this.error.set('');
+
+    this.api.verifyMfa(this.mfaToken(), code).subscribe({
+      next: (auth) => this.establish(auth.token, auth.user),
+      error: (err) => {
+        this.loading.set(false);
+        this.error.set(toApiError(err).status === 0 ? 'Could not reach the server.' : 'That code is not valid.');
+      },
+    });
+  }
+
+  resend() {
+    this.api.resendVerification(this.email().trim()).subscribe({
+      next: () => this.error.set('Verification email sent. Check the backend console if SMTP is off.'),
+      error: () => this.error.set('Could not resend the verification email.'),
+    });
+  }
+
+  private establish(token: string, user: MeResponse) {
+    this.session.setSession(token, user);
+    this.gate.load();
+    const next = { admin: '/admin/tenants', 'compliance-hub': '/compliance-hub/overview', workspace: '/dashboard' }[
+      this.session.navKey()
+    ];
+    this.router.navigateByUrl('/loading?next=' + encodeURIComponent(next));
   }
 }
