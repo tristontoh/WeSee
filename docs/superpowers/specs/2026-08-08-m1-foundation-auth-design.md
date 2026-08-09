@@ -179,18 +179,31 @@ Seeded matrix (13 flags): `dashboard`, `materiality`, `indicators`, `reports`, `
 
 ## Error handling
 
-**The backend returns `403` — not `401` — for unauthenticated requests.** Verified: `GET
-/api/v1/indicators` with no token returns 403, the same status as a plan-gated refusal. Spring
-Security's default entry point produces 403 here rather than 401.
+**The backend returns `403` — never `401` — for every authentication and authorization failure.**
+Measured against the running server:
 
-The interceptor therefore disambiguates on whether a token was sent:
+| Request | Status |
+|---|---|
+| `GET /auth/me`, no token | **403** |
+| `GET /auth/me`, expired/garbage token | **403** |
+| `GET /indicators`, valid token, insufficient role | **403** |
+| `GET /auth/me`, valid token | 200 |
+
+All three failures are indistinguishable by status code. An earlier draft of this spec proposed
+disambiguating on *whether a token was sent* — that is wrong, and E2E testing caught it: an expired
+token **is** sent, so it looked identical to a plan refusal and the session was never cleared.
+
+The working discriminator is the **endpoint**. `/auth/me` is gated on authentication alone — no
+role, no plan — so a 403 from it can only mean "not authenticated":
 
 | Case | Meaning | Action |
 |---|---|---|
-| 403, no token attached | session missing/expired | clear session, redirect `/login` |
-| 403, token attached | authorization or plan refusal | surface to the calling screen |
+| 401, any endpoint | session dead | clear session, redirect `/login` |
+| 403 from `/auth/me` | session dead (missing, expired, or tampered token) | clear session, redirect `/login` |
+| 403, no token attached | session dead | clear session, redirect `/login` |
+| 403 with token, any other endpoint | authorization or plan refusal | surface to the calling screen |
 
-Handling only `401` would mean the logged-out redirect never fires.
+Handling only `401` would mean the logged-out redirect never fires at all.
 
 `api-error.ts` normalizes Spring's error body into `{status, message, fieldErrors}` so forms can
 render per-field validation from `@Valid` failures (e.g. `RegisterRequest.password` requires ≥8

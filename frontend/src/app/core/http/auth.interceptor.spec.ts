@@ -62,6 +62,16 @@ describe('authInterceptor', () => {
     expect(navigatedTo).toBeNull();
   });
 
+  it('treats 403 from /auth/me as a dead session even WITH a token', () => {
+    // An expired or tampered token still gets sent, and the backend answers 403 — identical
+    // to a plan refusal. /auth/me needs only authentication, so a 403 there is unambiguous.
+    currentToken = 'expired.invalid.token';
+    http.get(`${API_BASE}/auth/me`).subscribe({ error: () => {} });
+    ctrl.expectOne(`${API_BASE}/auth/me`).flush(null, { status: 403, statusText: 'Forbidden' });
+    expect(cleared).toBe(true);
+    expect(navigatedTo).toBe('/login');
+  });
+
   it('treats 401 as a dead session regardless of token', () => {
     currentToken = 'abc123';
     http.get(`${API_BASE}/auth/me`).subscribe({ error: () => {} });
