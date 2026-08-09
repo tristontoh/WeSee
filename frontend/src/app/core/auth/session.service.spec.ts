@@ -80,6 +80,14 @@ describe('SessionService', () => {
     expect(fresh.user()?.email).toBe('kept@wesee.my');
   });
 
+  it('applyUser() replaces the cached user while keeping the token', () => {
+    svc.setSession('tok', user({ plan: 'STARTER' }));
+    svc.applyUser(user({ plan: 'ISSUER_READY' }));
+    expect(svc.token()).toBe('tok');
+    expect(svc.plan()).toBe('ISSUER_READY');
+    expect(svc.navKey()).toBe('compliance-hub');
+  });
+
   it('clears everything on logout', () => {
     svc.setSession('tok', user());
     svc.clear();

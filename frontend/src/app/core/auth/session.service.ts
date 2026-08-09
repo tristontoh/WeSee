@@ -42,6 +42,15 @@ export class SessionService implements TokenStore {
     writeString(USER_KEY, JSON.stringify(user));
   }
 
+  /**
+   * Replaces the cached user without touching the token. Used after a plan change or a company
+   * switch, both of which alter MeResponse — including `plan`, which drives navigation.
+   */
+  applyUser(user: MeResponse) {
+    this.userSignal.set(user);
+    writeString(USER_KEY, JSON.stringify(user));
+  }
+
   clear() {
     this.tokenSignal.set('');
     this.userSignal.set(null);
