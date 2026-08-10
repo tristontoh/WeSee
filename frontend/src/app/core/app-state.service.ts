@@ -35,6 +35,10 @@ export class AppStateService {
 
   meta = computed(() => TENANT_META[this.tenant()]);
 
+  /** Real company from the session; falls back to the tenant blurb for platform admins,
+   * who belong to no company. */
+  companyName = computed(() => this.auth.user()?.companyName || this.meta().sub);
+
   /** Tenant's placeholder user, overridden by whatever email was used to log in. */
   private baseUser = computed(() => {
     const email = this.auth.email();
