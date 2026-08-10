@@ -54,7 +54,12 @@ export class AppStateService {
   initials = computed(() => initialsOf(this.displayName()));
   user = computed(() => ({ ...this.baseUser(), name: this.displayName(), initials: this.initials() }));
 
-  navItems = computed(() => NAV[this.tenant()]);
+  navItems = computed(() => {
+    const isAdmin = this.auth.role() === 'COMPANY_ADMIN';
+    // Group is entirely COMPANY_ADMIN-gated on the backend, including its list endpoint,
+    // so hide it rather than render a section that will 403.
+    return NAV[this.tenant()].filter((n) => !n.adminOnly || isAdmin);
+  });
   screenTitle = computed(() => SCREEN_TITLES[this.currentUrl()] ?? '');
 
   setUsername(v: string) {

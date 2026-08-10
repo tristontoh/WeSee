@@ -29,6 +29,10 @@ export const routes: Routes = [
       // Settings (shared)
       { path: 'settings', loadComponent: () => import('./screens/settings/settings.component').then((m) => m.SettingsComponent) },
 
+      // Company
+      { path: 'team', loadComponent: () => import('./screens/company/team/team.component').then((m) => m.TeamComponent) },
+      { path: 'group', loadComponent: () => import('./screens/company/group/group.component').then((m) => m.GroupComponent) },
+
       // Compliance Hub
       { path: 'compliance-hub/overview', loadComponent: () => import('./screens/compliance-hub/overview/overview.component').then((m) => m.ComplianceHubOverviewComponent) },
       { path: 'compliance-hub/ledger', loadComponent: () => import('./screens/compliance-hub/ledger/ledger.component').then((m) => m.ComplianceHubLedgerComponent) },
