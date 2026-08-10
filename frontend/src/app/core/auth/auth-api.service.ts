@@ -41,4 +41,14 @@ export class AuthApiService {
   me(): Observable<MeResponse> {
     return this.http.get<MeResponse>(`${API_BASE}/auth/me`);
   }
+
+  /** Returns a fresh MeResponse; the session should be updated from it. */
+  completeOnboarding(body: {
+    market: string;
+    sectorCode: string | null;
+    frameworks: string[];
+    priorities: string[];
+  }): Observable<MeResponse> {
+    return this.http.patch<MeResponse>(`${API_BASE}/auth/onboarding`, body);
+  }
 }
