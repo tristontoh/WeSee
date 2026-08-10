@@ -1,8 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AppStateService } from '../../core/app-state.service';
 import { UiService } from '../../core/ui.service';
+import { CompanyApiService } from '../../core/company/company-api.service';
+import { CompanyResponse, CompanySizeBand, SIZE_BANDS } from '../../core/company/company.model';
+import { ReferenceApiService } from '../../core/reference/reference-api.service';
+import { PlanPricingResponse, SectorResponse } from '../../core/reference/reference.model';
+import { AuthApiService } from '../../core/auth/auth-api.service';
+import { SessionService } from '../../core/auth/session.service';
+import { SubscriptionPlan } from '../../core/auth/session.model';
+import { toApiError } from '../../core/http/api-error';
 
 @Component({
   selector: 'app-settings',
@@ -63,18 +71,43 @@ import { UiService } from '../../core/ui.service';
           <!-- PlanCard -->
           <div class="glass" style="border-radius:16px;padding:24px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span style="font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;">CURRENT PLAN</span><span style="font-size:11px;font-weight:600;color:#4C96B3;background:#E4EEF0;padding:4px 10px;border-radius:12px;">Active</span></div>
-            <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px;"><span style="font-family:'Work Sans',serif;font-size:40px;">RM19</span><span style="color:#8A968F;font-size:14px;">/month</span></div>
-            <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Workspace Starter</div>
-            <div style="font-size:12.5px;color:#8A968F;margin-bottom:20px;">Renews 1 Aug 2026 · Visa ···· 4291</div>
-            <button (click)="manageSubscription()" class="btn-frost" style="width:100%;justify-content:center;">Manage subscription</button>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:4px;"><span style="font-family:'Work Sans',serif;font-size:40px;">{{ planPrice() }}</span><span *ngIf="planPrice() !== '—'" style="color:#8A968F;font-size:14px;">/month</span></div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:2px;">{{ currentPlan() || '—' }}</div>
+            <div style="font-size:12.5px;color:#8A968F;margin-bottom:20px;">{{ company()?.name || 'Loading…' }}</div>
+
+            <div *ngIf="canEditCompany()">
+              <div style="font-size:12.5px;font-weight:600;color:#33413A;margin-bottom:8px;">Change plan</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button *ngFor="let p of pricing()" (click)="changePlan(p.plan)" [disabled]="savingPlan() || p.plan === currentPlan()"
+                  [style.background]="p.plan === currentPlan() ? '#E7F0F2' : '#fff'"
+                  [style.border-color]="p.plan === currentPlan() ? '#BFD8DD' : '#E5E8E1'"
+                  style="padding:9px 14px;border-radius:10px;border-width:1px;border-style:solid;cursor:pointer;font-size:12.5px;font-weight:600;font-family:inherit;color:#33413A;">
+                  {{ p.plan }}
+                </button>
+              </div>
+            </div>
           </div>
-          <!-- BYOTokenHealthIndicator -->
+
+          <!-- Company profile -->
           <div class="glass" style="border-radius:16px;padding:24px;">
-            <div style="font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;margin-bottom:16px;">AI KEY HEALTH · GEMINI FLASH</div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;"><span style="width:10px;height:10px;border-radius:50%;background:#4C96B3;box-shadow:0 0 0 4px rgba(110,120,216,.16);"></span><span style="font-size:15px;font-weight:600;">Key valid &amp; active</span></div>
-            <div style="margin-bottom:8px;display:flex;justify-content:space-between;font-size:12.5px;color:#64726B;"><span>Quota used this month</span><span style="font-family:'Work Sans',monospace;font-weight:600;color:#1A2420;">62%</span></div>
-            <div style="height:9px;border-radius:5px;background:#EEF1EC;overflow:hidden;margin-bottom:14px;"><div style="height:100%;width:62%;background:linear-gradient(90deg,#4C96B3,#A99FDB);border-radius:5px;"></div></div>
-            <div style="font-size:12px;color:#93A099;">1.24M / 2M tokens · resets in 22 days</div>
+            <div style="font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;margin-bottom:16px;">COMPANY</div>
+            <div style="font-size:15px;font-weight:600;margin-bottom:16px;">{{ company()?.name || '—' }}</div>
+
+            <label style="font-size:12.5px;font-weight:600;color:#33413A;display:block;margin-bottom:6px;">Sector</label>
+            <select #sectorSel [value]="company()?.sectorCode || ''" [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
+              <option value="">Not set</option>
+              <option *ngFor="let s of sectors()" [value]="s.code">{{ s.name }}</option>
+            </select>
+
+            <label style="font-size:12.5px;font-weight:600;color:#33413A;display:block;margin:14px 0 6px;">Company size</label>
+            <select #sizeSel [value]="company()?.sizeBand || ''" [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
+              <option value="">Not set</option>
+              <option *ngFor="let b of sizeBands" [value]="b.value">{{ b.label }}</option>
+            </select>
+
+            <button *ngIf="canEditCompany()" (click)="saveProfile(sectorSel.value, sizeSel.value)" [disabled]="savingProfile()" class="btn-frost" style="margin-top:16px;width:100%;justify-content:center;">{{ savingProfile() ? 'Saving…' : 'Save company profile' }}</button>
+
+            <div *ngIf="companyError()" style="margin-top:14px;font-size:12.5px;color:#8C3A2E;background:#FBEAE7;border:1px solid #F0C4BC;padding:10px 12px;border-radius:11px;line-height:1.4;">{{ companyError() }}</div>
           </div>
         </div>
         <!-- UpgradePrompt -->
@@ -86,15 +119,88 @@ import { UiService } from '../../core/ui.service';
     </div>
   `,
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
   state = inject(AppStateService);
   ui = inject(UiService);
   private route = inject(ActivatedRoute);
+  private companyApi = inject(CompanyApiService);
+  private referenceApi = inject(ReferenceApiService);
+  private authApi = inject(AuthApiService);
+  private session = inject(SessionService);
 
   tab = signal<'account' | 'billing'>(this.route.snapshot.queryParamMap.get('view') === 'billing' ? 'billing' : 'account');
 
   usernameEditing = signal(false);
   usernameDraft = signal('');
+
+  sizeBands = SIZE_BANDS;
+  company = signal<CompanyResponse | null>(null);
+  sectors = signal<SectorResponse[]>([]);
+  pricing = signal<PlanPricingResponse[]>([]);
+  savingProfile = signal(false);
+  savingPlan = signal(false);
+  companyError = signal('');
+
+  /** PATCH /company/profile carries no @PreAuthorize, but every sibling mutation on that
+   * controller is COMPANY_ADMIN-only, so the form is read-only for other roles to match
+   * intent. This is a courtesy, not a security control — the endpoint stays open. */
+  canEditCompany = computed(() => this.session.role() === 'COMPANY_ADMIN');
+
+  currentPlan = computed(() => this.session.plan());
+  planPrice = computed(() => {
+    const p = this.pricing().find((x) => x.plan === this.currentPlan());
+    return p ? `RM${Number(p.monthlyPrice).toFixed(0)}` : '—';
+  });
+
+  ngOnInit(): void {
+    this.companyApi.get().subscribe({
+      next: (c) => this.company.set(c),
+      error: (err) => this.companyError.set(toApiError(err).message),
+    });
+    this.referenceApi.sectors().subscribe({ next: (s) => this.sectors.set(s), error: () => {} });
+    this.referenceApi.planPricing().subscribe({ next: (p) => this.pricing.set(p), error: () => {} });
+  }
+
+  saveProfile(sectorCode: string, sizeBand: string) {
+    if (this.savingProfile()) return;
+    this.savingProfile.set(true);
+    this.companyError.set('');
+    this.companyApi.updateProfile({ sectorCode, sizeBand: sizeBand as CompanySizeBand }).subscribe({
+      next: (c) => {
+        this.company.set(c);
+        this.savingProfile.set(false);
+        this.ui.showToast('Company profile saved.');
+      },
+      error: (err) => {
+        this.savingProfile.set(false);
+        this.companyError.set(toApiError(err).message);
+      },
+    });
+  }
+
+  changePlan(plan: SubscriptionPlan) {
+    if (this.savingPlan() || plan === this.currentPlan()) return;
+    this.savingPlan.set(true);
+    this.companyError.set('');
+    this.companyApi.updatePlan(plan).subscribe({
+      next: (c) => {
+        this.company.set(c);
+        // Plan drives navigation, so the cached session must follow.
+        this.authApi.me().subscribe({
+          next: (me) => {
+            this.session.applyUser(me);
+            this.savingPlan.set(false);
+            this.ui.showToast(`Plan changed to ${plan}.`);
+          },
+          error: () => this.savingPlan.set(false),
+        });
+      },
+      error: (err) => {
+        this.savingPlan.set(false);
+        this.companyError.set(toApiError(err).message);
+      },
+    });
+  }
 
   startEdit() {
     this.usernameDraft.set(this.state.user().name);
