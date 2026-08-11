@@ -29,8 +29,10 @@ const BTN = 'height:40px;padding:0 16px;border-radius:10px;border:none;cursor:po
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:12.5px;color:#8A968F;font-weight:600;">Fiscal year</span>
-          <select [value]="year()" (change)="setYear($any($event.target).value)" [style]="input">
-            <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+          <!-- [selected] per option, not [value] on the select: binding value before the
+               options render leaves the browser showing the first one. -->
+          <select (change)="setYear($any($event.target).value)" [style]="input">
+            <option *ngFor="let y of years" [value]="y" [selected]="y === year()">{{ y }}</option>
           </select>
         </div>
       </div>

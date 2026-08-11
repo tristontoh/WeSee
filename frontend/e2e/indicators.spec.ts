@@ -18,6 +18,20 @@ test('indicators screen lists the seeded indicators grouped by category', async 
   await expect(page.getByText(/GOVERNANCE \(\d+\)/)).toBeVisible();
 });
 
+test('the fiscal-year selector displays the year actually in use', async ({ page, request }) => {
+  // Regression: binding [value] on a <select> left the browser showing the first option
+  // (an older year) while the app operated on the current one.
+  const year = String(new Date().getFullYear());
+  await freshAdmin(page, request);
+  await page.goto('/indicators');
+  await expect(page.getByText('Total Electricity Consumed')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('select').first()).toHaveValue(year);
+
+  await page.goto('/activity');
+  await expect(page.getByText('ADD ACTIVITY')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('select').first()).toHaveValue(year);
+});
+
 test('a computed indicator shows the month grid and no annual field', async ({ page, request }) => {
   await freshAdmin(page, request);
   await page.goto('/indicators');

@@ -55,8 +55,10 @@ const BTN = 'height:40px;padding:0 16px;border-radius:10px;border:none;cursor:po
             <div style="font-size:12.5px;color:#8A968F;">{{ u.email }}</div>
           </div>
           <span *ngIf="!u.active" style="font-size:11px;font-weight:600;color:#B36A5E;background:#FBEAE7;padding:3px 9px;border-radius:10px;">Inactive</span>
-          <select *ngIf="canManage()" [value]="u.role" (change)="changeRole(u, $any($event.target).value)" [style]="input" style="height:34px;">
-            <option *ngFor="let r of roles" [value]="r">{{ label(r) }}</option>
+          <!-- [selected] per option, not [value] on the select: binding value before the
+               options render leaves every member showing the first role. -->
+          <select *ngIf="canManage()" (change)="changeRole(u, $any($event.target).value)" [style]="input" style="height:34px;">
+            <option *ngFor="let r of roles" [value]="r" [selected]="r === u.role">{{ label(r) }}</option>
           </select>
           <span *ngIf="!canManage()" style="font-size:12.5px;color:#64726B;">{{ label(u.role) }}</span>
           <button *ngIf="canManage()" (click)="toggleActive(u)" style="height:34px;padding:0 12px;border-radius:9px;border:1px solid #E5E8E1;background:#fff;cursor:pointer;font-size:12.5px;font-family:inherit;">{{ u.active ? 'Deactivate' : 'Activate' }}</button>

@@ -30,8 +30,10 @@ const BTN = 'height:36px;padding:0 14px;border-radius:9px;border:none;cursor:poi
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:12.5px;color:#8A968F;font-weight:600;">Fiscal year</span>
-          <select [value]="year()" (change)="setYear($any($event.target).value)" [style]="input">
-            <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+          <!-- [selected] per option, not [value] on the select: binding value before the
+               options render leaves the browser showing the first one. -->
+          <select (change)="setYear($any($event.target).value)" [style]="input">
+            <option *ngFor="let y of years" [value]="y" [selected]="y === year()">{{ y }}</option>
           </select>
         </div>
       </div>
@@ -88,9 +90,9 @@ const BTN = 'height:36px;padding:0 14px;border-radius:9px;border:none;cursor:poi
             <div style="margin-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <span style="font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;">TARGET</span>
               <input #tgt [value]="ind.effectiveTarget ?? ''" inputmode="decimal" [style]="input" style="width:120px;">
-              <select #dir [value]="ind.effectiveTargetDirection || 'DOWN'" [style]="input">
-                <option value="DOWN">Lower is better</option>
-                <option value="UP">Higher is better</option>
+              <select #dir [style]="input">
+                <option value="DOWN" [selected]="ind.effectiveTargetDirection !== 'UP'">Lower is better</option>
+                <option value="UP" [selected]="ind.effectiveTargetDirection === 'UP'">Higher is better</option>
               </select>
               <button (click)="saveTarget(ind, tgt.value, dir.value)" [style]="btn" style="background:#fff;color:#4C96B3;border:1px solid #BFD8DD;">Set target</button>
 

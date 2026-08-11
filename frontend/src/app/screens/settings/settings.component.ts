@@ -94,15 +94,17 @@ import { toApiError } from '../../core/http/api-error';
             <div style="font-size:15px;font-weight:600;margin-bottom:16px;">{{ company()?.name || '—' }}</div>
 
             <label style="font-size:12.5px;font-weight:600;color:#33413A;display:block;margin-bottom:6px;">Sector</label>
-            <select #sectorSel [value]="company()?.sectorCode || ''" [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
-              <option value="">Not set</option>
-              <option *ngFor="let s of sectors()" [value]="s.code">{{ s.name }}</option>
+            <!-- [selected] per option, not [value] on the select: binding value before the
+                 options render leaves the browser showing "Not set". -->
+            <select #sectorSel [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
+              <option value="" [selected]="!company()?.sectorCode">Not set</option>
+              <option *ngFor="let s of sectors()" [value]="s.code" [selected]="s.code === company()?.sectorCode">{{ s.name }}</option>
             </select>
 
             <label style="font-size:12.5px;font-weight:600;color:#33413A;display:block;margin:14px 0 6px;">Company size</label>
-            <select #sizeSel [value]="company()?.sizeBand || ''" [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
-              <option value="">Not set</option>
-              <option *ngFor="let b of sizeBands" [value]="b.value">{{ b.label }}</option>
+            <select #sizeSel [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
+              <option value="" [selected]="!company()?.sizeBand">Not set</option>
+              <option *ngFor="let b of sizeBands" [value]="b.value" [selected]="b.value === company()?.sizeBand">{{ b.label }}</option>
             </select>
 
             <button *ngIf="canEditCompany()" (click)="saveProfile(sectorSel.value, sizeSel.value)" [disabled]="savingProfile()" class="btn-frost" style="margin-top:16px;width:100%;justify-content:center;">{{ savingProfile() ? 'Saving…' : 'Save company profile' }}</button>
