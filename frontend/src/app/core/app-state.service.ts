@@ -5,6 +5,7 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { NAV, SCREEN_TITLES, TenantKey } from './nav';
 import { TENANT_META, initialsOf } from './tenant-meta';
 import { SessionService } from './auth/session.service';
+import { PlanGateService } from './plan/plan-gate.service';
 
 const USERNAME_KEY = 'wesee_username';
 
@@ -12,6 +13,7 @@ const USERNAME_KEY = 'wesee_username';
 export class AppStateService {
   private router = inject(Router);
   private auth = inject(SessionService);
+  private gate = inject(PlanGateService);
 
   /** Independent client state, but kept in sync with the route below — /settings is the
    * one route reachable from any tenant, so it deliberately leaves `tenant` untouched. */
@@ -61,8 +63,11 @@ export class AppStateService {
   navItems = computed(() => {
     const isAdmin = this.auth.role() === 'COMPANY_ADMIN';
     // Group is entirely COMPANY_ADMIN-gated on the backend, including its list endpoint,
-    // so hide it rather than render a section that will 403.
-    return NAV[this.tenant()].filter((n) => !n.adminOnly || isAdmin);
+    // so hide it rather than render a section that will 403. Feature-gated items follow the
+    // backend's own plan matrix for the same reason.
+    return NAV[this.tenant()].filter(
+      (n) => (!n.adminOnly || isAdmin) && (!n.feature || this.gate.state(n.feature) !== 'hidden'),
+    );
   });
   screenTitle = computed(() => SCREEN_TITLES[this.currentUrl()] ?? '');
 

@@ -54,6 +54,27 @@ export async function verifyUser(email: string): Promise<void> {
   if (!res.ok) throw new Error(`verify-email failed: ${res.status}`);
 }
 
+/**
+ * Upgrades the user's company to ISSUER_READY over the API. Call this *before* signing in
+ * through the UI, so the session caches the new plan — nav derives from it.
+ */
+export async function upgradeToIssuerReady(email: string, password = 'E2ePassw0rd!'): Promise<void> {
+  const login = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const token = (await login.json())?.auth?.token;
+  if (!token) throw new Error(`could not log in ${email} to upgrade plan`);
+
+  const res = await fetch(`${API}/company/plan`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ plan: 'ISSUER_READY' }),
+  });
+  if (!res.ok) throw new Error(`plan upgrade failed: ${res.status}`);
+}
+
 /** Signs a verified user in through the UI. */
 export async function loginThroughUi(
   page: Page,
@@ -65,5 +86,7 @@ export async function loginThroughUi(
   await page.getByRole('button', { name: 'Next' }).click();
   await page.locator('input[type=password]').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
+  // Landing depends on plan: workspace tier goes to /indicators, ISSUER_READY to the
+  // compliance-hub overview, since /dashboard reads ISSUER_READY-only data.
+  await page.waitForURL(/\/(indicators|dashboard|onboarding|compliance-hub)/, { timeout: 15_000 });
 }

@@ -73,4 +73,18 @@ describe('PlanGateService', () => {
   it('locks gated features when there is no plan (platform admins have no company)', () => {
     expect(gate.state('targets')).toBe('locked');
   });
+
+});
+
+describe('PlanGateService before the matrix loads', () => {
+  it('hides a gated feature, so the nav entry never flashes into view', () => {
+    localStorage.clear();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    const gate = TestBed.inject(PlanGateService);
+    // load() has not been called and no flags were injected.
+    expect(gate.state('climate-module')).toBe('hidden');
+  });
 });

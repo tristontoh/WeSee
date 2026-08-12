@@ -7,7 +7,23 @@ export interface NavItem {
   d: string;
   /** Hidden unless the session role is COMPANY_ADMIN. */
   adminOnly?: boolean;
+  /** Backend feature key. Hidden when PlanGateService reports 'hidden' for it. */
+  feature?: string;
 }
+
+/**
+ * The Emissions Dashboard belongs to both nav sets. Its data is guarded by `climate-module`
+ * (ISSUER_READY, visibleOnlyAtMinPlan), and M1's plan-derived navigation gives ISSUER_READY
+ * companies the compliance-hub nav — so listing it only under workspace would show it to
+ * exactly the tiers that get a 403 and hide it from the one tier that can use it.
+ */
+const DASHBOARD: NavItem = {
+  key: 'dashboard',
+  label: 'Emissions Dashboard',
+  path: '/dashboard',
+  d: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  feature: 'climate-module',
+};
 
 const TEAM: NavItem = {
   key: 'team',
@@ -45,7 +61,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'review', label: 'Extraction Review', path: '/review', d: 'M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9' },
     INDICATORS,
     ACTIVITY,
-    { key: 'dashboard', label: 'Emissions Dashboard', path: '/dashboard', d: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z' },
+    DASHBOARD,
     { key: 'trust', label: 'Trust Score', path: '/trust', d: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z' },
     { key: 'export', label: 'Export Center', path: '/export', d: 'M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13' },
     TEAM,
@@ -57,6 +73,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'arbitrage', label: 'Sourcing Arbitrage', path: '/compliance-hub/arbitrage', d: 'M23 6l-9.5 9.5-5-5L1 18M17 6h6v6' },
     INDICATORS,
     ACTIVITY,
+    DASHBOARD,
     { key: 'report', label: 'Report Builder', path: '/compliance-hub/report', d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6' },
     { key: 'compliance', label: 'Compliance Exports', path: '/compliance-hub/compliance', d: 'M9 12l2 2 4-4M12 3l7 4v5c0 4-3 7-7 8-4-1-7-4-7-8V7z' },
     TEAM,
@@ -71,8 +88,13 @@ export const NAV: Record<TenantKey, NavItem[]> = {
   ],
 };
 
+/**
+ * Where each nav lands after login. Workspace-tier companies go to /indicators, not
+ * /dashboard: the dashboard reads climate-module data, which is ISSUER_READY-only, so sending
+ * them there would end every signup at a 403.
+ */
 export const DEFAULT_ROUTE: Record<TenantKey, string> = {
-  workspace: '/dashboard',
+  workspace: '/indicators',
   'compliance-hub': '/compliance-hub/overview',
   admin: '/admin/tenants',
 };
