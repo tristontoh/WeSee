@@ -41,16 +41,23 @@ const valueFor = (points: { fiscalYear: number; value: number }[], year: number)
   Number(points.find((p) => p.fiscalYear === year)?.value ?? 0);
 
 /**
+ * Summing decimal tCO₂e figures accumulates binary floating-point error — four scope 3
+ * categories totalled 432.79999999999995 on screen. Three decimals is well beyond the
+ * precision anyone reports emissions to, and removes the noise entirely.
+ */
+const round3 = (n: number): number => Math.round(n * 1000) / 1000;
+
+/**
  * Collapses an EmissionsResponse into the three scope figures for one year plus their split.
  * Scope 3 is the sum across every category, standard and custom alike.
  */
 export function scopeTotals(data: EmissionsResponse | null, year: number): ScopeTotals {
   if (!data) return { scope1: 0, scope2: 0, scope3: 0, total: 0, pct1: 0, pct2: 0, pct3: 0 };
 
-  const scope1 = valueFor(data.scope1, year);
-  const scope2 = valueFor(data.scope2, year);
-  const scope3 = data.scope3.reduce((sum, c) => sum + valueFor(c.values, year), 0);
-  const total = scope1 + scope2 + scope3;
+  const scope1 = round3(valueFor(data.scope1, year));
+  const scope2 = round3(valueFor(data.scope2, year));
+  const scope3 = round3(data.scope3.reduce((sum, c) => sum + valueFor(c.values, year), 0));
+  const total = round3(scope1 + scope2 + scope3);
 
   if (total === 0) return { scope1, scope2, scope3, total: 0, pct1: 0, pct2: 0, pct3: 0 };
 
