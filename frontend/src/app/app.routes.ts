@@ -22,6 +22,7 @@ export const routes: Routes = [
       { path: 'dashboard', loadComponent: () => import('./screens/workspace/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
       { path: 'indicators', loadComponent: () => import('./screens/workspace/indicators/indicators.component').then((m) => m.IndicatorsComponent) },
       { path: 'activity', loadComponent: () => import('./screens/workspace/activity/activity.component').then((m) => m.ActivityComponent) },
+      { path: 'ifrs', loadComponent: () => import('./screens/workspace/ifrs/ifrs.component').then((m) => m.IfrsComponent) },
       { path: 'onboarding', loadComponent: () => import('./screens/workspace/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
       { path: 'upload', loadComponent: () => import('./screens/workspace/upload/upload.component').then((m) => m.UploadComponent) },
       { path: 'review', loadComponent: () => import('./screens/workspace/review/review.component').then((m) => m.ReviewComponent) },

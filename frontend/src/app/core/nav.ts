@@ -25,6 +25,14 @@ const DASHBOARD: NavItem = {
   feature: 'climate-module',
 };
 
+const IFRS: NavItem = {
+  key: 'ifrs',
+  label: 'IFRS Disclosures',
+  path: '/ifrs',
+  d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6',
+  feature: 'ifrs-s1-s2',
+};
+
 const TEAM: NavItem = {
   key: 'team',
   label: 'Team',
@@ -62,6 +70,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     INDICATORS,
     ACTIVITY,
     DASHBOARD,
+    IFRS,
     { key: 'trust', label: 'Trust Score', path: '/trust', d: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z' },
     { key: 'export', label: 'Export Center', path: '/export', d: 'M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13' },
     TEAM,
@@ -74,6 +83,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     INDICATORS,
     ACTIVITY,
     DASHBOARD,
+    IFRS,
     { key: 'report', label: 'Report Builder', path: '/compliance-hub/report', d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6' },
     { key: 'compliance', label: 'Compliance Exports', path: '/compliance-hub/compliance', d: 'M9 12l2 2 4-4M12 3l7 4v5c0 4-3 7-7 8-4-1-7-4-7-8V7z' },
     TEAM,
