@@ -58,6 +58,27 @@ export async function verifyUser(email: string): Promise<void> {
  * Upgrades the user's company to ISSUER_READY over the API. Call this *before* signing in
  * through the UI, so the session caches the new plan — nav derives from it.
  */
+export async function upgradePlan(
+  email: string,
+  plan: 'STARTER' | 'GROWTH' | 'ISSUER_READY',
+  password = 'E2ePassw0rd!',
+): Promise<void> {
+  const login = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const token = (await login.json())?.auth?.token;
+  if (!token) throw new Error(`could not log in ${email} to upgrade plan`);
+
+  const res = await fetch(`${API}/company/plan`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ plan }),
+  });
+  if (!res.ok) throw new Error(`plan upgrade failed: ${res.status}`);
+}
+
 export async function upgradeToIssuerReady(email: string, password = 'E2ePassw0rd!'): Promise<void> {
   const login = await fetch(`${API}/auth/login`, {
     method: 'POST',

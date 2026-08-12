@@ -25,6 +25,29 @@ const DASHBOARD: NavItem = {
   feature: 'climate-module',
 };
 
+const MATERIALITY: NavItem = {
+  key: 'materiality',
+  label: 'Materiality',
+  path: '/materiality',
+  d: 'M3 3v18h18M7 16l4-6 4 3 5-8',
+};
+
+const GOVERNANCE: NavItem = {
+  key: 'governance',
+  label: 'Governance',
+  path: '/governance',
+  d: 'M3 21h18M4 21V10M20 21V10M12 3L2 9h20zM8 21V10M16 21V10',
+  feature: 'governance',
+};
+
+const TARGETS: NavItem = {
+  key: 'targets',
+  label: 'Targets',
+  path: '/targets',
+  d: 'M12 12m-9 0a9 9 0 1018 0 9 9 0 10-18 0M12 12m-5 0a5 5 0 1010 0 5 5 0 10-10 0M12 12m-1 0a1 1 0 102 0 1 1 0 10-2 0',
+  feature: 'targets',
+};
+
 const IFRS: NavItem = {
   key: 'ifrs',
   label: 'IFRS Disclosures',
@@ -69,6 +92,9 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'review', label: 'Extraction Review', path: '/review', d: 'M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9' },
     INDICATORS,
     ACTIVITY,
+    MATERIALITY,
+    GOVERNANCE,
+    TARGETS,
     DASHBOARD,
     IFRS,
     { key: 'trust', label: 'Trust Score', path: '/trust', d: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z' },
@@ -82,6 +108,9 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'arbitrage', label: 'Sourcing Arbitrage', path: '/compliance-hub/arbitrage', d: 'M23 6l-9.5 9.5-5-5L1 18M17 6h6v6' },
     INDICATORS,
     ACTIVITY,
+    MATERIALITY,
+    GOVERNANCE,
+    TARGETS,
     DASHBOARD,
     IFRS,
     { key: 'report', label: 'Report Builder', path: '/compliance-hub/report', d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6' },

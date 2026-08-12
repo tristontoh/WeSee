@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs/operators';
-import { NAV, SCREEN_TITLES, TenantKey } from './nav';
+import { NAV, NavItem, SCREEN_TITLES, TenantKey } from './nav';
 import { TENANT_META, initialsOf } from './tenant-meta';
 import { SessionService } from './auth/session.service';
 import { PlanGateService } from './plan/plan-gate.service';
@@ -59,6 +59,14 @@ export class AppStateService {
   displayName = computed(() => this.usernameOverride() || this.baseUser().name);
   initials = computed(() => initialsOf(this.displayName()));
   user = computed(() => ({ ...this.baseUser(), name: this.displayName(), initials: this.initials() }));
+
+  /**
+   * True when the backend marks a feature visibleOnlyAtMinPlan=false and this company's plan
+   * is below its minimum — shown deliberately, but not usable yet.
+   */
+  isLocked(item: NavItem): boolean {
+    return !!item.feature && this.gate.state(item.feature) === 'locked';
+  }
 
   navItems = computed(() => {
     const isAdmin = this.auth.role() === 'COMPANY_ADMIN';
