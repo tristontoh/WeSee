@@ -96,6 +96,36 @@ export async function upgradeToIssuerReady(email: string, password = 'E2ePassw0r
   if (!res.ok) throw new Error(`plan upgrade failed: ${res.status}`);
 }
 
+/**
+ * Fills every applicable indicator for a fiscal year. Assurance sign-off is rejected below
+ * 100% completeness, so any test that signs off must seed data first.
+ */
+export async function fillAllIndicators(
+  email: string,
+  fiscalYear: number,
+  password = 'E2ePassw0rd!',
+): Promise<void> {
+  const login = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const token = (await login.json())?.auth?.token;
+  if (!token) throw new Error(`could not log in ${email}`);
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+  const indicators = await (await fetch(`${API}/indicators`, { headers })).json();
+  for (const ind of indicators) {
+    // DIRECT_ANNUAL takes the annual endpoint; every other rule takes a month.
+    const url =
+      ind.aggregationRule === 'DIRECT_ANNUAL'
+        ? `${API}/indicators/${ind.id}/values/${fiscalYear}`
+        : `${API}/indicators/${ind.id}/monthly/${fiscalYear}/1`;
+    const res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ value: 10 }) });
+    if (!res.ok) throw new Error(`seeding ${ind.id} failed: ${res.status} ${await res.text()}`);
+  }
+}
+
 /** Signs a verified user in through the UI. */
 export async function loginThroughUi(
   page: Page,

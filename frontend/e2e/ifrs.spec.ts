@@ -16,7 +16,7 @@ async function issuerReady(page: Page, request: APIRequestContext): Promise<stri
   return email;
 }
 
-test('IFRS is hidden below ISSUER_READY and visible at it', async ({ page, request }) => {
+test('IFRS is hidden below ISSUER_READY', async ({ page, request }) => {
   const starter = uniqueEmail('ifrsstarter');
   await registerUser(request, starter);
   await verifyUser(starter);
@@ -24,10 +24,11 @@ test('IFRS is hidden below ISSUER_READY and visible at it', async ({ page, reque
   await page.goto('/indicators');
   await expect(page.getByText('Indicators').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'IFRS Disclosures' })).toHaveCount(0);
+});
 
-  await page.context().clearCookies();
-  await page.goto('/login');
-  await page.evaluate(() => localStorage.clear());
+test('IFRS is visible at ISSUER_READY', async ({ page, request }) => {
+  // Kept separate: clearing localStorage does not reset the in-memory session, so a second
+  // sign-in inside one test never reaches the login form.
   await issuerReady(page, request);
   await page.goto('/indicators');
   await expect(page.getByRole('button', { name: 'IFRS Disclosures' })).toBeVisible({ timeout: 15_000 });

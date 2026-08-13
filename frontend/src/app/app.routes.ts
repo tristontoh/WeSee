@@ -26,6 +26,7 @@ export const routes: Routes = [
       { path: 'materiality', loadComponent: () => import('./screens/workspace/materiality/materiality.component').then((m) => m.MaterialityComponent) },
       { path: 'governance', loadComponent: () => import('./screens/workspace/governance/governance.component').then((m) => m.GovernanceComponent) },
       { path: 'targets', loadComponent: () => import('./screens/workspace/targets/targets.component').then((m) => m.TargetsComponent) },
+      { path: 'assurance', loadComponent: () => import('./screens/workspace/assurance/assurance.component').then((m) => m.AssuranceComponent) },
       { path: 'onboarding', loadComponent: () => import('./screens/workspace/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
       { path: 'upload', loadComponent: () => import('./screens/workspace/upload/upload.component').then((m) => m.UploadComponent) },
       { path: 'review', loadComponent: () => import('./screens/workspace/review/review.component').then((m) => m.ReviewComponent) },
