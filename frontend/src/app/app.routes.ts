@@ -35,6 +35,7 @@ export const routes: Routes = [
 
       // Settings (shared)
       { path: 'settings', loadComponent: () => import('./screens/settings/settings.component').then((m) => m.SettingsComponent) },
+      { path: 'account', loadComponent: () => import('./screens/account/account.component').then((m) => m.AccountComponent) },
 
       // Company
       { path: 'team', loadComponent: () => import('./screens/company/team/team.component').then((m) => m.TeamComponent) },

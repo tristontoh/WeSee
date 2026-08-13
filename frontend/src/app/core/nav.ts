@@ -64,6 +64,13 @@ const IFRS: NavItem = {
   feature: 'ifrs-s1-s2',
 };
 
+const ACCOUNT: NavItem = {
+  key: 'account',
+  label: 'Account',
+  path: '/account',
+  d: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8',
+};
+
 const TEAM: NavItem = {
   key: 'team',
   label: 'Team',
@@ -110,6 +117,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'export', label: 'Export Center', path: '/export', d: 'M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13' },
     TEAM,
     GROUP,
+    ACCOUNT,
   ],
   'compliance-hub': [
     { key: 'overview', label: 'Carbon Overview', path: '/compliance-hub/overview', d: 'M12 3v9l7.5 4.3M12 3a9 9 0 109 9' },
@@ -127,6 +135,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'compliance', label: 'Compliance Exports', path: '/compliance-hub/compliance', d: 'M9 12l2 2 4-4M12 3l7 4v5c0 4-3 7-7 8-4-1-7-4-7-8V7z' },
     TEAM,
     GROUP,
+    ACCOUNT,
   ],
   admin: [
     { key: 'tenants', label: 'Tenants', path: '/admin/tenants', d: 'M3 21h18M6 21V7l6-4 6 4v14M10 9h.01M14 9h.01M10 13h.01M14 13h.01' },
@@ -134,6 +143,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'tokens', label: 'Token Monitor', path: '/admin/tokens', d: 'M21 2l-2 2m-7.6 7.6a5 5 0 11-7 7 5 5 0 017-7zM15 7l4 4' },
     { key: 'audit', label: 'Audit Log', path: '/admin/audit', d: 'M4 4h13l3 3v13H4zM8 9h8M8 13h8M8 17h5' },
     { key: 'support', label: 'Support Tools', path: '/admin/support', d: 'M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2-2 2.6-2.6z' },
+    ACCOUNT,
   ],
 };
 
