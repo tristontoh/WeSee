@@ -143,6 +143,7 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'tokens', label: 'Token Monitor', path: '/admin/tokens', d: 'M21 2l-2 2m-7.6 7.6a5 5 0 11-7 7 5 5 0 017-7zM15 7l4 4' },
     { key: 'audit', label: 'Audit Log', path: '/admin/audit', d: 'M4 4h13l3 3v13H4zM8 9h8M8 13h8M8 17h5' },
     { key: 'support', label: 'Support Tools', path: '/admin/support', d: 'M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2-2 2.6-2.6z' },
+    { key: 'platform', label: 'Platform', path: '/admin/platform', d: 'M4 4h16v12H4zM2 20h20M9 8h6M9 12h6' },
     ACCOUNT,
   ],
 };

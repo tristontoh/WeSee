@@ -50,6 +50,7 @@ export const routes: Routes = [
 
       // Admin
       { path: 'admin/tenants', loadComponent: () => import('./screens/admin/tenants/tenants.component').then((m) => m.AdminTenantsComponent) },
+      { path: 'admin/platform', loadComponent: () => import('./screens/admin/platform/platform.component').then((m) => m.AdminPlatformComponent) },
       { path: 'admin/mapping', loadComponent: () => import('./screens/admin/mapping/mapping.component').then((m) => m.AdminMappingComponent) },
       { path: 'admin/tokens', loadComponent: () => import('./screens/admin/tokens/tokens.component').then((m) => m.AdminTokensComponent) },
       { path: 'admin/audit', loadComponent: () => import('./screens/admin/audit/audit.component').then((m) => m.AdminAuditComponent) },

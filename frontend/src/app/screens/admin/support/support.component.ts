@@ -1,53 +1,84 @@
-import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { AdminApiService } from '../../../core/admin/admin-api.service';
+import { SupportTicketResponse, TicketStatus } from '../../../core/account/account.model';
 import { UiService } from '../../../core/ui.service';
+import { toApiError } from '../../../core/http/api-error';
+
+const STATUSES: TicketStatus[] = ['OPEN', 'PENDING', 'CLOSED'];
+const INPUT = 'height:34px;border-radius:9px;border:1px solid #E5E8E1;padding:0 10px;font-family:inherit;font-size:13px;background:#fff;';
+
+const STATUS_COLOR: Record<TicketStatus, { bg: string; fg: string }> = {
+  OPEN: { bg: '#FFF8E6', fg: '#8A6A2A' },
+  PENDING: { bg: '#E7F0F2', fg: '#4C96B3' },
+  CLOSED: { bg: '#F3F5F1', fg: '#64726B' },
+};
 
 @Component({
   selector: 'app-admin-support',
   standalone: true,
+  imports: [CommonModule],
   template: `
-    <div style="animation:vfade .3s ease both;max-width:820px;">
-      <h1 style="font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;margin:0 0 6px;letter-spacing:-.5px;">Support Tools</h1>
-      <p style="color:#64726B;margin:0 0 22px;font-size:14px;">Elevated actions · all logged to the audit trail.</p>
-      <div style="background:#EDF3F8;border:1px solid #D9E4EF;border-radius:12px;padding:13px 17px;display:flex;align-items:center;gap:11px;margin-bottom:20px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D96BA1" stroke-width="1.9"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.4 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01"></path></svg>
-        <span style="font-size:12.5px;color:#c66ba8;">These actions affect live tenant data. Impersonation and overrides require a reason and are permanently recorded.</span>
+    <div style="animation:vfade .3s ease both;max-width:940px;">
+      <div style="margin-bottom:22px;">
+        <h1 style="font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;margin:0 0 4px;letter-spacing:-.5px;">Support Tools</h1>
+        <p style="color:#64726B;margin:0;font-size:14px;">Tickets raised by companies across the platform.</p>
       </div>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="glass" style="border-radius:13px;padding:18px 20px;display:flex;align-items:center;gap:15px;">
-          <div style="width:40px;height:40px;border-radius:10px;background:#E7F0F2;color:#CBDCDF;display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"></path></svg></div>
-          <div style="flex:1;"><div style="font-size:14px;font-weight:600;">Impersonate tenant</div><div style="font-size:12.5px;color:#8A968F;">View the app exactly as a tenant user sees it.</div></div>
-          <button (click)="impersonateTenant()" class="btn-frost">Start session</button>
+
+      <div *ngIf="error()" style="background:#FBEAE7;border:1px solid #F0C4BC;color:#8C3A2E;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;">{{ error() }}</div>
+
+      <div style="background:#fff;border:1px solid #E9ECE6;border-radius:16px;padding:6px 22px 18px;">
+        <div *ngFor="let t of tickets()" [attr.data-ticket]="t.subject" style="display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid #F2F4F0;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:600;">{{ t.subject }}</div>
+            <div style="font-size:12.5px;color:#8A968F;margin-top:2px;">{{ t.message }}</div>
+            <div style="font-size:12px;color:#93A099;margin-top:4px;">
+              {{ t.type === 'FEEDBACK' ? 'Feedback' : 'Support request' }} · {{ t.priority }} · {{ t.createdAt.slice(0, 10) }}
+            </div>
+          </div>
+          <span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:11px;"
+            [style.background]="color(t.status).bg" [style.color]="color(t.status).fg">{{ t.status }}</span>
+          <select (change)="setStatus(t, $any($event.target).value)" [style]="input" style="width:120px;">
+            <option *ngFor="let s of statuses" [value]="s" [selected]="s === t.status">{{ s }}</option>
+          </select>
         </div>
-        <div class="glass" style="border-radius:13px;padding:18px 20px;display:flex;align-items:center;gap:15px;">
-          <div style="width:40px;height:40px;border-radius:10px;background:#E4EEF0;color:#4C96B3;display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"></path></svg></div>
-          <div style="flex:1;"><div style="font-size:14px;font-weight:600;">Manual review override</div><div style="font-size:12.5px;color:#8A968F;">Force-approve or re-flag an extraction field.</div></div>
-          <button (click)="manualOverride()" class="btn-frost">Open override</button>
-        </div>
-        <div class="glass" style="border-radius:13px;padding:18px 20px;display:flex;align-items:center;gap:15px;">
-          <div style="width:40px;height:40px;border-radius:10px;background:#FCEFF5;color:#F1A6CC;display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"></path></svg></div>
-          <div style="flex:1;"><div style="font-size:14px;font-weight:600;">Reset tenant workspace</div><div style="font-size:12.5px;color:#8A968F;">Purge extractions and re-run ingestion. Destructive.</div></div>
-          <button (click)="openResetDialog()" class="btn-danger-outline">Reset…</button>
-        </div>
+        <div *ngIf="!tickets().length" style="color:#8A968F;font-size:13.5px;padding:14px 0;">No tickets on the platform.</div>
       </div>
     </div>
   `,
 })
-export class AdminSupportComponent {
+export class AdminSupportComponent implements OnInit {
+  private api = inject(AdminApiService);
   private ui = inject(UiService);
 
-  impersonateTenant() {
-    this.ui.showToast('Impersonation coming soon');
+  input = INPUT;
+  statuses = STATUSES;
+
+  tickets = signal<SupportTicketResponse[]>([]);
+  error = signal('');
+
+  color(s: TicketStatus) {
+    return STATUS_COLOR[s];
   }
 
-  manualOverride() {
-    this.ui.showToast('Manual override coming soon');
+  ngOnInit(): void {
+    this.load();
   }
 
-  openResetDialog() {
-    this.ui.openDialog({
-      title: 'Reset this workspace?',
-      body: 'This permanently purges all extractions and re-runs ingestion for Rimba Electronics Sdn Bhd. This action is recorded in the audit log and cannot be undone.',
-      confirmLabel: 'Reset workspace',
+  private load() {
+    this.api.adminTickets().subscribe({
+      next: (t) => this.tickets.set(t),
+      error: (err) => this.error.set(toApiError(err).message),
+    });
+  }
+
+  setStatus(t: SupportTicketResponse, status: string) {
+    this.api.setTicketStatus(t.id, status as TicketStatus).subscribe({
+      next: () => {
+        this.ui.showToast(`Ticket moved to ${status}.`);
+        this.load();
+      },
+      error: (err) => this.error.set(toApiError(err).message),
     });
   }
 }
