@@ -4,9 +4,7 @@ import { Router, RouterOutlet } from '@angular/router';
 import { AppStateService } from '../core/app-state.service';
 import { UiService } from '../core/ui.service';
 import { SessionService } from '../core/auth/session.service';
-import { NOTIFICATIONS } from '../core/mock-data';
 import { ToastComponent } from '../overlays/toast.component';
-import { SupplierDrawerComponent } from '../overlays/supplier-drawer.component';
 import { EvidenceDrawerComponent } from '../overlays/evidence-drawer.component';
 import { ChangePasswordModalComponent } from '../overlays/change-password-modal.component';
 import { ConfirmDialogComponent } from '../overlays/confirm-dialog.component';
@@ -18,7 +16,6 @@ import { ConfirmDialogComponent } from '../overlays/confirm-dialog.component';
     CommonModule,
     RouterOutlet,
     ToastComponent,
-    SupplierDrawerComponent,
     EvidenceDrawerComponent,
     ChangePasswordModalComponent,
     ConfirmDialogComponent,
@@ -30,8 +27,6 @@ export class ShellComponent {
   ui = inject(UiService);
   private auth = inject(SessionService);
   private router = inject(Router);
-
-  notifications = NOTIFICATIONS;
 
   searchResults = computed(() => {
     const q = this.ui.searchQuery().trim().toLowerCase();

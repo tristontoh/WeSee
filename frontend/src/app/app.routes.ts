@@ -16,7 +16,7 @@ export const routes: Routes = [
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: '', pathMatch: 'full', redirectTo: 'indicators' },
 
       // Workspace
       { path: 'dashboard', loadComponent: () => import('./screens/workspace/dashboard/dashboard.component').then((m) => m.DashboardComponent) },
@@ -28,9 +28,6 @@ export const routes: Routes = [
       { path: 'targets', loadComponent: () => import('./screens/workspace/targets/targets.component').then((m) => m.TargetsComponent) },
       { path: 'assurance', loadComponent: () => import('./screens/workspace/assurance/assurance.component').then((m) => m.AssuranceComponent) },
       { path: 'onboarding', loadComponent: () => import('./screens/workspace/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
-      { path: 'upload', loadComponent: () => import('./screens/workspace/upload/upload.component').then((m) => m.UploadComponent) },
-      { path: 'review', loadComponent: () => import('./screens/workspace/review/review.component').then((m) => m.ReviewComponent) },
-      { path: 'trust', loadComponent: () => import('./screens/workspace/trust/trust.component').then((m) => m.TrustComponent) },
       { path: 'export', loadComponent: () => import('./screens/workspace/export/export.component').then((m) => m.ExportComponent) },
 
       // Settings (shared)
@@ -41,22 +38,12 @@ export const routes: Routes = [
       { path: 'team', loadComponent: () => import('./screens/company/team/team.component').then((m) => m.TeamComponent) },
       { path: 'group', loadComponent: () => import('./screens/company/group/group.component').then((m) => m.GroupComponent) },
 
-      // Compliance Hub
-      { path: 'compliance-hub/overview', loadComponent: () => import('./screens/compliance-hub/overview/overview.component').then((m) => m.ComplianceHubOverviewComponent) },
-      { path: 'compliance-hub/ledger', loadComponent: () => import('./screens/compliance-hub/ledger/ledger.component').then((m) => m.ComplianceHubLedgerComponent) },
-      { path: 'compliance-hub/arbitrage', loadComponent: () => import('./screens/compliance-hub/arbitrage/arbitrage.component').then((m) => m.ComplianceHubArbitrageComponent) },
-      { path: 'compliance-hub/report', loadComponent: () => import('./screens/compliance-hub/report/report.component').then((m) => m.ComplianceHubReportComponent) },
-      { path: 'compliance-hub/compliance', loadComponent: () => import('./screens/compliance-hub/compliance/compliance.component').then((m) => m.ComplianceHubComplianceComponent) },
-
       // Admin
       { path: 'admin/tenants', loadComponent: () => import('./screens/admin/tenants/tenants.component').then((m) => m.AdminTenantsComponent) },
       { path: 'admin/platform', loadComponent: () => import('./screens/admin/platform/platform.component').then((m) => m.AdminPlatformComponent) },
-      { path: 'admin/mapping', loadComponent: () => import('./screens/admin/mapping/mapping.component').then((m) => m.AdminMappingComponent) },
-      { path: 'admin/tokens', loadComponent: () => import('./screens/admin/tokens/tokens.component').then((m) => m.AdminTokensComponent) },
-      { path: 'admin/audit', loadComponent: () => import('./screens/admin/audit/audit.component').then((m) => m.AdminAuditComponent) },
       { path: 'admin/support', loadComponent: () => import('./screens/admin/support/support.component').then((m) => m.AdminSupportComponent) },
 
-      { path: '**', redirectTo: 'dashboard' },
+      { path: '**', redirectTo: 'indicators' },
     ],
   },
 
