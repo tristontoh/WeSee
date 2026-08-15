@@ -76,6 +76,33 @@ export class AdminApiService {
     return this.http.get<PlatformSettingsResponse>(`${API_BASE}/admin/platform-settings`);
   }
 
+  /**
+   * `password` is write-only — the backend stores it encrypted and never returns it, so
+   * `passwordSet` is the only signal that one exists. Sending null leaves it unchanged.
+   */
+  updateSettings(body: {
+    smtpHost: string | null;
+    smtpPort: number;
+    smtpUsername: string | null;
+    password: string | null;
+    fromAddress: string | null;
+    enabled: boolean;
+    appBaseUrl: string | null;
+    platformName: string | null;
+    supportEmail: string | null;
+    require2fa: boolean;
+  }): Observable<PlatformSettingsResponse> {
+    return this.http.put<PlatformSettingsResponse>(`${API_BASE}/admin/platform-settings`, body);
+  }
+
+  /** Sends a test message to the signed-in admin's own address. */
+  sendTestEmail(): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(
+      `${API_BASE}/admin/platform-settings/test`,
+      {},
+    );
+  }
+
   adminTickets(): Observable<SupportTicketResponse[]> {
     return this.http.get<SupportTicketResponse[]>(`${API_BASE}/admin/support-tickets`);
   }
