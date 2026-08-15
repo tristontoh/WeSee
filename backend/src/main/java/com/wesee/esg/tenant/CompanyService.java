@@ -278,7 +278,8 @@ public class CompanyService {
     }
 
     private String buildInviteUrl(String token) {
-        return platformSettingsService.getEffectiveAppBaseUrl() + "/#/accept-invite?token=" + token;
+        // Path routing, not hash — see EmailVerificationService for why.
+        return platformSettingsService.getEffectiveAppBaseUrl() + "/accept-invite?token=" + token;
     }
 
     private String generateInviteToken() {

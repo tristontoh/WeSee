@@ -44,7 +44,9 @@ public class EmailVerificationService {
         tokenEntity.setExpiresAt(Instant.now().plus(TOKEN_VALIDITY_HOURS, ChronoUnit.HOURS));
         tokenRepository.save(tokenEntity);
 
-        String verifyUrl = platformSettingsService.getEffectiveAppBaseUrl() + "/#/verify-email?token=" + tokenEntity.getToken();
+        // Path routing, not hash: the Angular app uses provideRouter() without withHashLocation(),
+        // so a "/#/verify-email?token=…" link loads the app at "/" and discards the token.
+        String verifyUrl = platformSettingsService.getEffectiveAppBaseUrl() + "/verify-email?token=" + tokenEntity.getToken();
         UUID companyId = user.getCompany() != null ? user.getCompany().getId() : null;
         emailService.sendVerificationEmail(companyId, user.getEmail(), user.getName(), verifyUrl);
     }

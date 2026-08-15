@@ -84,6 +84,44 @@ test('switching company changes the active company', async ({ page, request }) =
   await expect(page.getByText(/Now working in/i)).toBeVisible({ timeout: 15_000 });
 });
 
+test('an invite link lets someone join the company', async ({ page, request }) => {
+  const adminEmail = await freshAdmin(page, request);
+  const invitee = uniqueEmail('joiner');
+
+  const token = await loginForToken(adminEmail);
+  const invite = await (
+    await request.post(`${API}/company/invites`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { name: 'Invited Person', email: invitee, role: 'COMPANY_CONTRIBUTOR' },
+    })
+  ).json();
+
+  // The URL must be path-routed; a "/#/accept-invite" link would load the app at "/"
+  // and drop the token entirely.
+  expect(invite.inviteUrl).toContain('/accept-invite?token=');
+  expect(invite.inviteUrl).not.toContain('/#/');
+
+  // Deliberately still signed in as the admin — an invitee often clicks the link in a
+  // browser where someone else is already authenticated.
+  await page.goto(invite.inviteUrl);
+  await expect(page.getByRole('heading', { name: /^Join / })).toBeVisible({ timeout: 15_000 });
+
+  await page.locator('input:not([disabled])').first().fill('Invited Person');
+  await page.locator('input[type=password]').fill('Joiner#2026');
+  await page.getByRole('button', { name: /^Join / }).click();
+
+  await expect(page).toHaveURL(/\/(indicators|dashboard)/, { timeout: 15_000 });
+  // Accepting replaces the session with the invitee's, not the admin's.
+  const who = await page.evaluate(() => JSON.parse(localStorage.getItem('wesee_user') || '{}').email);
+  expect(who).toBe(invitee);
+});
+
+test('an invalid invite token shows a clear message instead of redirecting', async ({ page }) => {
+  await page.goto('/accept-invite?token=not-a-real-token');
+  await expect(page.getByText(/Invitation not valid/i)).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(/accept-invite/);
+});
+
 test('a non-admin cannot edit the company profile', async ({ page, request }) => {
   // Regression: PATCH /company/profile once had no @PreAuthorize, so any company member —
   // including a CONSULTANT — could change the company's sector and size band.

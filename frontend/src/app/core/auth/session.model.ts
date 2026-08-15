@@ -48,4 +48,13 @@ export interface LoginResponse {
   auth: AuthResponse | null;
 }
 
+/** Mirrors com.wesee.esg.auth.dto.InvitePreviewResponse. */
+export interface InvitePreviewResponse {
+  companyName: string;
+  name: string;
+  email: string;
+  role: Role;
+  invitedByName: string | null;
+}
+
 export type NavKey = 'workspace' | 'compliance-hub' | 'admin';

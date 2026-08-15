@@ -8,6 +8,8 @@ export const routes: Routes = [
   // Deliberately unguarded: a logged-in user clicking a verification link should see the
   // result rather than be bounced to the dashboard.
   { path: 'verify-email', loadComponent: () => import('./screens/auth/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent) },
+  // Also unguarded: an invited person may already be signed in as someone else.
+  { path: 'accept-invite', loadComponent: () => import('./screens/auth/accept-invite/accept-invite.component').then((m) => m.AcceptInviteComponent) },
   { path: 'loading', loadComponent: () => import('./screens/loading/loading.component').then((m) => m.LoadingComponent) },
   { path: 'puzzle', loadComponent: () => import('./screens/puzzle/puzzle.component').then((m) => m.PuzzleComponent) },
 

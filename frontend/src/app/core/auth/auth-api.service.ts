@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../http/api-base';
-import { AuthResponse, LoginResponse, MeResponse } from './session.model';
+import { AuthResponse, InvitePreviewResponse, LoginResponse, MeResponse } from './session.model';
 
 export interface RegisterRequest {
   name: string;
@@ -40,6 +40,16 @@ export class AuthApiService {
   /** Rehydrates a session after a page reload, when only the stored token survives. */
   me(): Observable<MeResponse> {
     return this.http.get<MeResponse>(`${API_BASE}/auth/me`);
+  }
+
+  /** Reads an invite without consuming it, so the landing page can show who it is for. */
+  previewInvite(token: string): Observable<InvitePreviewResponse> {
+    return this.http.get<InvitePreviewResponse>(`${API_BASE}/auth/invites/${token}`);
+  }
+
+  /** Consumes the invite and signs the new member in. */
+  acceptInvite(token: string, name: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${API_BASE}/auth/invites/${token}/accept`, { name, password });
   }
 
   /** Returns a fresh MeResponse; the session should be updated from it. */
