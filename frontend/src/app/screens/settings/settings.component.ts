@@ -143,9 +143,8 @@ export class SettingsComponent implements OnInit {
   savingPlan = signal(false);
   companyError = signal('');
 
-  /** PATCH /company/profile carries no @PreAuthorize, but every sibling mutation on that
-   * controller is COMPANY_ADMIN-only, so the form is read-only for other roles to match
-   * intent. This is a courtesy, not a security control — the endpoint stays open. */
+  /** Mirrors the backend: PATCH /company/profile is COMPANY_ADMIN-only, so other roles get a
+   * read-only form rather than a control that would 403. */
   canEditCompany = computed(() => this.session.role() === 'COMPANY_ADMIN');
 
   currentPlan = computed(() => this.session.plan());

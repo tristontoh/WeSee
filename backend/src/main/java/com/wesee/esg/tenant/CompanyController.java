@@ -57,6 +57,7 @@ public class CompanyController {
     }
 
     @PatchMapping("/profile")
+    @PreAuthorize("hasRole('COMPANY_ADMIN')")
     public CompanyResponse updateProfile(@Valid @RequestBody UpdateCompanyProfileRequest request) {
         return companyService.updateProfile(request);
     }

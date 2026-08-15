@@ -157,7 +157,7 @@ Role visibility differs between the two, because the backend guards them differe
 | Endpoint | Guard |
 |---|---|
 | `GET /company`, `GET /company/users` | open to any company member |
-| `PATCH /company/profile` | **open — no role check** |
+| `PATCH /company/profile` | `COMPANY_ADMIN` *(was open — see below)* |
 | `PATCH /company/plan` | `COMPANY_ADMIN` |
 | all `/company/users` writes, all `/company/invites` | `COMPANY_ADMIN` |
 | `GET /company/group`, all `/subsidiaries`, `/switch` | `COMPANY_ADMIN` |
@@ -167,18 +167,19 @@ Role visibility differs between the two, because the backend guards them differe
 - **Group** is entirely `COMPANY_ADMIN`-gated, including its list endpoint, so the nav entry is
   hidden for other roles rather than shown failing.
 
-### A backend authorization gap
+### A backend authorization gap — since fixed
 
-`PATCH /company/profile` carries no `@PreAuthorize`, so any authenticated company member —
-including a `CONSULTANT` — can change the company's sector code and size band. Every sibling
-mutation on that controller is `COMPANY_ADMIN`-guarded, so this reads as an oversight rather than a
-decision.
+`PATCH /company/profile` originally carried no `@PreAuthorize`, so any authenticated company
+member — including a `CONSULTANT` — could change the company's sector code and size band, while
+every sibling mutation on that controller was `COMPANY_ADMIN`-guarded.
 
-M2 does **not** rely on the gap: the profile form is shown read-only to non-admins, matching how
-the rest of the controller behaves. That is a client-side courtesy, not a security control — the
-endpoint stays open until the backend adds the annotation. Flagged for a follow-up backend fix;
-changing it is out of scope here because it is an authorization change to a shipped API rather than
-frontend wiring.
+M2 shipped with the profile form read-only for non-admins, but recorded that this was a
+client-side courtesy rather than a security control, and flagged the endpoint for a follow-up.
+
+**Resolved on 2026-08-15**: `@PreAuthorize("hasRole('COMPANY_ADMIN')")` was added to the endpoint.
+Verified against the running backend with a real `CONSULTANT` account — the call returns 403 where
+it previously returned 200, while read access (`GET /company`, `GET /indicators`) is unaffected.
+The read-only form now mirrors the backend rather than compensating for it.
 
 ## Error handling
 

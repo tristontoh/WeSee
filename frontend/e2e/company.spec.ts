@@ -1,5 +1,5 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
-import { loginThroughUi, registerUser, uniqueEmail, verifyUser } from './fixtures';
+import { API, loginForToken, loginThroughUi, registerUser, uniqueEmail, verifyUser } from './fixtures';
 
 /** Registers, verifies, and signs in a fresh COMPANY_ADMIN with its own company. */
 async function freshAdmin(page: Page, request: APIRequestContext): Promise<string> {
@@ -82,6 +82,35 @@ test('switching company changes the active company', async ({ page, request }) =
 
   await page.getByRole('button', { name: 'Switch' }).first().click();
   await expect(page.getByText(/Now working in/i)).toBeVisible({ timeout: 15_000 });
+});
+
+test('a non-admin cannot edit the company profile', async ({ page, request }) => {
+  // Regression: PATCH /company/profile once had no @PreAuthorize, so any company member —
+  // including a CONSULTANT — could change the company's sector and size band.
+  const adminEmail = await freshAdmin(page, request);
+  const consultant = uniqueEmail('consultant');
+
+  const token = await loginForToken(adminEmail);
+  const created = await request.post(`${API}/company/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { name: 'Outside Consultant', email: consultant, role: 'CONSULTANT' },
+  });
+  const { temporaryPassword } = await created.json();
+
+  // The endpoint itself must refuse, not merely the UI.
+  const consultantToken = await loginForToken(consultant, temporaryPassword);
+  const refused = await request.patch(`${API}/company/profile`, {
+    headers: { Authorization: `Bearer ${consultantToken}` },
+    data: { sectorCode: 'TECHNOLOGY_SOFTWARE' },
+  });
+  expect(refused.status()).toBe(403);
+
+  // And the UI shows the form read-only rather than a control that would 403.
+  await page.evaluate(() => localStorage.clear());
+  await loginThroughUi(page, consultant, temporaryPassword);
+  await page.goto('/settings?view=billing');
+  await expect(page.getByText('COMPANY', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: /Save company profile/ })).toHaveCount(0);
 });
 
 test('settings shows the live plan and its price', async ({ page, request }) => {

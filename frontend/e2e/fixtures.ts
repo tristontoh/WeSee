@@ -58,6 +58,18 @@ export async function verifyUser(email: string): Promise<void> {
  * Upgrades the user's company to ISSUER_READY over the API. Call this *before* signing in
  * through the UI, so the session caches the new plan — nav derives from it.
  */
+/** Logs in over the API and returns the bearer token, for assertions the UI cannot make. */
+export async function loginForToken(email: string, password = 'E2ePassw0rd!'): Promise<string> {
+  const res = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const token = (await res.json())?.auth?.token;
+  if (!token) throw new Error(`could not log in ${email}`);
+  return token;
+}
+
 export async function upgradePlan(
   email: string,
   plan: 'STARTER' | 'GROWTH' | 'ISSUER_READY',
