@@ -26,6 +26,8 @@ export class ShellComponent {
   state = inject(AppStateService);
   ui = inject(UiService);
   private auth = inject(SessionService);
+  /** Exposed for the template: the sidebar shows setup progress until onboarding is done. */
+  session = this.auth;
   private router = inject(Router);
 
   searchResults = computed(() => {

@@ -21,6 +21,13 @@ export class SessionService implements TokenStore {
   email = computed<string>(() => this.userSignal()?.email ?? '');
 
   /**
+   * Two setup steps: the account exists once you have signed in, the workspace once
+   * onboarding is submitted. Drives the sidebar progress card, which hides at 2 of 2.
+   */
+  onboardingCompleted = computed(() => this.userSignal()?.onboardingCompleted ?? false);
+  setupStepsDone = computed(() => (this.onboardingCompleted() ? 2 : 1));
+
+  /**
    * Which navigation this session sees. The backend has no tenant-type concept — it has roles
    * and one company type whose features unlock by plan — so the nav is derived, not stored.
    */

@@ -35,6 +35,39 @@ test('onboarding completes with sector and market', async ({ page, request }) =>
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 });
 
+test('the setup summary fills in as choices are made', async ({ page, request }) => {
+  await freshAdmin(page, request);
+  await page.goto('/onboarding');
+
+  const summary = page.locator('[data-setup-summary]');
+  await expect(summary).toBeVisible({ timeout: 15_000 });
+  await expect(summary.getByText('Not selected yet')).toHaveCount(2);
+
+  await page.locator('[data-sector="MANUFACTURING"]').click();
+  await page.locator('[data-market="MAIN_MARKET"]').click();
+
+  await expect(summary.getByText('Manufacturing & Heavy Industry')).toBeVisible();
+  await expect(summary.getByText('Main Market')).toBeVisible();
+  await expect(summary.getByText('Not selected yet')).toHaveCount(0);
+});
+
+test('sidebar setup progress shows while onboarding is outstanding, then disappears', async ({ page, request }) => {
+  await freshAdmin(page, request);
+  await page.goto('/onboarding');
+
+  const progress = page.locator('[data-setup-progress]');
+  await expect(progress).toBeVisible({ timeout: 15_000 });
+  await expect(progress.getByText('1 of 2 steps complete')).toBeVisible();
+
+  await page.locator('[data-sector="MANUFACTURING"]').click();
+  await page.locator('[data-market="SME"]').click();
+  await page.getByRole('button', { name: /Finish setup/i }).click();
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+
+  // onboardingCompleted flips on the session, so the card retires itself.
+  await expect(progress).toHaveCount(0, { timeout: 15_000 });
+});
+
 test('team screen lists the founding admin', async ({ page, request }) => {
   const email = await freshAdmin(page, request);
   await page.goto('/team');

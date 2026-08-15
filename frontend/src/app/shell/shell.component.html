@@ -38,6 +38,17 @@
       </button>
     </nav>
 
+    <!-- Setup progress. Only while onboarding is outstanding — it disappears at 2 of 2
+         rather than sitting on every screen forever. -->
+    <div *ngIf="!session.onboardingCompleted() && session.companyId()" data-setup-progress
+      style="margin:14px 16px 4px;background:#F3F7F5;border:1px solid #E6ECE9;border-radius:12px;padding:14px 16px;">
+      <div style="font-size:12px;font-weight:700;color:#33413C;margin-bottom:2px;">Onboarding progress</div>
+      <div style="font-size:11.5px;color:#7C8781;margin-bottom:10px;">{{ session.setupStepsDone() }} of 2 steps complete</div>
+      <div style="height:6px;border-radius:4px;background:#E2E9E5;overflow:hidden;">
+        <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#4C96B3,#A99FDB);" [style.width]="(session.setupStepsDone() / 2) * 100 + '%'"></div>
+      </div>
+    </div>
+
     <!-- profile footer -->
     <div style="padding:14px 16px 18px;border-top:1px solid rgba(70,90,120,.12);position:relative;">
       <button (click)="ui.toggleProfile()" class="hover-soft" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.6);border-radius:14px;padding:8px 10px;width:100%;box-sizing:border-box;box-shadow:0 4px 12px rgba(70,90,120,.08);cursor:pointer;font-family:inherit;">
