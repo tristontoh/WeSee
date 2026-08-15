@@ -27,8 +27,10 @@ test('onboarding refuses to submit without a market', async ({ page, request }) 
 test('onboarding completes with sector and market', async ({ page, request }) => {
   await freshAdmin(page, request);
   await page.goto('/onboarding');
-  await page.getByText('Manufacturing & Heavy Industry').click();
-  await page.getByRole('button', { name: 'SME', exact: true }).click();
+  // Cards carry a description, so their accessible name is no longer just the label —
+  // select by the stable data hooks instead.
+  await page.locator('[data-sector="MANUFACTURING"]').click();
+  await page.locator('[data-market="SME"]').click();
   await page.getByRole('button', { name: /Finish setup/i }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 });

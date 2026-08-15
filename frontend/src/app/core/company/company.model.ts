@@ -6,10 +6,10 @@ export type CompanySizeBand = 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE';
 /** Roles a company admin may assign. Platform roles are deliberately excluded. */
 export const ASSIGNABLE_ROLES: Role[] = ['COMPANY_ADMIN', 'COMPANY_CONTRIBUTOR', 'CONSULTANT'];
 
-export const MARKETS: { value: MarketClassification; label: string }[] = [
-  { value: 'SME', label: 'SME' },
-  { value: 'MAIN_MARKET', label: 'Main Market' },
-  { value: 'ACE_MARKET', label: 'ACE Market' },
+export const MARKETS: { value: MarketClassification; label: string; desc: string }[] = [
+  { value: 'SME', label: 'SME', desc: 'Private companies below Main or ACE market thresholds.' },
+  { value: 'MAIN_MARKET', label: 'Main Market', desc: "Bursa Malaysia's principal board for larger issuers." },
+  { value: 'ACE_MARKET', label: 'ACE Market', desc: 'Sponsor-driven market for emerging growth companies.' },
 ];
 
 export const SIZE_BANDS: { value: CompanySizeBand; label: string }[] = [

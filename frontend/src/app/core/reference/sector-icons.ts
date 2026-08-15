@@ -19,3 +19,23 @@ const ICONS: Record<string, string> = {
 export function sectorIcon(code: string): string {
   return (code && ICONS[code]) || FALLBACK_ICON;
 }
+
+/**
+ * One-line explanations shown under each sector on the onboarding cards. The backend's
+ * SectorResponse carries only { code, name }, so these live here next to the icons and
+ * degrade the same way for codes an admin adds later.
+ */
+const DESCRIPTIONS: Record<string, string> = {
+  AGRICULTURE_PLANTATION: 'Farming, plantations, and agri-processing.',
+  CONSTRUCTION_PROPERTY: 'Builders, developers, and real estate.',
+  CONSUMER_RETAIL: 'Retail, FMCG, and consumer brands.',
+  ENERGY_OIL_GAS: 'Power generation, oil, gas, and utilities.',
+  FINANCIAL_SERVICES: 'Banks, insurers, and financial institutions.',
+  HEALTHCARE_PHARMA: 'Hospitals, clinics, and pharma manufacturers.',
+  MANUFACTURING: 'Factories, plants, and industrial operations.',
+  TECHNOLOGY_SOFTWARE: 'SaaS, IT services, and digital platforms.',
+};
+
+export function sectorDescription(code: string): string {
+  return (code && DESCRIPTIONS[code]) || '';
+}

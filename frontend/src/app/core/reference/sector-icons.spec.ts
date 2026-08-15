@@ -1,4 +1,4 @@
-import { sectorIcon, FALLBACK_ICON } from './sector-icons';
+import { sectorIcon, sectorDescription, FALLBACK_ICON } from './sector-icons';
 
 describe('sectorIcon', () => {
   it('returns a distinct icon for each seeded sector code', () => {
@@ -24,5 +24,26 @@ describe('sectorIcon', () => {
   it('falls back for an empty or null code', () => {
     expect(sectorIcon('')).toBe(FALLBACK_ICON);
     expect(sectorIcon(null as unknown as string)).toBe(FALLBACK_ICON);
+  });
+});
+
+describe('sectorDescription', () => {
+  it('describes every seeded sector', () => {
+    const codes = [
+      'AGRICULTURE_PLANTATION',
+      'CONSTRUCTION_PROPERTY',
+      'CONSUMER_RETAIL',
+      'ENERGY_OIL_GAS',
+      'FINANCIAL_SERVICES',
+      'HEALTHCARE_PHARMA',
+      'MANUFACTURING',
+      'TECHNOLOGY_SOFTWARE',
+    ];
+    codes.forEach((c) => expect(sectorDescription(c).length).toBeGreaterThan(10));
+  });
+
+  it('returns empty for an unknown code so the card just omits the line', () => {
+    expect(sectorDescription('SOMETHING_NEW')).toBe('');
+    expect(sectorDescription('')).toBe('');
   });
 });
