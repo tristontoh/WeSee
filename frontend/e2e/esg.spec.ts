@@ -59,11 +59,13 @@ test('governance and targets show as locked on STARTER, not hidden', async ({ pa
 
   // governance and targets are visibleOnlyAtMinPlan=false, so the backend intends them shown
   // but locked — unlike climate-module and ifrs-s1-s2, which are hidden outright.
-  const gov = page.getByRole('button', { name: /Governance/ });
+  // Scoped to the sidebar: the indicators page also has a "Governance" category tab.
+  const nav = page.locator('nav');
+  const gov = nav.getByRole('button', { name: /Governance/ });
   await expect(gov).toBeVisible();
   await expect(gov).toHaveAttribute('data-locked', 'true');
-  await expect(page.getByRole('button', { name: /^Targets/ })).toHaveAttribute('data-locked', 'true');
-  await expect(page.getByRole('button', { name: 'Emissions Dashboard' })).toHaveCount(0);
+  await expect(nav.getByRole('button', { name: /^Targets/ })).toHaveAttribute('data-locked', 'true');
+  await expect(nav.getByRole('button', { name: 'Emissions Dashboard' })).toHaveCount(0);
 });
 
 test('opening a locked screen explains the plan requirement', async ({ page, request }) => {
@@ -75,7 +77,7 @@ test('opening a locked screen explains the plan requirement', async ({ page, req
 test('governance and targets unlock on GROWTH', async ({ page, request }) => {
   await company(page, request, 'GROWTH', 'gov');
   await page.goto('/indicators');
-  const gov = page.getByRole('button', { name: /Governance/ });
+  const gov = page.locator('nav').getByRole('button', { name: /Governance/ });
   await expect(gov).toBeVisible({ timeout: 15_000 });
   await expect(gov).not.toHaveAttribute('data-locked', 'true');
 });
