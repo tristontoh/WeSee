@@ -1,5 +1,5 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
-import { API, loginForToken, loginThroughUi, registerUser, uniqueEmail, verifyUser } from './fixtures';
+import { API, loginForToken, loginThroughUi, registerUser, uniqueEmail, upgradePlan, verifyUser } from './fixtures';
 
 /** Registers, verifies, and signs in a fresh COMPANY_ADMIN with its own company. */
 async function freshAdmin(page: Page, request: APIRequestContext): Promise<string> {
@@ -184,6 +184,37 @@ test('a non-admin cannot edit the company profile', async ({ page, request }) =>
   await page.goto('/settings?view=billing');
   await expect(page.getByText('COMPANY', { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: /Save company profile/ })).toHaveCount(0);
+});
+
+test('turning on sector disclosures adds sector-specific indicators', async ({ page, request }) => {
+  const email = uniqueEmail('sectormod');
+  await registerUser(request, email);
+  await verifyUser(email);
+  await loginThroughUi(page, email);
+
+  // Onboard as MANUFACTURING, then move to GROWTH — the sector matter set needs both a
+  // sector and GROWTH before the toggle does anything.
+  await page.goto('/onboarding');
+  await page.locator('[data-sector="MANUFACTURING"]').click();
+  await page.locator('[data-market="SME"]').click();
+  await page.getByRole('button', { name: /Finish setup/i }).click();
+  await expect(page).toHaveURL(/\/dashboard|\/indicators/, { timeout: 15_000 });
+
+  await upgradePlan(email, 'GROWTH');
+  await page.reload();
+
+  await page.goto('/indicators');
+  await expect(page.getByText(/12 indicators apply/)).toBeVisible({ timeout: 15_000 });
+
+  await page.goto('/settings?view=billing');
+  await expect(page.getByText('Sector disclosures')).toBeVisible({ timeout: 15_000 });
+  await page.locator('select').last().selectOption('true');
+  await page.getByRole('button', { name: /Save company profile/ }).click();
+  await expect(page.getByText('Company profile saved.')).toBeVisible({ timeout: 15_000 });
+
+  await page.goto('/indicators');
+  await expect(page.getByText(/15 indicators apply/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Raw Material Conversion Efficiency')).toBeVisible();
 });
 
 test('settings shows the live plan and its price', async ({ page, request }) => {

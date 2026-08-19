@@ -107,7 +107,17 @@ import { toApiError } from '../../core/http/api-error';
               <option *ngFor="let b of sizeBands" [value]="b.value" [selected]="b.value === company()?.sizeBand">{{ b.label }}</option>
             </select>
 
-            <button *ngIf="canEditCompany()" (click)="saveProfile(sectorSel.value, sizeSel.value)" [disabled]="savingProfile()" class="btn-frost" style="margin-top:16px;width:100%;justify-content:center;">{{ savingProfile() ? 'Saving…' : 'Save company profile' }}</button>
+            <label style="font-size:12.5px;font-weight:600;color:#33413A;display:block;margin:14px 0 6px;">Sector disclosures</label>
+            <select #sectorModSel [disabled]="!canEditCompany()" style="width:100%;height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;">
+              <option value="false" [selected]="!company()?.sectorModuleEnabled">Off</option>
+              <option value="true" [selected]="company()?.sectorModuleEnabled">On</option>
+            </select>
+            <div style="font-size:12px;color:#8A968F;margin-top:6px;line-height:1.45;">
+              Adds indicators specific to your sector, on top of the standard set.
+              <span *ngIf="!sectorModuleUsable()" style="color:#8A6A2A;">Takes effect once you are on Growth or above with a sector selected.</span>
+            </div>
+
+            <button *ngIf="canEditCompany()" (click)="saveProfile(sectorSel.value, sizeSel.value, sectorModSel.value)" [disabled]="savingProfile()" class="btn-frost" style="margin-top:16px;width:100%;justify-content:center;">{{ savingProfile() ? 'Saving…' : 'Save company profile' }}</button>
 
             <div *ngIf="companyError()" style="margin-top:14px;font-size:12.5px;color:#8C3A2E;background:#FBEAE7;border:1px solid #F0C4BC;padding:10px 12px;border-radius:11px;line-height:1.4;">{{ companyError() }}</div>
           </div>
@@ -162,11 +172,28 @@ export class SettingsComponent implements OnInit {
     this.referenceApi.planPricing().subscribe({ next: (p) => this.pricing.set(p), error: () => {} });
   }
 
-  saveProfile(sectorCode: string, sizeBand: string) {
+  /**
+   * The sector matter set only resolves when the company is on GROWTH or above AND has a
+   * sector. The toggle still saves below that — it just has no effect yet, so say so.
+   */
+  sectorModuleUsable = computed(() => {
+    const plan = this.currentPlan();
+    return !!this.company()?.sectorCode && (plan === 'GROWTH' || plan === 'ISSUER_READY');
+  });
+
+  saveProfile(sectorCode: string, sizeBand: string, sectorModuleEnabled: string) {
     if (this.savingProfile()) return;
     this.savingProfile.set(true);
     this.companyError.set('');
-    this.companyApi.updateProfile({ sectorCode, sizeBand: sizeBand as CompanySizeBand }).subscribe({
+    this.companyApi
+      .updateProfile({
+        // "Not set" must go as null, not "". CompanySizeBand is an enum server-side, and an
+        // empty string fails deserialization with a 500 rather than being treated as absent.
+        sectorCode: sectorCode || undefined,
+        sizeBand: (sizeBand || undefined) as CompanySizeBand | undefined,
+        sectorModuleEnabled: sectorModuleEnabled === 'true',
+      })
+      .subscribe({
       next: (c) => {
         this.company.set(c);
         this.savingProfile.set(false);
