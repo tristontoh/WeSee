@@ -4,6 +4,8 @@ import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.ForbiddenException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,7 +21,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -84,6 +89,42 @@ public class GlobalExceptionHandler {
         String message = "Invalid value for '" + ex.getName() + "': " + ex.getValue();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiError.of(400, "Bad Request", message, request.getRequestURI()));
+    }
+
+    /**
+     * A body Jackson cannot bind is a client error, not a server fault. Without this it fell
+     * through to the generic handler as a 500 — sending sizeBand:"" for an enum field, for
+     * instance, looked like the server had broken.
+     *
+     * Only the field path and the accepted constants are echoed back: both are already part of
+     * the published API contract, unlike Jackson's own message, which carries internal class
+     * names.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex,
+                                                         HttpServletRequest request) {
+        String message = "Request body could not be read.";
+        List<String> details = List.of();
+
+        if (ex.getCause() instanceof InvalidFormatException ife) {
+            String field = ife.getPath().stream()
+                    .map(JsonMappingException.Reference::getFieldName)
+                    .filter(Objects::nonNull)
+                    .reduce((a, b) -> a + "." + b)
+                    .orElse("value");
+            Object rejected = ife.getValue();
+            String shown = rejected == null || rejected.toString().isEmpty() ? "an empty value" : "\"" + rejected + "\"";
+            message = field + " does not accept " + shown + ".";
+
+            Object[] constants = ife.getTargetType() != null ? ife.getTargetType().getEnumConstants() : null;
+            if (constants != null) {
+                details = Arrays.stream(constants).map(String::valueOf).toList();
+                message += " Accepted values: " + String.join(", ", details) + ".";
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiError.of(400, "Bad Request", message, request.getRequestURI(), details));
     }
 
     /** Without this a wrong verb surfaces as an opaque 500 instead of a 405. */
