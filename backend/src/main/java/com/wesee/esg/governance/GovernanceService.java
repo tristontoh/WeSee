@@ -105,7 +105,7 @@ public class GovernanceService {
             }
         }
 
-        return ownershipRepository.findByCompanyId(companyId).stream()
+        return ownershipRepository.findByCompanyIdOrderByMatterCategoryAscMatterNameAsc(companyId).stream()
                 .map(MatterOwnershipResponse::from)
                 .toList();
     }

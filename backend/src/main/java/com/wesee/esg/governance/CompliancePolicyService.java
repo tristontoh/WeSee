@@ -48,7 +48,7 @@ public class CompliancePolicyService {
     @Transactional
     public List<CompliancePolicyResponse> getPolicies() {
         UUID companyId = currentUserProvider.requireCompanyId();
-        List<CompliancePolicy> policies = repository.findByCompanyId(companyId);
+        List<CompliancePolicy> policies = repository.findByCompanyIdOrdered(companyId);
         if (policies.isEmpty()) {
             for (var entry : DEFAULT_POLICIES.entrySet()) {
                 CompliancePolicy policy = new CompliancePolicy();
@@ -59,7 +59,7 @@ public class CompliancePolicyService {
                 policy.setReviewCycleMonths((Integer) entry.getValue()[2]);
                 repository.save(policy);
             }
-            policies = repository.findByCompanyId(companyId);
+            policies = repository.findByCompanyIdOrdered(companyId);
         }
         return policies.stream().map(CompliancePolicyResponse::from).toList();
     }

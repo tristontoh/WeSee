@@ -121,7 +121,7 @@ test('governance and targets unlock on GROWTH', async ({ page, request }) => {
 test('an oversight role can be set', async ({ page, request }) => {
   await company(page, request, 'GROWTH', 'gov');
   await page.goto('/governance');
-  await expect(page.getByText('OVERSIGHT STRUCTURE')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('OVERSIGHT STRUCTURE', { exact: true })).toBeVisible({ timeout: 15_000 });
 
   const role = page.locator('input[placeholder="Role title"]').first();
   await role.fill('Board Sustainability Committee');
@@ -131,7 +131,8 @@ test('an oversight role can be set', async ({ page, request }) => {
 
 test('a compliance policy can be added and marked reviewed', async ({ page, request }) => {
   await company(page, request, 'GROWTH', 'gov');
-  await page.goto('/governance');
+  // Governance is a three-step wizard; policies are the third step.
+  await page.goto('/governance?step=policies');
   await expect(page.getByText(/COMPLIANCE POLICIES/)).toBeVisible({ timeout: 15_000 });
 
   await page.locator('input[placeholder="Policy name"]').fill('Anti-Bribery Policy');
@@ -142,6 +143,46 @@ test('a compliance policy can be added and marked reviewed', async ({ page, requ
 
   await row.getByRole('button', { name: 'Mark reviewed' }).click();
   await expect(row.getByText('Current')).toBeVisible({ timeout: 15_000 });
+});
+
+test('the governance steps advance and survive a reload', async ({ page, request }) => {
+  await company(page, request, 'GROWTH', 'gov');
+  await page.goto('/governance');
+
+  // Step 1 is where it opens; the other steps' content is not rendered yet.
+  await expect(page.getByText('OVERSIGHT STRUCTURE', { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/MATTER OWNERSHIP/)).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText(/MATTER OWNERSHIP/)).toBeVisible();
+  await expect(page.getByText('OVERSIGHT STRUCTURE', { exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByText(/COMPLIANCE POLICIES/)).toBeVisible();
+
+  // The step is in the URL, so a reload returns to it rather than to step 1.
+  await expect(page).toHaveURL(/step=policies/);
+  await page.reload();
+  await expect(page.getByText(/COMPLIANCE POLICIES/)).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByText(/MATTER OWNERSHIP/)).toBeVisible();
+});
+
+test('a matter owner can be assigned from the ownership step', async ({ page, request }) => {
+  await company(page, request, 'GROWTH', 'gov');
+  await page.goto('/governance?step=ownership');
+  await expect(page.getByText(/MATTER OWNERSHIP/)).toBeVisible({ timeout: 15_000 });
+
+  const row = page.locator('[data-matter]').first();
+  await row.locator('input[placeholder="Owner"]').fill('Ahmad Razali');
+  await row.getByRole('button', { name: 'Set' }).click();
+  await expect(page.getByText('Owner set.')).toBeVisible({ timeout: 15_000 });
+
+  // The assignment persists across a reload rather than living only in the row's input.
+  await page.reload();
+  await expect(page.locator('[data-matter]').first().locator('input[placeholder="Owner"]'))
+    .toHaveValue('Ahmad Razali', { timeout: 15_000 });
 });
 
 test('a performance target can be added with a progress bar', async ({ page, request }) => {
