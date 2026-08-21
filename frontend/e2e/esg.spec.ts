@@ -1,5 +1,5 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
-import { loginThroughUi, registerUser, uniqueEmail, upgradePlan, verifyUser } from './fixtures';
+import { API, loginForToken, loginThroughUi, registerUser, uniqueEmail, upgradePlan, verifyUser } from './fixtures';
 
 async function company(
   page: Page,
@@ -48,6 +48,42 @@ test('creating an assessment lists it as a draft and validates it', async ({ pag
 
   await row.getByRole('button', { name: 'Validate' }).click();
   await expect(row.getByText('Validated')).toBeVisible({ timeout: 15_000 });
+});
+
+test('clicking a heat cell sets the score that gets saved', async ({ page, request }) => {
+  // The scores used to come from <select> dropdowns; they are now a click-to-set heat strip,
+  // so the value reaching the API no longer has a form control behind it.
+  const email = await company(page, request, 'STARTER', 'mat');
+  await page.goto('/materiality');
+  await expect(page.getByText('SCORE MATTERS · 1–5')).toBeVisible({ timeout: 15_000 });
+
+  const matter = 'Energy Consumption & GHG Footprint';
+  await page.getByRole('button', { name: `Impact 5 for ${matter}` }).click();
+  await page.getByRole('button', { name: `Influence 1 for ${matter}` }).click();
+
+  await page.locator('input[placeholder="Assessment name"]').fill('Heat Strip FY26');
+  await page.getByRole('button', { name: 'Create assessment' }).click();
+  await expect(page.locator('[data-assessment="Heat Strip FY26"]')).toBeVisible({ timeout: 15_000 });
+
+  // Assert against the persisted record, not the UI that produced it.
+  const token = await loginForToken(email);
+  const list = await (
+    await request.get(`${API}/materiality/assessments`, { headers: { Authorization: `Bearer ${token}` } })
+  ).json();
+  const created = list.find((a: { name: string }) => a.name === 'Heat Strip FY26');
+  const detail = await (
+    await request.get(`${API}/materiality/assessments/${created.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  ).json();
+
+  const saved = detail.scores.find((s: { matterName: string }) => s.matterName === matter);
+  expect(saved.impact).toBe(5);
+  expect(saved.influence).toBe(1);
+
+  // Matters left untouched still submit the mid-scale default rather than dropping out.
+  const untouched = detail.scores.find((s: { matterName: string }) => s.matterName !== matter);
+  expect(untouched.impact).toBe(3);
 });
 
 // ---------- governance + targets (GROWTH) ----------

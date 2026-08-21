@@ -18,76 +18,126 @@ const H = 'font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;marg
 const INPUT = 'height:38px;border-radius:9px;border:1px solid #E5E8E1;padding:0 11px;font-family:inherit;font-size:13.5px;background:#fff;';
 const BTN = 'height:38px;padding:0 16px;border-radius:9px;border:none;cursor:pointer;background:#4C96B3;color:#fff;font-weight:600;font-size:13px;font-family:inherit;';
 
+/** The app's category palette, as RGB triples so the heat scale can vary only the alpha. */
+const CAT_RGB: Record<string, string> = {
+  ENVIRONMENTAL: '76,150,179', // #4C96B3
+  SOCIAL: '169,159,219', // #A99FDB
+  GOVERNANCE: '217,107,161', // #D96BA1
+};
+const CAT_SOLID: Record<string, string> = {
+  ENVIRONMENTAL: '#4C96B3',
+  SOCIAL: '#A99FDB',
+  GOVERNANCE: '#D96BA1',
+};
+
 @Component({
   selector: 'app-materiality',
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div style="animation:vfade .3s ease both;max-width:960px;">
+    <div style="animation:vfade .3s ease both;max-width:1120px;">
       <h1 style="font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;margin:0 0 4px;letter-spacing:-.5px;">Materiality</h1>
-      <p style="color:#64726B;margin:0 0 20px;font-size:14px;">Score each sustainability matter on impact and stakeholder influence, then validate the assessment.</p>
+      <p style="color:#64726B;margin:0 0 20px;font-size:14px;">Click a cell to set the score — colour depth shows intensity at a glance.</p>
 
       <div *ngIf="error()" style="background:#FBEAE7;border:1px solid #F0C4BC;color:#8C3A2E;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;">{{ error() }}</div>
 
-      <!-- stakeholders -->
-      <div [style]="card">
-        <div [style]="h">STAKEHOLDER GROUPS ({{ selectedStakeholders().length }} selected)</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-          <button *ngFor="let s of stakeholders()" (click)="toggle(s)" type="button"
-            [style.background]="s.selected ? '#E7F0F2' : '#fff'"
-            [style.border-color]="s.selected ? '#BFD8DD' : '#E5E8E1'"
-            [style.color]="s.selected ? '#4C96B3' : '#64726B'"
-            style="padding:8px 14px;border-radius:20px;border-width:1px;border-style:solid;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;">
-            {{ s.name }}
-          </button>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <input #newSh placeholder="Add a stakeholder group" [style]="input" style="flex:1;max-width:280px;">
-          <button (click)="addStakeholder(newSh.value); newSh.value = ''" [style]="btn">Add</button>
-        </div>
-      </div>
-
-      <!-- scoring -->
-      <div [style]="card">
-        <div [style]="h">SCORE MATTERS · 1–5</div>
-        <div *ngFor="let m of matters()" style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #F2F4F0;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13.5px;font-weight:600;">{{ m.name }}</div>
-            <div style="font-size:12px;color:#8A968F;">{{ m.category }}</div>
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+        <!-- ---------- scoring column ---------- -->
+        <div style="flex:1;min-width:520px;">
+          <!-- stakeholders -->
+          <div [style]="card">
+            <div [style]="h">STAKEHOLDER GROUPS ({{ selectedStakeholders().length }} selected)</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+              <button *ngFor="let s of stakeholders()" (click)="toggle(s)" type="button"
+                [style.background]="s.selected ? '#E7F0F2' : '#fff'"
+                [style.border-color]="s.selected ? '#BFD8DD' : '#E5E8E1'"
+                [style.color]="s.selected ? '#4C96B3' : '#64726B'"
+                style="padding:8px 14px;border-radius:20px;border-width:1.5px;border-style:solid;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;">
+                {{ s.name }}
+              </button>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <input #newSh placeholder="Add a stakeholder group" [style]="input" style="flex:1;max-width:280px;">
+              <button (click)="addStakeholder(newSh.value); newSh.value = ''" [style]="btn">Add</button>
+            </div>
           </div>
-          <label style="font-size:12px;color:#8A968F;">Impact</label>
-          <select (change)="setScore(m.id, 'impact', $any($event.target).value)" [style]="input" style="width:64px;">
-            <option *ngFor="let n of scale" [value]="n" [selected]="n === impactOf(m.id)">{{ n }}</option>
-          </select>
-          <label style="font-size:12px;color:#8A968F;">Influence</label>
-          <select (change)="setScore(m.id, 'influence', $any($event.target).value)" [style]="input" style="width:64px;">
-            <option *ngFor="let n of scale" [value]="n" [selected]="n === influenceOf(m.id)">{{ n }}</option>
-          </select>
-        </div>
-        <div *ngIf="!matters().length" style="color:#8A968F;font-size:13.5px;">No applicable matters found.</div>
 
-        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;">
-          <input #name placeholder="Assessment name" [style]="input" style="flex:1;min-width:200px;">
-          <input #date type="date" [value]="today" [style]="input">
-          <button (click)="create(name.value, date.value)" [style]="btn" [disabled]="busy() || !matters().length">Create assessment</button>
-        </div>
-      </div>
+          <!-- scoring -->
+          <div [style]="card">
+            <div [style]="h">SCORE MATTERS · 1–5</div>
 
-      <!-- assessments -->
-      <div [style]="card">
-        <div [style]="h">ASSESSMENTS ({{ assessments().length }})</div>
-        <div *ngFor="let a of assessments()" [attr.data-assessment]="a.name" style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F2F4F0;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:600;">{{ a.name }}</div>
-            <div style="font-size:12.5px;color:#8A968F;">{{ a.assessmentDate }} · {{ a.createdByName || '—' }}</div>
+            <div *ngIf="matters().length"
+              style="display:grid;grid-template-columns:1fr auto auto;gap:2px 18px;align-items:center;font-size:10px;letter-spacing:.7px;color:#A9B3AD;font-weight:700;margin-bottom:8px;padding:0 12px;">
+              <span>MATTER</span><span>IMPACT</span><span>INFLUENCE</span>
+            </div>
+
+            <div *ngFor="let m of matters()"
+              style="display:grid;grid-template-columns:1fr auto auto;gap:2px 18px;align-items:center;padding:12px;margin-bottom:6px;border-radius:11px;background:#FBFCFA;border:1px solid #EFF2EC;">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <span [style.background]="solidOf(m.category)" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;"></span>
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px;font-weight:700;color:#26302B;">{{ m.name }}</div>
+                  <div style="font-size:9.5px;letter-spacing:.6px;color:#A9B3AD;font-weight:700;margin-top:1px;">{{ m.category }}</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <button *ngFor="let n of scale" type="button" (click)="setScore(m.id, 'impact', n)"
+                  [attr.aria-label]="'Impact ' + n + ' for ' + m.name"
+                  [attr.aria-pressed]="n === impactOf(m.id)"
+                  [style.background]="heat(m.category, n, impactOf(m.id))"
+                  style="width:22px;height:22px;border-radius:5px;border:none;padding:0;cursor:pointer;"></button>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <button *ngFor="let n of scale" type="button" (click)="setScore(m.id, 'influence', n)"
+                  [attr.aria-label]="'Influence ' + n + ' for ' + m.name"
+                  [attr.aria-pressed]="n === influenceOf(m.id)"
+                  [style.background]="heat(m.category, n, influenceOf(m.id))"
+                  style="width:22px;height:22px;border-radius:5px;border:none;padding:0;cursor:pointer;"></button>
+              </div>
+            </div>
+
+            <div *ngIf="!matters().length" style="color:#8A968F;font-size:13.5px;">No applicable matters found.</div>
           </div>
-          <span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:11px;"
-            [style.background]="a.status === 'VALIDATED' ? '#E4EEF0' : '#F3F5F1'"
-            [style.color]="a.status === 'VALIDATED' ? '#4C96B3' : '#64726B'">{{ a.status === 'VALIDATED' ? 'Validated' : 'Draft' }}</span>
-          <button *ngIf="canValidate() && a.status !== 'VALIDATED'" (click)="validate(a)" [style]="btn" style="height:32px;font-size:12.5px;">Validate</button>
-          <a [href]="reportUrl(a)" target="_blank" style="font-size:12.5px;color:#4C96B3;font-weight:600;">PDF</a>
         </div>
-        <div *ngIf="!assessments().length" style="color:#8A968F;font-size:13.5px;">No assessments yet.</div>
+
+        <!-- ---------- side column ---------- -->
+        <div style="width:300px;flex-shrink:0;">
+          <div [style]="card">
+            <div style="font-size:14px;font-weight:700;color:#26302B;margin-bottom:3px;">Create assessment</div>
+            <div style="font-size:12.5px;color:#8A968F;margin-bottom:16px;line-height:1.45;">Save the current scores as a named assessment.</div>
+
+            <div style="font-size:10px;letter-spacing:.6px;color:#A9B3AD;font-weight:700;margin-bottom:6px;">NAME</div>
+            <input #name placeholder="Assessment name" [style]="input" style="width:100%;box-sizing:border-box;margin-bottom:14px;">
+
+            <div style="font-size:10px;letter-spacing:.6px;color:#A9B3AD;font-weight:700;margin-bottom:6px;">DATE</div>
+            <input #date type="date" [value]="today" [style]="input" style="width:100%;box-sizing:border-box;margin-bottom:18px;">
+
+            <button (click)="create(name.value, date.value)" [style]="btn" [disabled]="busy() || !matters().length"
+              style="width:100%;">Create assessment</button>
+          </div>
+
+          <!-- assessments -->
+          <div [style]="card">
+            <div [style]="h">ASSESSMENTS ({{ assessments().length }})</div>
+            <div *ngFor="let a of assessments()" [attr.data-assessment]="a.name"
+              style="padding:11px 0;border-bottom:1px solid #F2F4F0;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13.5px;font-weight:600;">{{ a.name }}</div>
+                  <div style="font-size:12px;color:#8A968F;">{{ a.assessmentDate }}</div>
+                </div>
+                <span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:11px;flex-shrink:0;"
+                  [style.background]="a.status === 'VALIDATED' ? '#E4EEF0' : '#F3F5F1'"
+                  [style.color]="a.status === 'VALIDATED' ? '#4C96B3' : '#64726B'">{{ a.status === 'VALIDATED' ? 'Validated' : 'Draft' }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+                <button *ngIf="canValidate() && a.status !== 'VALIDATED'" (click)="validate(a)" [style]="btn" style="height:30px;font-size:12px;padding:0 12px;">Validate</button>
+                <a [href]="reportUrl(a)" target="_blank" style="font-size:12.5px;color:#4C96B3;font-weight:600;">PDF</a>
+              </div>
+            </div>
+            <div *ngIf="!assessments().length" style="color:#8A968F;font-size:13.5px;">No assessments yet.</div>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -132,6 +182,20 @@ export class MaterialityComponent implements OnInit {
     this.api.assessments().subscribe({ next: (a) => this.assessments.set(a), error: () => {} });
   }
 
+  solidOf(category: string): string {
+    return CAT_SOLID[category] ?? '#8A968F';
+  }
+
+  /**
+   * Cells at or below the score carry the category colour, deepening with level; the rest stay
+   * grey. Alpha rather than distinct colours keeps a row readable as a single strip.
+   */
+  heat(category: string, level: number, score: number): string {
+    if (level > score) return '#ECEEF1';
+    const rgb = CAT_RGB[category] ?? '138,150,143';
+    return `rgba(${rgb},${(0.15 + level * 0.17).toFixed(2)})`;
+  }
+
   impactOf(matterId: string): number {
     return this.scores()[matterId]?.impact ?? 3;
   }
@@ -140,13 +204,12 @@ export class MaterialityComponent implements OnInit {
     return this.scores()[matterId]?.influence ?? 3;
   }
 
-  setScore(matterId: string, key: 'impact' | 'influence', raw: string) {
-    const n = Number(raw);
+  setScore(matterId: string, key: 'impact' | 'influence', value: number) {
     this.scores.update((s) => ({
       ...s,
       [matterId]: {
-        impact: key === 'impact' ? n : (s[matterId]?.impact ?? 3),
-        influence: key === 'influence' ? n : (s[matterId]?.influence ?? 3),
+        impact: key === 'impact' ? value : (s[matterId]?.impact ?? 3),
+        influence: key === 'influence' ? value : (s[matterId]?.influence ?? 3),
       },
     }));
   }
