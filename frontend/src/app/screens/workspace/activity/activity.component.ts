@@ -60,7 +60,8 @@ const BTN = 'height:40px;padding:0 16px;border-radius:10px;border:none;cursor:po
           <div style="font-family:'Work Sans',monospace;font-size:14px;font-weight:600;">{{ e.calculatedTco2e }} tCO₂e</div>
           <button (click)="remove(e)" style="height:34px;padding:0 12px;border-radius:9px;border:1px solid #F0C4BC;background:#fff;color:#8C3A2E;cursor:pointer;font-size:12.5px;font-family:inherit;">Delete</button>
         </div>
-        <div *ngIf="!entries().length" style="color:#8A968F;font-size:13.5px;">No entries for {{ year() }}.</div>
+        <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading entries…</div>
+        <div *ngIf="!loading() && !entries().length" style="color:#8A968F;font-size:13.5px;">No entries for {{ year() }}.</div>
         <div *ngIf="entries().length" style="display:flex;justify-content:flex-end;gap:10px;align-items:baseline;margin-top:14px;">
           <span style="font-size:12.5px;color:#8A968F;font-weight:600;">TOTAL</span>
           <span style="font-family:'Work Sans',monospace;font-size:20px;font-weight:600;">{{ total() }} tCO₂e</span>
@@ -97,6 +98,7 @@ export class ActivityComponent implements OnInit {
   entries = signal<EmissionActivityEntryResponse[]>([]);
   year = signal(currentFiscalYear());
   busy = signal(false);
+  loading = signal(false);
   error = signal('');
 
   years = [currentFiscalYear() - 2, currentFiscalYear() - 1, currentFiscalYear(), currentFiscalYear() + 1];
@@ -116,9 +118,16 @@ export class ActivityComponent implements OnInit {
   }
 
   private loadEntries() {
+    this.loading.set(true);
     this.api.entries(this.year()).subscribe({
-      next: (e) => this.entries.set(e),
-      error: (err) => this.error.set(toApiError(err).message),
+      next: (e) => {
+        this.entries.set(e);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(toApiError(err).message);
+        this.loading.set(false);
+      },
     });
   }
 

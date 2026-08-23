@@ -36,7 +36,9 @@ const BTN = 'height:34px;padding:0 13px;border-radius:9px;border:none;cursor:poi
 
       <div *ngIf="error() && !planBlocked()" style="background:#FBEAE7;border:1px solid #F0C4BC;color:#8C3A2E;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;">{{ error() }}</div>
 
-      <ng-container *ngIf="!planBlocked()">
+      <div *ngIf="loading() && !data()" style="color:#8A968F;font-size:13.5px;padding:8px 2px;">Loading emissions…</div>
+
+      <ng-container *ngIf="!planBlocked() && data()">
         <!-- scope summary -->
         <div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
           <div class="glass" style="border-radius:14px;padding:17px 18px;">
@@ -126,6 +128,7 @@ export class DashboardComponent implements OnInit {
   data = signal<EmissionsResponse | null>(null);
   year = signal(currentFiscalYear());
   busy = signal(false);
+  loading = signal(false);
   error = signal('');
   planBlocked = signal(false);
 
@@ -150,16 +153,20 @@ export class DashboardComponent implements OnInit {
   }
 
   private load() {
+    this.loading.set(true);
+    this.error.set('');
     this.api.get(this.year()).subscribe({
       next: (d) => {
         this.data.set(d);
         this.planBlocked.set(false);
+        this.loading.set(false);
       },
       error: (err) => {
         const e = toApiError(err);
         // Nav gating should prevent arrival; this catches a plan downgraded mid-session.
         if (e.status === 403) this.planBlocked.set(true);
         else this.error.set(e.message);
+        this.loading.set(false);
       },
     });
   }
