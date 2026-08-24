@@ -63,7 +63,8 @@ const BTN = 'height:38px;padding:0 16px;border-radius:9px;border:none;cursor:poi
               <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#4C96B3,#A99FDB);" [style.width]="t.currentProgress + '%'"></div>
             </div>
           </div>
-          <div *ngIf="!targets().length" style="color:#8A968F;font-size:13.5px;">No targets set yet.</div>
+          <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading targets…</div>
+          <div *ngIf="!loading() && !targets().length" style="color:#8A968F;font-size:13.5px;">No targets set yet.</div>
         </div>
       </ng-container>
     </div>
@@ -83,6 +84,7 @@ export class TargetsComponent implements OnInit {
   targets = signal<PerformanceTargetResponse[]>([]);
   indicators = signal<IndicatorResponse[]>([]);
   busy = signal(false);
+  loading = signal(false);
   error = signal('');
   planBlocked = signal(false);
 
@@ -92,12 +94,17 @@ export class TargetsComponent implements OnInit {
   }
 
   private load() {
+    this.loading.set(true);
     this.api.list().subscribe({
-      next: (t) => this.targets.set(t),
+      next: (t) => {
+        this.targets.set(t);
+        this.loading.set(false);
+      },
       error: (err) => {
         const e = toApiError(err);
         if (e.status === 403) this.planBlocked.set(true);
         else this.error.set(e.message);
+        this.loading.set(false);
       },
     });
   }

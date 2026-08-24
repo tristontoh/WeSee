@@ -67,7 +67,8 @@ const BTN = 'height:36px;padding:0 15px;border-radius:9px;border:none;cursor:poi
           <span *ngIf="h.signedOffByName" style="font-size:11px;font-weight:600;color:#4C96B3;background:#E4EEF0;padding:4px 10px;border-radius:11px;">Signed off</span>
           <button *ngIf="!h.signedOffByName" (click)="signOff(h)" style="height:32px;padding:0 11px;border-radius:9px;border:1px solid #E5E8E1;background:#fff;cursor:pointer;font-size:12.5px;font-family:inherit;">Mark signed off</button>
         </div>
-        <div *ngIf="!history().length" style="color:#8A968F;font-size:13.5px;">Nothing exported yet.</div>
+        <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading history…</div>
+        <div *ngIf="!loading() && !history().length" style="color:#8A968F;font-size:13.5px;">Nothing exported yet.</div>
       </div>
     </div>
   `,
@@ -86,6 +87,7 @@ export class ExportComponent implements OnInit {
   history = signal<ExportHistoryResponse[]>([]);
   pending = signal<string | null>(null);
   error = signal('');
+  loading = signal(false);
 
   years = [currentFiscalYear() - 2, currentFiscalYear() - 1, currentFiscalYear(), currentFiscalYear() + 1];
 
@@ -94,9 +96,16 @@ export class ExportComponent implements OnInit {
   }
 
   private load() {
+    this.loading.set(true);
     this.api.history().subscribe({
-      next: (h) => this.history.set(h),
-      error: (err) => this.error.set(toApiError(err).message),
+      next: (h) => {
+        this.history.set(h);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(toApiError(err).message);
+        this.loading.set(false);
+      },
     });
   }
 

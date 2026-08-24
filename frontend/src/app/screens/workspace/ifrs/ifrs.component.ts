@@ -165,7 +165,8 @@ const BTN = 'height:38px;padding:0 16px;border-radius:9px;border:none;cursor:poi
             </div>
           </div>
 
-          <div *ngIf="!segments().length" style="color:#8A968F;font-size:13.5px;">No business segments yet.</div>
+          <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading segments…</div>
+          <div *ngIf="!loading() && !segments().length" style="color:#8A968F;font-size:13.5px;">No business segments yet.</div>
         </ng-container>
       </ng-container>
     </div>
@@ -194,6 +195,7 @@ export class IfrsComponent implements OnInit {
   s2 = signal<IfrsS2Response | null>(null);
   segments = signal<BusinessSegmentResponse[]>([]);
   busy = signal(false);
+  loading = signal(false);
   error = signal('');
   planBlocked = signal(false);
 
@@ -221,7 +223,14 @@ export class IfrsComponent implements OnInit {
   }
 
   private loadSegments() {
-    this.api.listSegments().subscribe({ next: (s) => this.segments.set(s), error: () => {} });
+    this.loading.set(true);
+    this.api.listSegments().subscribe({
+      next: (s) => {
+        this.segments.set(s);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
   }
 
   horizonLabel(h: string): string {
