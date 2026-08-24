@@ -7,6 +7,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface EmissionValueRepository extends JpaRepository<EmissionValue, UUID> {
-    List<EmissionValue> findByCompanyIdAndScope(UUID companyId, EmissionScope scope);
+    /**
+     * Ordered explicitly. Postgres writes a new tuple on update and reuses whatever slot is
+     * free, so an unordered scan returns edited rows in a different position — editing one
+     * year's figure would otherwise move its point within the scope's series. There is one row
+     * per fiscal year (unique per scope), so the year is a total order on its own.
+     */
+    List<EmissionValue> findByCompanyIdAndScopeOrderByFiscalYearAsc(UUID companyId, EmissionScope scope);
     Optional<EmissionValue> findByCompanyIdAndScopeAndFiscalYear(UUID companyId, EmissionScope scope, Integer fiscalYear);
 }

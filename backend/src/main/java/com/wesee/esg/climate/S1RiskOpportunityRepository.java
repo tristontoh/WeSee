@@ -8,7 +8,14 @@ import java.util.UUID;
 
 public interface S1RiskOpportunityRepository extends JpaRepository<S1RiskOpportunity, UUID> {
     List<S1RiskOpportunity> findByCompanyId(UUID companyId);
-    List<S1RiskOpportunity> findBySegmentId(UUID segmentId);
+
+    /**
+     * Ordered explicitly. Postgres writes a new tuple on update and reuses whatever slot is
+     * free, so an unordered scan returns edited rows in a different position — the list
+     * visibly reshuffles after a save. {@code id} breaks ties, since rows seeded in one
+     * transaction can share a timestamp. Risks and opportunities are edited in place inside their segment card.
+     */
+    List<S1RiskOpportunity> findBySegmentIdOrderByCreatedAtAscIdAsc(UUID segmentId);
     Optional<S1RiskOpportunity> findByIdAndCompanyId(UUID id, UUID companyId);
     void deleteBySegmentId(UUID segmentId);
 }

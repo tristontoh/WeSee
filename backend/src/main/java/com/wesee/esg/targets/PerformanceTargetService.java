@@ -37,7 +37,7 @@ public class PerformanceTargetService {
 
     @Transactional(readOnly = true)
     public List<PerformanceTargetResponse> list() {
-        return repository.findByCompanyId(currentUserProvider.requireCompanyId()).stream()
+        return repository.findByCompanyIdOrderByCreatedAtAscIdAsc(currentUserProvider.requireCompanyId()).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -140,7 +140,7 @@ public class PerformanceTargetService {
     }
 
     private BigDecimal latestValueAtOrBefore(UUID companyId, String indicatorDefinitionId, int year) {
-        return indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionId(companyId, indicatorDefinitionId).stream()
+        return indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdOrderByFiscalYearAsc(companyId, indicatorDefinitionId).stream()
                 .filter(v -> v.getFiscalYear() <= year && v.getValue() != null)
                 .max(Comparator.comparingInt(IndicatorValue::getFiscalYear))
                 .map(IndicatorValue::getValue)

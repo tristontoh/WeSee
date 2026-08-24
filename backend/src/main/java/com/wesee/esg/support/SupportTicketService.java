@@ -57,7 +57,7 @@ public class SupportTicketService {
     @Transactional(readOnly = true)
     public List<SupportTicketResponse> listMyTickets() {
         UUID companyId = currentUserProvider.requireCompanyId();
-        return supportTicketRepository.findByCompanyId(companyId).stream().map(this::toResponse).toList();
+        return supportTicketRepository.findByCompanyIdOrderByCreatedAtDescIdDesc(companyId).stream().map(this::toResponse).toList();
     }
 
     @Transactional
@@ -80,7 +80,7 @@ public class SupportTicketService {
 
     @Transactional(readOnly = true)
     public List<SupportTicketResponse> listAllTickets() {
-        return supportTicketRepository.findAll().stream().map(this::toResponse).toList();
+        return supportTicketRepository.findAllByOrderByCreatedAtDescIdDesc().stream().map(this::toResponse).toList();
     }
 
     @Transactional

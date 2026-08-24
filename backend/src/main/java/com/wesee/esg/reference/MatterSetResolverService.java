@@ -44,7 +44,7 @@ public class MatterSetResolverService {
 
     public List<SustainabilityMatter> resolveApplicableMatters(Company company) {
         return resolveApplicableMatterSets(company).stream()
-                .flatMap(set -> matterRepository.findByMatterSet(set).stream())
+                .flatMap(set -> matterRepository.findByMatterSetOrderByCategoryAscNameAsc(set).stream())
                 .toList();
     }
 }

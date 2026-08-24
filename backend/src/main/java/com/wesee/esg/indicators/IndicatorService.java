@@ -72,7 +72,7 @@ public class IndicatorService {
         List<String> matterIds = matterSetResolverService.resolveApplicableMatters(company).stream()
                 .map(SustainabilityMatter::getId)
                 .toList();
-        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdIn(matterIds);
+        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds);
         List<String> defIds = defs.stream().map(IndicatorDefinition::getId).toList();
 
         Map<String, TenantIndicator> overrides = tenantIndicatorRepository
@@ -80,7 +80,7 @@ public class IndicatorService {
                 .collect(Collectors.toMap(ti -> ti.getIndicatorDefinition().getId(), ti -> ti));
 
         Map<String, List<IndicatorValue>> valuesByDef = indicatorValueRepository
-                .findByCompanyIdAndIndicatorDefinitionIdIn(companyId, defIds).stream()
+                .findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(companyId, defIds).stream()
                 .collect(Collectors.groupingBy(v -> v.getIndicatorDefinition().getId()));
 
         Map<String, List<IndicatorMonthlyValue>> monthlyByDef = indicatorMonthlyValueRepository
@@ -106,7 +106,7 @@ public class IndicatorService {
 
         TenantIndicator override = tenantIndicatorRepository
                 .findByCompanyIdAndIndicatorDefinitionId(companyId, indicatorDefinitionId).orElse(null);
-        List<IndicatorValue> values = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionId(companyId, indicatorDefinitionId);
+        List<IndicatorValue> values = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdOrderByFiscalYearAsc(companyId, indicatorDefinitionId);
         List<IndicatorMonthlyValue> monthlyValues = indicatorMonthlyValueRepository
                 .findByCompanyIdAndIndicatorDefinitionIdIn(companyId, List.of(indicatorDefinitionId));
         List<IndicatorAuditEntry> history = auditEntryRepository.findByCompanyIdAndIndicatorDefinitionIdOrderByCreatedAtDesc(companyId, indicatorDefinitionId);

@@ -35,7 +35,7 @@ public class ApiTokenService {
 
     @Transactional(readOnly = true)
     public List<ApiTokenResponse> list() {
-        return repository.findByCompanyId(currentUserProvider.requireCompanyId()).stream()
+        return repository.findByCompanyIdOrderByCreatedAtDescIdDesc(currentUserProvider.requireCompanyId()).stream()
                 .map(ApiTokenResponse::from)
                 .toList();
     }

@@ -74,7 +74,7 @@ public class MaterialityService {
                 stakeholderOptionRepository.save(option);
             }
         }
-        return stakeholderOptionRepository.findByCompanyId(companyId).stream()
+        return stakeholderOptionRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId).stream()
                 .map(StakeholderOptionResponse::from)
                 .toList();
     }
@@ -147,7 +147,7 @@ public class MaterialityService {
 
         List<String> stakeholderNames = request.stakeholderNames() != null && !request.stakeholderNames().isEmpty()
                 ? request.stakeholderNames()
-                : stakeholderOptionRepository.findByCompanyId(companyId).stream()
+                : stakeholderOptionRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId).stream()
                         .filter(o -> Boolean.TRUE.equals(o.getSelected()))
                         .map(StakeholderOption::getName)
                         .toList();
@@ -206,7 +206,7 @@ public class MaterialityService {
         List<String> stakeholders = stakeholderSnapshotRepository.findByAssessmentIdOrderBySortOrder(assessment.getId()).stream()
                 .map(MaterialityStakeholderSnapshot::getName)
                 .toList();
-        List<ScoreResponse> scores = scoreRepository.findByAssessmentId(assessment.getId()).stream()
+        List<ScoreResponse> scores = scoreRepository.findByAssessmentIdOrderByCreatedAtAscIdAsc(assessment.getId()).stream()
                 .map(ScoreResponse::from)
                 .toList();
         return new AssessmentDetailResponse(

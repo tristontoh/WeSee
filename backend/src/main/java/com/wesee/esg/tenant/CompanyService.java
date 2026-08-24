@@ -108,7 +108,7 @@ public class CompanyService {
         Company root = groupRoot(currentCompany());
         List<Company> members = new java.util.ArrayList<>();
         members.add(root);
-        members.addAll(companyRepository.findByParentCompanyId(root.getId()));
+        members.addAll(companyRepository.findByParentCompanyIdOrderByCreatedAtAscIdAsc(root.getId()));
         return members.stream()
                 .map(c -> CompanyGroupMemberResponse.from(c, c.getId().equals(currentCompanyId)))
                 .toList();
@@ -157,7 +157,7 @@ public class CompanyService {
         if (target.getParentCompany() == null || !groupRoot(target).getId().equals(root.getId())) {
             throw new NotFoundException("Company not found");
         }
-        if (!appUserRepository.findByCompanyId(companyId).isEmpty()) {
+        if (!appUserRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId).isEmpty()) {
             throw new ConflictException("Cannot delete a company with users still assigned to it — "
                     + "reassign or remove them first (this also blocks deleting the company you're currently switched into)");
         }
@@ -336,7 +336,7 @@ public class CompanyService {
 
     @Transactional(readOnly = true)
     public List<TenantSummaryResponse> listTenants() {
-        return companyRepository.findAll().stream().map(this::toSummary).toList();
+        return companyRepository.findAllByOrderByCreatedAtAscIdAsc().stream().map(this::toSummary).toList();
     }
 
     @Transactional
@@ -356,7 +356,7 @@ public class CompanyService {
     @Transactional(readOnly = true)
     public List<TenantUserResponse> listTenantUsers(UUID companyId) {
         findCompany(companyId);
-        return appUserRepository.findByCompanyId(companyId).stream()
+        return appUserRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId).stream()
                 .map(u -> new TenantUserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(),
                         Boolean.TRUE.equals(u.getActive()), u.getCreatedAt()))
                 .toList();
@@ -368,7 +368,7 @@ public class CompanyService {
     }
 
     private TenantSummaryResponse toSummary(Company company) {
-        List<AppUser> users = appUserRepository.findByCompanyId(company.getId());
+        List<AppUser> users = appUserRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(company.getId());
         AppUser primaryContact = users.stream()
                 .filter(u -> u.getRole() == Role.COMPANY_ADMIN)
                 .min(Comparator.comparing(AppUser::getCreatedAt))

@@ -73,15 +73,15 @@ public class EmissionsService {
         UUID companyId = currentUserProvider.requireCompanyId();
         Company company = companyRepository.findById(companyId).orElseThrow(() -> new NotFoundException("Company not found"));
 
-        List<EmissionPointDto> scope1 = emissionValueRepository.findByCompanyIdAndScope(companyId, EmissionScope.SCOPE_1).stream()
+        List<EmissionPointDto> scope1 = emissionValueRepository.findByCompanyIdAndScopeOrderByFiscalYearAsc(companyId, EmissionScope.SCOPE_1).stream()
                 .map(v -> new EmissionPointDto(v.getFiscalYear(), v.getValue())).toList();
-        List<EmissionPointDto> scope2 = emissionValueRepository.findByCompanyIdAndScope(companyId, EmissionScope.SCOPE_2).stream()
+        List<EmissionPointDto> scope2 = emissionValueRepository.findByCompanyIdAndScopeOrderByFiscalYearAsc(companyId, EmissionScope.SCOPE_2).stream()
                 .map(v -> new EmissionPointDto(v.getFiscalYear(), v.getValue())).toList();
 
         if (!scope3CategoryRepository.existsByCompanyId(companyId)) {
             seedStandardScope3Categories(companyId);
         }
-        List<Scope3Category> categories = scope3CategoryRepository.findByCompanyId(companyId);
+        List<Scope3Category> categories = scope3CategoryRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId);
         int reliefYears = transitionReliefRuleRepository.findById(company.getMarketClassification())
                 .map(r -> r.getReliefYears()).orElse(0);
         Integer firstReportingYear = scope3ValueRepository.findByCompanyId(companyId).stream()
@@ -95,7 +95,7 @@ public class EmissionsService {
                 .sorted(Comparator.comparing(
                         cat -> cat.getStandardCategoryNumber() != null ? cat.getStandardCategoryNumber() : Integer.MAX_VALUE))
                 .map(cat -> {
-                    List<Scope3ValuePointDto> values = scope3ValueRepository.findByCategoryId(cat.getId()).stream()
+                    List<Scope3ValuePointDto> values = scope3ValueRepository.findByCategoryIdOrderByFiscalYearAsc(cat.getId()).stream()
                             .map(v -> new Scope3ValuePointDto(v.getFiscalYear(), v.getValue(), isInRelief(v.getFiscalYear(), firstReportingYear, reliefYears)))
                             .toList();
                     boolean mandatory = isMandatory(cat, isFinancialInstitution);

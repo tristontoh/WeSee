@@ -37,12 +37,12 @@ public class EmissionActivityService {
 
     @Transactional(readOnly = true)
     public List<EmissionFactorResponse> listFactors() {
-        return factorRepository.findAll().stream().map(EmissionFactorResponse::from).toList();
+        return factorRepository.findAllByOrderByScopeAscNameAsc().stream().map(EmissionFactorResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public List<EmissionActivityEntryResponse> listEntries(int fiscalYear) {
-        return entryRepository.findByCompanyIdAndFiscalYear(currentUserProvider.requireCompanyId(), fiscalYear).stream()
+        return entryRepository.findByCompanyIdAndFiscalYearOrderByCreatedAtAscIdAsc(currentUserProvider.requireCompanyId(), fiscalYear).stream()
                 .map(EmissionActivityEntryResponse::from)
                 .toList();
     }
@@ -77,7 +77,7 @@ public class EmissionActivityService {
         }
 
         UUID companyId = currentUserProvider.requireCompanyId();
-        BigDecimal sum = entryRepository.findByCompanyIdAndFiscalYear(companyId, fiscalYear).stream()
+        BigDecimal sum = entryRepository.findByCompanyIdAndFiscalYearOrderByCreatedAtAscIdAsc(companyId, fiscalYear).stream()
                 .filter(e -> e.getEmissionFactor().getScope() == scope)
                 .map(EmissionActivityEntry::getCalculatedTco2e)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

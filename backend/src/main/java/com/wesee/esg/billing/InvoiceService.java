@@ -21,7 +21,7 @@ public class InvoiceService {
 
     @Transactional(readOnly = true)
     public List<InvoiceResponse> listAllInvoices() {
-        return invoiceRepository.findAll().stream().map(this::toResponse).toList();
+        return invoiceRepository.findAllByOrderByDueDateDescIdDesc().stream().map(this::toResponse).toList();
     }
 
     private InvoiceResponse toResponse(Invoice invoice) {

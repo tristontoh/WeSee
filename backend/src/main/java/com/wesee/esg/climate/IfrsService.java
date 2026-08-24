@@ -54,9 +54,9 @@ public class IfrsService {
         if (!segmentRepository.existsByCompanyId(companyId)) {
             seedDefaultSegments(companyId);
         }
-        return segmentRepository.findByCompanyId(companyId).stream()
+        return segmentRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId).stream()
                 .map(segment -> BusinessSegmentResponse.from(segment,
-                        itemRepository.findBySegmentId(segment.getId()).stream().map(S1ItemResponse::from).toList()))
+                        itemRepository.findBySegmentIdOrderByCreatedAtAscIdAsc(segment.getId()).stream().map(S1ItemResponse::from).toList()))
                 .toList();
     }
 
@@ -120,7 +120,7 @@ public class IfrsService {
         }
         segment.setName(request.name());
         segment = segmentRepository.save(segment);
-        List<S1ItemResponse> items = itemRepository.findBySegmentId(segment.getId()).stream()
+        List<S1ItemResponse> items = itemRepository.findBySegmentIdOrderByCreatedAtAscIdAsc(segment.getId()).stream()
                 .map(S1ItemResponse::from).toList();
         return BusinessSegmentResponse.from(segment, items);
     }

@@ -11,6 +11,7 @@ import com.wesee.esg.reference.dto.UpdateFeatureFlagRequest;
 import com.wesee.esg.security.CurrentUserProvider;
 import com.wesee.esg.tenant.Company;
 import com.wesee.esg.tenant.CompanyRepository;
+import com.wesee.esg.tenant.PlanPricing;
 import com.wesee.esg.tenant.PlanPricingRepository;
 import com.wesee.esg.tenant.Sector;
 import com.wesee.esg.tenant.SectorRepository;
@@ -18,6 +19,7 @@ import com.wesee.esg.tenant.dto.PlanPricingResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -52,14 +54,14 @@ public class ReferenceService {
 
     @Transactional(readOnly = true)
     public List<SectorResponse> listSectors() {
-        return sectorRepository.findAll().stream().map(SectorResponse::from).toList();
+        return sectorRepository.findAllByOrderByNameAsc().stream().map(SectorResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public List<MatterResponse> listMatters(MatterSet set) {
         List<SustainabilityMatter> matters = set != null
-                ? matterRepository.findByMatterSet(set)
-                : matterRepository.findAll();
+                ? matterRepository.findByMatterSetOrderByCategoryAscNameAsc(set)
+                : matterRepository.findAllByOrderByCategoryAscNameAsc();
         return matters.stream().map(MatterResponse::from).toList();
     }
 
@@ -74,8 +76,8 @@ public class ReferenceService {
     @Transactional(readOnly = true)
     public List<IndicatorDefinitionResponse> listIndicators(String matterId) {
         List<IndicatorDefinition> defs = matterId != null
-                ? indicatorDefinitionRepository.findByMatterIdIn(List.of(matterId))
-                : indicatorDefinitionRepository.findAll();
+                ? indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(List.of(matterId))
+                : indicatorDefinitionRepository.findAllByOrderByCategoryAscNameAsc();
         return defs.stream().map(IndicatorDefinitionResponse::from).toList();
     }
 
@@ -85,7 +87,7 @@ public class ReferenceService {
         List<String> matterIds = matterSetResolverService.resolveApplicableMatters(company).stream()
                 .map(SustainabilityMatter::getId)
                 .toList();
-        return indicatorDefinitionRepository.findByMatterIdIn(matterIds).stream()
+        return indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds).stream()
                 .map(IndicatorDefinitionResponse::from)
                 .toList();
     }
@@ -146,12 +148,16 @@ public class ReferenceService {
 
     @Transactional(readOnly = true)
     public List<FeatureFlagResponse> listFeatureFlags() {
-        return featureFlagRepository.findAll().stream().map(FeatureFlagResponse::from).toList();
+        return featureFlagRepository.findAllByOrderByFeatureKeyAsc().stream().map(FeatureFlagResponse::from).toList();
     }
 
+    /** Sorted on the enum, not the query — see PlanPricingService#listPricing for why. */
     @Transactional(readOnly = true)
     public List<PlanPricingResponse> listPlanPricing() {
-        return planPricingRepository.findAll().stream().map(PlanPricingResponse::from).toList();
+        return planPricingRepository.findAll().stream()
+                .sorted(Comparator.comparing(PlanPricing::getPlan))
+                .map(PlanPricingResponse::from)
+                .toList();
     }
 
     @Transactional

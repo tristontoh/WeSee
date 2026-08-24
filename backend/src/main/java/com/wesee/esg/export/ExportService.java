@@ -68,7 +68,7 @@ public class ExportService {
         List<Integer> years = List.of(fiscalYear - 3, fiscalYear - 2, fiscalYear - 1, fiscalYear);
 
         Map<String, List<IndicatorValue>> valuesByDef = indicatorValueRepository
-                .findByCompanyIdAndIndicatorDefinitionIdIn(companyId, defs.stream().map(IndicatorDefinition::getId).toList())
+                .findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(companyId, defs.stream().map(IndicatorDefinition::getId).toList())
                 .stream().collect(Collectors.groupingBy(v -> v.getIndicatorDefinition().getId()));
         Map<String, TenantIndicator> overrides = tenantIndicatorRepository
                 .findByCompanyIdAndIndicatorDefinitionIdIn(companyId, defs.stream().map(IndicatorDefinition::getId).toList())
@@ -109,7 +109,7 @@ public class ExportService {
         List<IndicatorDefinition> defs = applicableIndicatorDefinitions(company);
 
         Map<String, IndicatorValue> valueByDef = indicatorValueRepository
-                .findByCompanyIdAndIndicatorDefinitionIdIn(companyId, defs.stream().map(IndicatorDefinition::getId).toList())
+                .findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(companyId, defs.stream().map(IndicatorDefinition::getId).toList())
                 .stream()
                 .filter(v -> v.getFiscalYear() == fiscalYear)
                 .collect(Collectors.toMap(v -> v.getIndicatorDefinition().getId(), v -> v, (a, b) -> b));
@@ -169,7 +169,7 @@ public class ExportService {
     private List<IndicatorDefinition> applicableIndicatorDefinitions(Company company) {
         List<String> matterIds = matterSetResolverService.resolveApplicableMatters(company).stream()
                 .map(SustainabilityMatter::getId).toList();
-        return indicatorDefinitionRepository.findByMatterIdIn(matterIds);
+        return indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds);
     }
 
     private Company currentCompany(UUID companyId) {

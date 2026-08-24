@@ -109,7 +109,7 @@ public class PrivacyService {
 
         List<Company> group = new ArrayList<>();
         group.add(root);
-        group.addAll(companyRepository.findByParentCompanyId(root.getId()));
+        group.addAll(companyRepository.findByParentCompanyIdOrderByCreatedAtAscIdAsc(root.getId()));
 
         Instant now = Instant.now();
         for (Company company : group) {
@@ -117,7 +117,7 @@ public class PrivacyService {
             company.setClosedAt(now);
             companyRepository.save(company);
 
-            for (AppUser user : appUserRepository.findByCompanyId(company.getId())) {
+            for (AppUser user : appUserRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(company.getId())) {
                 user.setActive(false);
                 user.setTokenVersion(user.getTokenVersion() + 1);
                 appUserRepository.save(user);

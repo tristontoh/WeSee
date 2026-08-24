@@ -67,7 +67,7 @@ public class AssuranceService {
     public List<SignOffResponse> list() {
         UUID companyId = currentUserProvider.requireCompanyId();
         LocalDate deadline = mandatoryExternalAssuranceDeadline(companyId);
-        return signOffRepository.findByCompanyId(companyId).stream()
+        return signOffRepository.findByCompanyIdOrderByFiscalYearDesc(companyId).stream()
                 .map(r -> SignOffResponse.from(r, deadline))
                 .toList();
     }
@@ -106,11 +106,11 @@ public class AssuranceService {
 
         List<String> matterIds = matterSetResolverService.resolveApplicableMatters(company).stream()
                 .map(SustainabilityMatter::getId).toList();
-        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdIn(matterIds);
+        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds);
         if (defs.isEmpty()) {
             return 100;
         }
-        Set<String> filledDefIds = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdIn(
+        Set<String> filledDefIds = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(
                         companyId, defs.stream().map(IndicatorDefinition::getId).toList()).stream()
                 .filter(v -> v.getFiscalYear() == fiscalYear && v.getValue() != null)
                 .map(v -> v.getIndicatorDefinition().getId())
@@ -212,8 +212,8 @@ public class AssuranceService {
         Company company = companyRepository.findById(companyId).orElseThrow(() -> new NotFoundException("Company not found"));
         List<String> matterIds = matterSetResolverService.resolveApplicableMatters(company).stream()
                 .map(SustainabilityMatter::getId).toList();
-        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdIn(matterIds);
-        List<IndicatorValue> values = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdIn(
+        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds);
+        List<IndicatorValue> values = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(
                 companyId, defs.stream().map(IndicatorDefinition::getId).toList());
 
         String canonicalValues = values.stream()
