@@ -100,7 +100,8 @@ const STEPS: { key: StepKey; label: string }[] = [
               </select>
               <button (click)="saveOwner(o, owner.value, lv.value)" [style]="btn" style="width:100%;height:34px;font-size:12px;padding:0;">Set</button>
             </div>
-            <div *ngIf="!ownership().length" style="color:#8A968F;font-size:13.5px;">No matters to assign.</div>
+            <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading matters…</div>
+            <div *ngIf="!loading() && !ownership().length" style="color:#8A968F;font-size:13.5px;">No matters to assign.</div>
           </ng-container>
 
           <!-- 3 · compliance policies -->
@@ -160,6 +161,7 @@ export class GovernanceComponent implements OnInit {
   structure = signal<GovernanceLevelResponse[]>([]);
   ownership = signal<MatterOwnershipResponse[]>([]);
   policies = signal<CompliancePolicyResponse[]>([]);
+  loading = signal(false);
   error = signal('');
   planBlocked = signal(false);
 
@@ -219,7 +221,14 @@ export class GovernanceComponent implements OnInit {
   }
 
   private loadOwnership() {
-    this.api.ownership().subscribe({ next: (o) => this.ownership.set(o), error: () => {} });
+    this.loading.set(true);
+    this.api.ownership().subscribe({
+      next: (o) => {
+        this.ownership.set(o);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
   }
 
   private loadPolicies() {

@@ -96,7 +96,8 @@ const CAT_SOLID: Record<string, string> = {
               </div>
             </div>
 
-            <div *ngIf="!matters().length" style="color:#8A968F;font-size:13.5px;">No applicable matters found.</div>
+            <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading matters…</div>
+            <div *ngIf="!loading() && !matters().length" style="color:#8A968F;font-size:13.5px;">No applicable matters found.</div>
           </div>
         </div>
 
@@ -160,15 +161,23 @@ export class MaterialityComponent implements OnInit {
   assessments = signal<AssessmentSummaryResponse[]>([]);
   private scores = signal<Record<string, { impact: number; influence: number }>>({});
   busy = signal(false);
+  loading = signal(false);
   error = signal('');
 
   canValidate = computed(() => this.session.role() === 'COMPANY_ADMIN');
   selectedStakeholders = computed(() => this.stakeholders().filter((s) => s.selected));
 
   ngOnInit(): void {
+    this.loading.set(true);
     this.reference.applicableMatters().subscribe({
-      next: (m) => this.matters.set(m),
-      error: (err) => this.error.set(toApiError(err).message),
+      next: (m) => {
+        this.matters.set(m);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(toApiError(err).message);
+        this.loading.set(false);
+      },
     });
     this.loadStakeholders();
     this.loadAssessments();

@@ -101,7 +101,8 @@ const BTN = 'height:38px;padding:0 16px;border-radius:9px;border:none;cursor:poi
             <span style="flex:1;color:#64726B;">{{ a.actorName || '—' }}<span *ngIf="a.actorTitle">, {{ a.actorTitle }}</span></span>
             <span style="color:#8A968F;font-size:12.5px;">{{ a.timestamp.slice(0, 10) }}</span>
           </div>
-          <div *ngIf="!trail().length" style="color:#8A968F;font-size:13.5px;">Nothing recorded yet.</div>
+          <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading audit trail…</div>
+          <div *ngIf="!loading() && !trail().length" style="color:#8A968F;font-size:13.5px;">Nothing recorded yet.</div>
         </div>
       </ng-container>
     </div>
@@ -122,6 +123,7 @@ export class AssuranceComponent implements OnInit {
   trail = signal<SignOffAuditEntryResponse[]>([]);
   completion = signal(0);
   busy = signal(false);
+  loading = signal(false);
   error = signal('');
   planBlocked = signal(false);
 
@@ -152,7 +154,17 @@ export class AssuranceComponent implements OnInit {
       next: (c) => this.completion.set(c.completionPercent ?? 0),
       error: () => {},
     });
-    this.api.auditTrail(this.year()).subscribe({ next: (t) => this.trail.set(t), error: () => this.trail.set([]) });
+    this.loading.set(true);
+    this.api.auditTrail(this.year()).subscribe({
+      next: (t) => {
+        this.trail.set(t);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.trail.set([]);
+        this.loading.set(false);
+      },
+    });
   }
 
   setYear(v: string) {
