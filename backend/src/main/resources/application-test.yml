@@ -11,3 +11,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+wesee:
+  extraction:
+    # Pinned, not inherited: no test may reach a model, and none needs a key to run.
+    provider: stub

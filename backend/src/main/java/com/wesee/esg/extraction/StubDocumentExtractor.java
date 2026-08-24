@@ -8,16 +8,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Stands in until an extraction provider is chosen, and backs every test so the suite never makes
- * a network call. Proposes a fixed electricity reading against whichever grid factor and
- * electricity indicator the tenant actually has, exercising the two-destination path end to end.
+ * Backs every test so the suite never makes a network call. Proposes a fixed electricity reading
+ * against whichever grid factor and electricity indicator the tenant actually has, exercising the
+ * two-destination path end to end.
  *
- * <p>Selected by {@code wesee.extraction.provider}, which defaults to {@code stub}. A property
- * switch rather than {@code @ConditionalOnMissingBean}: that annotation is only dependable inside
- * auto-configuration, since during component scanning the definition order is not guaranteed.
+ * <p>No longer a placeholder for an unchosen provider — {@link GeminiDocumentExtractor} is the
+ * default now, and this is a test double. It must be selected deliberately
+ * ({@code wesee.extraction.provider=stub}, which {@code application-test.yml} pins): the figures
+ * below are invented, and nothing that reads a real document should ever be able to fall back to
+ * them by accident.
+ *
+ * <p>A property switch rather than {@code @ConditionalOnMissingBean}: that annotation is only
+ * dependable inside auto-configuration, since during component scanning the definition order is not
+ * guaranteed.
  */
 @Component
-@ConditionalOnProperty(name = "wesee.extraction.provider", havingValue = "stub", matchIfMissing = true)
+@ConditionalOnProperty(name = "wesee.extraction.provider", havingValue = "stub")
 public class StubDocumentExtractor implements DocumentExtractor {
 
     static final BigDecimal STUB_KWH = new BigDecimal("1240");
