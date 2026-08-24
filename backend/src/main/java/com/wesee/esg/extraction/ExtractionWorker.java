@@ -6,7 +6,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.util.List;
@@ -49,11 +52,24 @@ public class ExtractionWorker {
         this.indicatorDefinitionRepository = indicatorDefinitionRepository;
     }
 
+    /**
+     * Runs after the uploading transaction commits, on another thread. Both halves matter: async so
+     * the request does not wait on a model, and after-commit so the row is actually visible — firing
+     * on commit-pending data silently finds nothing and the document sits in PENDING forever.
+     */
     @Async
-    @Transactional
-    public void runExtraction(UUID documentId, UUID companyId) {
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onExtractionRequested(ExtractionRequestedEvent event) {
+        runExtraction(event.documentId(), event.companyId());
+    }
+
+    void runExtraction(UUID documentId, UUID companyId) {
         ExtractedDocument document = documentRepository.findByIdAndCompanyId(documentId, companyId).orElse(null);
         if (document == null) {
+            // Never silent: this is what a fire-before-commit bug looks like from in here.
+            log.error("Extraction requested for document {} (company {}) but no such row was visible",
+                    documentId, companyId);
             return;
         }
 
