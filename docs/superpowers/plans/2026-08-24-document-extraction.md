@@ -2084,7 +2084,7 @@ Everything above works without it: the stub keeps the pipeline whole, and the te
 When unblocked:
 
 **Files:**
-- Create: `backend/src/main/java/com/wesee/esg/extraction/CloudDocumentExtractor.java` (bean named `cloudDocumentExtractor`, so `StubDocumentExtractor`'s `@ConditionalOnMissingBean` stands down)
+- Create: `backend/src/main/java/com/wesee/esg/extraction/CloudDocumentExtractor.java`, annotated `@ConditionalOnProperty(name = "wesee.extraction.provider", havingValue = "cloud")`. Setting that property to `cloud` activates it and stands the stub down; leaving it unset or `stub` keeps the stub. (`@ConditionalOnMissingBean` is not used here — it is only dependable inside auto-configuration, since component-scan definition order is not guaranteed.)
 - Modify: `backend/src/main/resources/application.yml` (add the key under the existing `wesee:` block, sourced from an environment variable, never committed)
 
 **Interfaces:**
