@@ -31,6 +31,7 @@ export const routes: Routes = [
       { path: 'assurance', loadComponent: () => import('./screens/workspace/assurance/assurance.component').then((m) => m.AssuranceComponent) },
       { path: 'onboarding', loadComponent: () => import('./screens/workspace/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
       { path: 'export', loadComponent: () => import('./screens/workspace/export/export.component').then((m) => m.ExportComponent) },
+      { path: 'extraction', loadComponent: () => import('./screens/workspace/extraction/extraction.component').then((m) => m.ExtractionComponent) },
 
       // Settings (shared)
       { path: 'settings', loadComponent: () => import('./screens/settings/settings.component').then((m) => m.SettingsComponent) },
