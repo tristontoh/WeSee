@@ -4,27 +4,24 @@ import com.google.genai.Client;
 import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.HttpOptions;
 import com.google.genai.types.Part;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * Reads an uploaded document with Gemini and proposes the records it implies.
- *
- * <p>Selected by {@code wesee.extraction.provider=gemini}, which is the default. Deliberately
- * without {@code matchIfMissing}: the test profile pins {@code stub}, so no suite can reach the
- * network by forgetting to override something.
+ * Reads an uploaded document with Gemini and proposes the records it implies. The only
+ * implementation — there is no fixed-reading stand-in to fall back to, so a misconfiguration
+ * surfaces as a failure rather than as invented figures.
  *
  * <p>Everything it returns is still untrusted. {@link ProposalValidator} resolves each proposal
  * against the tenant's own factors and indicators, and nothing reaches a real table until a person
  * accepts it.
  */
 @Component
-@ConditionalOnProperty(name = "wesee.extraction.provider", havingValue = "gemini", matchIfMissing = true)
 public class GeminiDocumentExtractor implements DocumentExtractor {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiDocumentExtractor.class);
@@ -35,7 +32,16 @@ public class GeminiDocumentExtractor implements DocumentExtractor {
     GeminiDocumentExtractor(GeminiProperties properties) {
         // requireApiKey before anything else: a missing key should stop the application, not wait
         // to surface as a failed document on someone's first upload.
-        this.client = Client.builder().apiKey(properties.requireApiKey()).build();
+        Client.Builder builder = Client.builder().apiKey(properties.requireApiKey());
+
+        // Only the e2e harness sets this, pointing at a local mock. Logged at warn because a
+        // deployment that reached here by accident would be sending documents to the wrong place.
+        if (properties.hasBaseUrl()) {
+            log.warn("Gemini base url overridden to {} — not the real API", properties.getBaseUrl());
+            builder.httpOptions(HttpOptions.builder().baseUrl(properties.getBaseUrl()).build());
+        }
+
+        this.client = builder.build();
         this.model = properties.getModel();
     }
 
@@ -54,6 +60,7 @@ public class GeminiDocumentExtractor implements DocumentExtractor {
                 .build();
 
         String json;
+        String answeredBy;
         try {
             GenerateContentResponse response = client.models.generateContent(
                     model,
@@ -62,6 +69,10 @@ public class GeminiDocumentExtractor implements DocumentExtractor {
                             Part.fromText(ExtractionPromptFactory.promptFor(context))),
                     config);
             json = response.text();
+            // What actually answered, not what was asked for. The two differ whenever the base url
+            // is overridden, and provenance that names the configured model regardless would let a
+            // stand-in's figures look as though a real model had read them.
+            answeredBy = response.modelVersion().orElse(model);
         } catch (RuntimeException e) {
             // The document is left FAILED with this message, and the existing retry path covers a
             // transient outage without a re-upload.
@@ -73,7 +84,7 @@ public class GeminiDocumentExtractor implements DocumentExtractor {
         }
 
         List<ProposedRecord> records = ProposalJsonParser.parse(json);
-        log.debug("Extracted {} proposal(s) from a {} with {}", records.size(), mediaType, model);
-        return new ExtractionResult(model, records);
+        log.debug("Extracted {} proposal(s) from a {} with {}", records.size(), mediaType, answeredBy);
+        return new ExtractionResult(answeredBy, records);
     }
 }
