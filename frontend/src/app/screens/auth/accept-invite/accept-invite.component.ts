@@ -5,7 +5,6 @@ import { AuthApiService } from '../../../core/auth/auth-api.service';
 import { InvitePreviewResponse } from '../../../core/auth/session.model';
 import { SessionService } from '../../../core/auth/session.service';
 import { PlanGateService } from '../../../core/plan/plan-gate.service';
-import { DEFAULT_ROUTE } from '../../../core/nav';
 import { toApiError } from '../../../core/http/api-error';
 
 const CARD =
@@ -130,7 +129,7 @@ export class AcceptInviteComponent implements OnInit {
         this.session.setSession(auth.token, auth.user);
         this.gate.load();
         this.busy.set(false);
-        this.router.navigateByUrl(DEFAULT_ROUTE[this.session.navKey()]);
+        this.router.navigateByUrl(this.session.landingRoute());
       },
       error: (err) => {
         this.busy.set(false);

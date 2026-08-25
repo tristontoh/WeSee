@@ -6,7 +6,6 @@ import { SessionService } from '../../../core/auth/session.service';
 import { MeResponse } from '../../../core/auth/session.model';
 import { PlanGateService } from '../../../core/plan/plan-gate.service';
 import { toApiError } from '../../../core/http/api-error';
-import { DEFAULT_ROUTE } from '../../../core/nav';
 
 type Step = 'email' | 'password' | 'mfa';
 type Focus = 'email' | 'pw' | null;
@@ -224,9 +223,10 @@ export class LoginComponent {
   private establish(token: string, user: MeResponse) {
     this.session.setSession(token, user);
     this.gate.load();
-    // DEFAULT_ROUTE is the single source of truth — workspace-tier lands on /indicators
-    // because /dashboard reads ISSUER_READY-only data.
-    const next = DEFAULT_ROUTE[this.session.navKey()];
+    // landingRoute is the single source of truth: DEFAULT_ROUTE per nav key — workspace-tier
+    // lands on /indicators because /dashboard reads ISSUER_READY-only data — except a company
+    // that has not finished setup, which starts on onboarding.
+    const next = this.session.landingRoute();
     this.router.navigateByUrl('/loading?next=' + encodeURIComponent(next));
   }
 }

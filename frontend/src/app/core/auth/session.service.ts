@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { DEFAULT_ROUTE } from '../nav';
 import { MeResponse, NavKey, Role, SubscriptionPlan } from './session.model';
 import { TokenStore } from '../http/auth.interceptor';
 
@@ -35,6 +36,19 @@ export class SessionService implements TokenStore {
     const role = this.role();
     if (role && PLATFORM_ROLES.includes(role)) return 'admin';
     return this.plan() === 'ISSUER_READY' ? 'compliance-hub' : 'workspace';
+  });
+
+  /**
+   * Where a session lands after signing in. A company that has not finished setup starts on
+   * onboarding rather than a data screen, because sector and market decide which matters and
+   * indicators apply at all. A starting point, not a lock — the nav stays clickable.
+   *
+   * Platform admins are excluded deliberately: they belong to no company, so their
+   * onboardingCompleted is false permanently and they would never reach the admin screens.
+   */
+  landingRoute = computed<string>(() => {
+    const key = this.navKey();
+    return key !== 'admin' && !this.onboardingCompleted() ? '/onboarding' : DEFAULT_ROUTE[key];
   });
 
   /** TokenStore — read by the HTTP interceptor. */

@@ -70,11 +70,16 @@ export class AppStateService {
 
   navItems = computed(() => {
     const isAdmin = this.auth.role() === 'COMPANY_ADMIN';
+    const onboarded = this.auth.onboardingCompleted();
     // Group is entirely COMPANY_ADMIN-gated on the backend, including its list endpoint,
     // so hide it rather than render a section that will 403. Feature-gated items follow the
-    // backend's own plan matrix for the same reason.
+    // backend's own plan matrix for the same reason. Onboarding drops off once it is done —
+    // it is a one-time setup, and sector and disclosures stay editable under Settings.
     return NAV[this.tenant()].filter(
-      (n) => (!n.adminOnly || isAdmin) && (!n.feature || this.gate.state(n.feature) !== 'hidden'),
+      (n) =>
+        (!n.adminOnly || isAdmin) &&
+        (!n.feature || this.gate.state(n.feature) !== 'hidden') &&
+        !(n.key === 'onboarding' && onboarded),
     );
   });
   screenTitle = computed(() => SCREEN_TITLES[this.currentUrl()] ?? '');

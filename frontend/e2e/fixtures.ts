@@ -91,6 +91,20 @@ export async function upgradePlan(
   if (!res.ok) throw new Error(`plan upgrade failed: ${res.status}`);
 }
 
+/**
+ * Marks a company's setup as done. Sign-in now lands a company that has not onboarded on
+ * /onboarding, so any test asserting a different landing screen must complete this first.
+ */
+export async function completeOnboarding(email: string, password = 'E2ePassw0rd!'): Promise<void> {
+  const token = await loginForToken(email, password);
+  const res = await fetch(`${API}/auth/onboarding`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ market: 'MAIN_MARKET', sectorCode: null, frameworks: [], priorities: [] }),
+  });
+  if (!res.ok) throw new Error(`completing onboarding failed: ${res.status}`);
+}
+
 export async function upgradeToIssuerReady(email: string, password = 'E2ePassw0rd!'): Promise<void> {
   const login = await fetch(`${API}/auth/login`, {
     method: 'POST',

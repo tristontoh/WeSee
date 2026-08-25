@@ -1,5 +1,6 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
 import {
+  completeOnboarding,
   loginThroughUi,
   registerUser,
   uniqueEmail,
@@ -26,17 +27,34 @@ async function issuerReadyCompany(page: Page, request: APIRequestContext): Promi
   return email;
 }
 
-test('a STARTER company lands on /indicators, not the gated dashboard', async ({ page, request }) => {
-  const email = uniqueEmail('landing');
-  await registerUser(request, email);
-  await verifyUser(email);
-
+async function signIn(page: Page, email: string) {
   await page.goto('/login');
   await page.locator('input[type=email]').fill(email);
   await page.getByRole('button', { name: 'Next' }).click();
   await page.locator('input[type=password]').fill('E2ePassw0rd!');
   await page.getByRole('button', { name: 'Sign in' }).click();
+}
 
+test('a company that has not finished setup lands on onboarding', async ({ page, request }) => {
+  const email = uniqueEmail('landing-new');
+  await registerUser(request, email);
+  await verifyUser(email);
+
+  await signIn(page, email);
+
+  await expect(page).toHaveURL(/\/onboarding/, { timeout: 15_000 });
+});
+
+test('an onboarded STARTER company lands on /indicators, not the gated dashboard', async ({ page, request }) => {
+  const email = uniqueEmail('landing');
+  await registerUser(request, email);
+  await verifyUser(email);
+  await completeOnboarding(email);
+
+  await signIn(page, email);
+
+  // The point of this test: STARTER must not be sent to /dashboard, which reads
+  // ISSUER_READY-only data and would 403.
   await expect(page).toHaveURL(/\/indicators/, { timeout: 15_000 });
 });
 

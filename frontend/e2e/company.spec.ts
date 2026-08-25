@@ -145,7 +145,9 @@ test('an invite link lets someone join the company', async ({ page, request }) =
   await page.locator('input[type=password]').fill('Joiner#2026');
   await page.getByRole('button', { name: /^Join / }).click();
 
-  await expect(page).toHaveURL(/\/(indicators|dashboard)/, { timeout: 15_000 });
+  // This company has not completed setup, so the invitee lands on onboarding like any other
+  // member of it would — landing follows the company's setup state, not the person's role.
+  await expect(page).toHaveURL(/\/(onboarding|indicators|dashboard)/, { timeout: 15_000 });
   // Accepting replaces the session with the invitee's, not the admin's.
   const who = await page.evaluate(() => JSON.parse(localStorage.getItem('wesee_user') || '{}').email);
   expect(who).toBe(invitee);
