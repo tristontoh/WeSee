@@ -154,6 +154,56 @@ type Preview = 'image' | 'pdf' | 'none';
             </div>
           </div>
         </div>
+
+        <!-- Full width, below the split: a meter table is five columns wide and would be
+             unreadable squeezed beside the preview. Everything here is a copy of the page —
+             nothing is proposed, so nothing is accepted. -->
+        <div *ngIf="!transcriptionIsEmpty(d)" [style]="CARD" style="margin-top:16px;">
+          <div [style]="H">WHAT THE DOCUMENT SAYS</div>
+          <p style="font-size:12px;color:#8A968F;margin:-8px 0 18px;line-height:1.5;">
+            Transcribed as printed, including the figures nothing reports on. Nothing here is
+            written to your data.
+          </p>
+
+          <div *ngIf="d.transcription.fields.length"
+            style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 24px;margin-bottom:8px;">
+            <div *ngFor="let f of d.transcription.fields"
+              style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #F4F6F2;font-size:12.5px;">
+              <span style="color:#8A968F;flex:0 0 46%;">{{ f.label }}</span>
+              <span style="color:#2F3B35;font-weight:500;min-width:0;word-break:break-word;">{{ f.value }}</span>
+            </div>
+          </div>
+
+          <!-- An untitled table gets a rule above it: bills leave headings off, and without one
+               the table reads as a continuation of the one before it. -->
+          <div *ngFor="let t of d.transcription.tables; let i = index"
+            [style.border-top]="!t.title && i > 0 ? '1px solid #E9ECE6' : 'none'"
+            [style.padding-top]="!t.title && i > 0 ? '22px' : '0'"
+            style="margin-top:22px;">
+            <div *ngIf="t.title" style="font-size:12.5px;font-weight:600;color:#42504A;margin-bottom:8px;">
+              {{ t.title }}
+            </div>
+            <!-- Scrolls inside itself so a wide table never pushes the page sideways. -->
+            <div style="overflow-x:auto;">
+              <table style="border-collapse:collapse;font-size:12px;min-width:100%;">
+                <thead>
+                  <tr>
+                    <th *ngFor="let c of t.columns"
+                      style="text-align:left;padding:7px 14px 7px 0;border-bottom:1.5px solid #E5E8E1;
+                             color:#8A968F;font-weight:600;white-space:nowrap;">{{ c }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of t.rows">
+                    <td *ngFor="let cell of row"
+                      style="padding:7px 14px 7px 0;border-bottom:1px solid #F4F6F2;color:#42504A;
+                             white-space:nowrap;">{{ cell }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </ng-container>
     </div>
   `,
@@ -205,6 +255,12 @@ export class DocumentDetailComponent implements OnInit, OnDestroy {
 
   color(status: string) {
     return STATUS_COLORS[status] ?? STATUS_COLORS['PENDING'];
+  }
+
+  /** Older documents were read before transcription existed, so the field can be absent. */
+  transcriptionIsEmpty(doc: ExtractedDocumentResponse): boolean {
+    const t = doc.transcription;
+    return !t || (!t.fields?.length && !t.tables?.length);
   }
 
   private load() {

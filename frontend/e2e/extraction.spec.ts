@@ -43,6 +43,13 @@ test('uploads a document, reviews the proposals beside it, and commits them', as
   // The source is on screen beside the figures — that pairing is the point of the screen.
   await expect(page.locator('iframe')).toBeVisible();
 
+  // Everything the document says, including the figures nothing reports on. The kVARh row matters:
+  // it is the one a reviewer must not read as consumption.
+  await expect(page.getByText('WHAT THE DOCUMENT SAYS')).toBeVisible();
+  await expect(page.getByText('Maklumat Meter')).toBeVisible();
+  await expect(page.getByText('kVARh')).toBeVisible();
+  await expect(page.getByText('RM276,397.88')).toBeVisible();
+
   await expect(page.getByText('Grid Electricity (Peninsular Malaysia)')).toBeVisible();
   await expect(page.getByText('Total Electricity Consumed')).toBeVisible();
 

@@ -19,6 +19,29 @@ export interface ExtractedRecordResponse {
   status: RecordStatus;
 }
 
+/** A labelled value printed outside any table. */
+export interface TranscribedField {
+  label: string;
+  value: string;
+}
+
+/** One table as printed. Rows are ragged when the document merges or leaves cells blank. */
+export interface TranscribedTable {
+  title: string | null;
+  columns: string[];
+  rows: string[][];
+}
+
+/**
+ * What the document says, as printed — descriptive, never reviewed. Distinct from the records:
+ * a figure with no matching indicator lives here and nowhere else, which is how everything on a
+ * bill gets captured without anything being forced into an indicator that does not mean it.
+ */
+export interface DocumentTranscription {
+  fields: TranscribedField[];
+  tables: TranscribedTable[];
+}
+
 export interface ExtractedDocumentResponse {
   id: string;
   originalFileName: string;
@@ -28,6 +51,7 @@ export interface ExtractedDocumentResponse {
   createdAt: string;
   /** Absent until the document has been read. */
   modelUsed: string | null;
+  transcription: DocumentTranscription;
   records: ExtractedRecordResponse[];
 }
 

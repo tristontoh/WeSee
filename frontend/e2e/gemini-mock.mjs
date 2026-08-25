@@ -14,8 +14,33 @@ import { createServer } from 'node:http';
 
 const PORT = Number(process.env.PORT || 8099);
 
-/** What the extractor's response schema asks for. */
+/**
+ * What the extractor's response schema asks for: the proposals, plus a copy of the page. The
+ * transcription is here so the detail screen's panel is exercised too — including a table whose
+ * heading the document omits, and a kVARh row, which is the pairing the screen exists to show.
+ */
 const PROPOSALS = {
+  fields: [
+    { label: 'No. Akaun', value: '220487651234' },
+    { label: 'Tempoh Bil', value: '02.05.2025 - 01.06.2025' },
+    { label: 'Jumlah Bil Anda', value: 'RM276,397.88' },
+  ],
+  tables: [
+    {
+      title: 'Maklumat Meter',
+      columns: ['No. Meter', 'Penggunaan', 'Unit'],
+      rows: [
+        ['M 825603417', '1,240.00', 'kWh'],
+        ['M 825603417', '267,840.00', 'kVARh'],
+        ['TENANT', '42,180.00', 'kWh'],
+      ],
+    },
+    {
+      title: null,
+      columns: ['Penerangan', 'Jumlah'],
+      rows: [['Caj Semasa', '276,397.88']],
+    },
+  ],
   records: [
     {
       targetType: 'EMISSION_ACTIVITY',
