@@ -32,6 +32,9 @@ export const routes: Routes = [
       { path: 'onboarding', loadComponent: () => import('./screens/workspace/onboarding/onboarding.component').then((m) => m.OnboardingComponent) },
       { path: 'export', loadComponent: () => import('./screens/workspace/export/export.component').then((m) => m.ExportComponent) },
       { path: 'extraction', loadComponent: () => import('./screens/workspace/extraction/extraction.component').then((m) => m.ExtractionComponent) },
+      { path: 'documents', loadComponent: () => import('./screens/workspace/documents/documents.component').then((m) => m.DocumentsComponent) },
+      // Before the wildcard below, which would otherwise swallow it back to /indicators.
+      { path: 'documents/:id', loadComponent: () => import('./screens/workspace/documents/document-detail.component').then((m) => m.DocumentDetailComponent) },
 
       // Settings (shared)
       { path: 'settings', loadComponent: () => import('./screens/settings/settings.component').then((m) => m.SettingsComponent) },

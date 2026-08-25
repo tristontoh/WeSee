@@ -77,6 +77,22 @@ public class ExtractionService {
         return ExtractedDocumentResponse.from(document, recordsFor(documentId));
     }
 
+    /** The stored bytes, for the detail screen's preview. */
+    @Transactional(readOnly = true)
+    public StoredDocument readFile(UUID documentId) {
+        UUID companyId = currentUserProvider.requireCompanyId();
+        // Scoped by company like get(): a document id alone must not be enough to read another
+        // tenant's bill.
+        ExtractedDocument document = documentRepository.findByIdAndCompanyId(documentId, companyId)
+                .orElseThrow(() -> new NotFoundException("Document not found"));
+
+        return new StoredDocument(storageService.read(document.getStoredPath()),
+                document.getOriginalFileName());
+    }
+
+    public record StoredDocument(byte[] content, String originalFileName) {
+    }
+
     @Transactional
     public void retry(UUID documentId) {
         UUID companyId = currentUserProvider.requireCompanyId();

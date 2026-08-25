@@ -17,6 +17,17 @@ export class ExtractionApiService {
     return this.http.get<ExtractedDocumentResponse>(`${this.base}/documents/${id}`);
   }
 
+  /**
+   * The stored document itself, for the detail screen's preview.
+   *
+   * Fetched as a blob rather than pointed at with `<img src>` or `<iframe src>`: those cannot
+   * carry the Authorization header, and the endpoint is tenant-scoped. The caller turns this into
+   * an object URL — and must revoke it, or every visit leaks one.
+   */
+  file(id: string): Observable<Blob> {
+    return this.http.get(`${this.base}/documents/${id}/file`, { responseType: 'blob' });
+  }
+
   upload(file: File): Observable<ExtractedDocumentResponse> {
     const form = new FormData();
     form.append('file', file);

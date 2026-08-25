@@ -92,6 +92,28 @@ const ACTIVITY: NavItem = {
   d: 'M13 2L3 14h8l-1 8 10-12h-8z',
 };
 
+/**
+ * Sits directly after Emission Activity: a bill uploaded here proposes an activity entry and an
+ * indicator value, so it belongs beside the two screens those land in. Not plan-gated — reading a
+ * document is available at every tier, same as manual entry.
+ *
+ * Uploading only. What was uploaded, and what was read out of it, lives in {@link DOCUMENTS}.
+ */
+const EXTRACTION: NavItem = {
+  key: 'extraction',
+  label: 'Document Extraction',
+  path: '/extraction',
+  d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 15h6M9 11h2',
+};
+
+/** Every uploaded document and the figures read from it. Ungated for the same reason as above. */
+const DOCUMENTS: NavItem = {
+  key: 'documents',
+  label: 'Documents',
+  path: '/documents',
+  d: 'M4 4h7l2 2h7v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z',
+};
+
 const GROUP: NavItem = {
   key: 'group',
   label: 'Group',
@@ -105,6 +127,8 @@ export const NAV: Record<TenantKey, NavItem[]> = {
     { key: 'onboarding', label: 'Onboarding', path: '/onboarding', d: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M19 8v6M22 11h-6' },
     INDICATORS,
     ACTIVITY,
+    EXTRACTION,
+    DOCUMENTS,
     MATERIALITY,
     GOVERNANCE,
     TARGETS,
@@ -119,6 +143,8 @@ export const NAV: Record<TenantKey, NavItem[]> = {
   'compliance-hub': [
     INDICATORS,
     ACTIVITY,
+    EXTRACTION,
+    DOCUMENTS,
     MATERIALITY,
     GOVERNANCE,
     TARGETS,

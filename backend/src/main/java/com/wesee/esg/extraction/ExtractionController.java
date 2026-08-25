@@ -3,6 +3,11 @@ package com.wesee.esg.extraction;
 import com.wesee.esg.extraction.dto.AcceptRecordRequest;
 import com.wesee.esg.extraction.dto.ExtractedDocumentResponse;
 import com.wesee.esg.extraction.dto.ExtractedRecordResponse;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +45,23 @@ public class ExtractionController {
     @GetMapping("/documents/{id}")
     public ExtractedDocumentResponse get(@PathVariable UUID id) {
         return extractionService.get(id);
+    }
+
+    /**
+     * Serves the stored document back for the detail screen's preview.
+     *
+     * <p>{@code inline}, unlike the evidence download's {@code attachment}: attachment makes a
+     * browser offer the file for saving rather than render it, which would leave the preview blank.
+     */
+    @GetMapping("/documents/{id}/file")
+    public ResponseEntity<Resource> file(@PathVariable UUID id) {
+        ExtractionService.StoredDocument stored = extractionService.readFile(id);
+
+        return ResponseEntity.ok()
+                .contentType(DocumentContentType.forFileName(stored.originalFileName()))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(stored.originalFileName()).toString())
+                .body(new ByteArrayResource(stored.content()));
     }
 
     @PostMapping("/documents/{id}/retry")

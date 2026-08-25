@@ -1,188 +1,137 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { Subscription, interval } from 'rxjs';
+import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ExtractionApiService } from '../../../core/extraction/extraction-api.service';
-import {
-  ExtractedDocumentResponse,
-  ExtractedRecordResponse,
-  isPending,
-} from '../../../core/extraction/extraction.model';
 import { toApiError } from '../../../core/http/api-error';
-import { UiService } from '../../../core/ui.service';
 
 const CARD = 'background:#fff;border:1px solid #E9ECE6;border-radius:16px;padding:22px;margin-bottom:16px;';
 const H = 'font-size:12px;font-weight:600;color:#8A968F;letter-spacing:.3px;margin-bottom:14px;';
-const INPUT = 'height:40px;border-radius:10px;border:1px solid #E5E8E1;padding:0 12px;font-family:inherit;font-size:13.5px;background:#fff;';
-const BTN = 'height:40px;padding:0 16px;border-radius:10px;border:none;cursor:pointer;background:#4C96B3;color:#fff;font-weight:600;font-size:13px;font-family:inherit;';
 
-const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
-  PENDING: { bg: '#F3F5F1', fg: '#8A968F' },
-  EXTRACTING: { bg: '#EAF2F6', fg: '#4C96B3' },
-  READY: { bg: '#E9F3EC', fg: '#3D7A52' },
-  FAILED: { bg: '#FBEDEA', fg: '#8C3A2E' },
-};
-
+/**
+ * Uploading only. A document goes off to be read on another thread, so there is nothing to show
+ * here once it is accepted — what came back lives in the Documents screen, and the confirmation
+ * below is what carries the reader across to it.
+ */
 @Component({
   selector: 'app-extraction',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div style="max-width:1000px;">
       <div [style]="CARD">
         <div [style]="H">UPLOAD A SOURCE DOCUMENT</div>
-        <p style="font-size:13.5px;color:#64726B;margin:0 0 14px;line-height:1.5;">
-          Upload a utility bill or invoice and it will be read for the figures it contains.
-          Nothing is written to your data until you accept it below.
-        </p>
-        <input type="file" (change)="onFile($event)"
+
+        <!-- The native file input is visually hidden: its "Choose File" chip is drawn by the
+             browser and cannot be styled to match the rest of the app. The label below drives it. -->
+        <input #picker type="file" (change)="onFile($event)"
           accept=".pdf,.png,.jpg,.jpeg,.xlsx,.csv,.docx"
-          [style]="INPUT" style="padding:8px 12px;height:auto;">
+          style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+
+        <div (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)"
+          [style.border-color]="dragging() ? '#4C96B3' : '#DDE3DA'"
+          [style.background]="dragging() ? '#F5FAFC' : '#FCFDFB'"
+          style="border:1.5px dashed;border-radius:14px;padding:26px 22px;text-align:center;transition:border-color .15s,background .15s;">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke="#A9B3AD" stroke-width="1.6"
+            stroke-linecap="round" stroke-linejoin="round" width="30" height="30" style="margin-bottom:10px;">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9.5 14.5L12 12l2.5 2.5"/>
+          </svg>
+
+          <div style="font-size:14px;font-weight:600;color:#42504A;margin-bottom:4px;">
+            {{ uploading() ? 'Reading ' + uploadingName() + '…' : 'Drop a bill here' }}
+          </div>
+          <div style="font-size:12.5px;color:#8A968F;margin-bottom:16px;">
+            PDF, image, or spreadsheet · up to 10 MB
+          </div>
+
+          <button type="button" (click)="picker.click()" [disabled]="uploading()"
+            [style.opacity]="uploading() ? '.55' : '1'"
+            style="height:40px;padding:0 18px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:#fff;background:linear-gradient(90deg,#4C96B3,#A99FDB);">
+            Choose a document
+          </button>
+        </div>
+
+        <p style="font-size:12.5px;color:#8A968F;margin:14px 0 0;line-height:1.5;">
+          The figures found in the document are proposed in Documents. Nothing is written to your
+          data until you accept them.
+        </p>
+
         <div *ngIf="error()" style="color:#8C3A2E;font-size:13px;margin-top:12px;">{{ error() }}</div>
       </div>
 
-      <div *ngIf="!documents().length" [style]="CARD" style="color:#8A968F;font-size:13.5px;">
-        No documents uploaded yet.
-      </div>
-
-      <div *ngFor="let doc of documents()" [style]="CARD">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-          <strong style="font-size:14px;">{{ doc.originalFileName }}</strong>
-          <span style="font-size:10.5px;font-weight:700;padding:5px 9px;border-radius:7px;"
-            [style.background]="color(doc.status).bg" [style.color]="color(doc.status).fg">
-            {{ doc.status }}
-          </span>
-          <button *ngIf="doc.status === 'FAILED'" (click)="retry(doc)"
-            style="margin-left:auto;height:32px;padding:0 12px;border-radius:8px;border:1.5px solid #E5E8E1;background:#fff;cursor:pointer;font-size:12px;font-family:inherit;">
-            Retry
-          </button>
-        </div>
-        <div style="font-size:11px;color:#A9B3AD;margin-bottom:12px;">
-          Uploaded by {{ doc.uploadedBy }}
-        </div>
-
-        <div *ngIf="doc.failureReason" style="color:#8C3A2E;font-size:12.5px;margin-bottom:8px;">
-          {{ doc.failureReason }}
-        </div>
-
-        <div *ngIf="doc.status === 'READY' && !doc.records.length"
-          style="color:#8A968F;font-size:13px;">
-          Nothing usable was found in this document.
-        </div>
-
-        <div *ngFor="let rec of doc.records" [attr.data-record]="rec.targetId"
-          style="display:grid;grid-template-columns:minmax(0,1fr) 130px 170px;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #F2F4F0;">
-          <div style="min-width:0;">
-            <div style="font-size:13px;font-weight:600;line-height:1.35;">{{ rec.targetName }}</div>
-            <div style="font-size:11px;color:#A9B3AD;margin-top:3px;">
-              {{ rec.targetType === 'EMISSION_ACTIVITY' ? 'Emission activity' : 'Indicator' }}
-              · FY{{ rec.fiscalYear }}
-              <span *ngIf="rec.unitAsRead"> · read as {{ rec.unitAsRead }}</span>
-              <span *ngIf="rec.confidence"> · {{ (rec.confidence * 100).toFixed(0) }}% confident</span>
-            </div>
-            <div *ngIf="rec.sourceSnippet"
-              style="font-size:11px;color:#8A968F;margin-top:4px;font-style:italic;">
-              “{{ rec.sourceSnippet }}”
-            </div>
-          </div>
-
-          <input #val type="number" [value]="rec.value" [disabled]="rec.status !== 'PROPOSED'"
-            [style]="INPUT" style="width:100%;box-sizing:border-box;height:36px;font-size:12.5px;">
-
-          <div style="display:flex;gap:6px;">
-            <ng-container *ngIf="rec.status === 'PROPOSED'; else reviewed">
-              <button (click)="accept(rec, val.value)" [style]="BTN"
-                style="flex:1;height:36px;padding:0;font-size:12px;">Accept</button>
-              <button (click)="reject(rec)"
-                style="flex:1;height:36px;border-radius:10px;border:1.5px solid #F0C4BC;background:#fff;color:#8C3A2E;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;">
-                Reject
-              </button>
-            </ng-container>
-            <ng-template #reviewed>
-              <span style="font-size:11.5px;font-weight:700;color:#8A968F;">{{ rec.status }}</span>
-            </ng-template>
+      <!-- Without this the file appears to vanish: it is read on another thread and the result
+           lands on a different screen. -->
+      <div *ngIf="uploaded() as name" [style]="CARD"
+        style="display:flex;align-items:center;gap:12px;border-color:#D6E7DC;background:#F6FBF7;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3D7A52" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="flex-shrink:0;">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:13.5px;font-weight:600;color:#2F3B35;">{{ name }} is being read</div>
+          <div style="font-size:12px;color:#5F7A69;margin-top:2px;">
+            The figures appear in Documents when it finishes.
           </div>
         </div>
+        <a [routerLink]="uploadedId() ? ['/documents', uploadedId()] : ['/documents']"
+          style="flex-shrink:0;height:36px;line-height:36px;padding:0 15px;border-radius:9px;text-decoration:none;font-size:12.5px;font-weight:600;color:#fff;background:#4C96B3;">
+          View document
+        </a>
       </div>
     </div>
   `,
 })
-export class ExtractionComponent implements OnInit, OnDestroy {
+export class ExtractionComponent {
   private api = inject(ExtractionApiService);
-  private ui = inject(UiService);
 
   CARD = CARD;
   H = H;
-  INPUT = INPUT;
-  BTN = BTN;
 
-  documents = signal<ExtractedDocumentResponse[]>([]);
   error = signal<string | null>(null);
-  private poll?: Subscription;
+  dragging = signal(false);
+  uploading = signal(false);
+  uploadingName = signal('');
+  uploaded = signal<string | null>(null);
+  uploadedId = signal<string | null>(null);
 
-  ngOnInit() {
-    this.refresh();
-    // Extraction runs off the request thread, so the queue is polled while any
-    // document is still PENDING or EXTRACTING, and left alone once all are terminal.
-    this.poll = interval(2000).subscribe(() => {
-      if (this.documents().some(isPending)) {
-        this.refresh();
-      }
-    });
+  onDragOver(event: DragEvent) {
+    // Without preventDefault the browser navigates to the dropped file instead of handing it over.
+    event.preventDefault();
+    this.dragging.set(true);
   }
 
-  ngOnDestroy() {
-    this.poll?.unsubscribe();
-  }
-
-  color(status: string) {
-    return STATUS_COLORS[status] ?? STATUS_COLORS['PENDING'];
-  }
-
-  refresh() {
-    this.api.list().subscribe({
-      next: (docs) => this.documents.set(docs),
-      error: (err) => this.error.set(toApiError(err).message),
-    });
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.dragging.set(false);
+    const file = event.dataTransfer?.files?.[0];
+    if (file) this.upload(file);
   }
 
   onFile(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
+    if (file) this.upload(file, input);
+  }
 
+  private upload(file: File, input?: HTMLInputElement) {
     this.error.set(null);
+    this.uploaded.set(null);
+    this.uploading.set(true);
+    this.uploadingName.set(file.name);
+
     this.api.upload(file).subscribe({
-      next: () => {
-        input.value = '';
-        this.refresh();
+      next: (doc) => {
+        // Cleared so re-picking the same file still fires a change event.
+        if (input) input.value = '';
+        this.uploading.set(false);
+        this.uploaded.set(doc.originalFileName);
+        this.uploadedId.set(doc.id);
       },
-      error: (err) => this.error.set(toApiError(err).message),
-    });
-  }
-
-  retry(doc: ExtractedDocumentResponse) {
-    this.api.retry(doc.id).subscribe({
-      next: () => this.refresh(),
-      error: (err) => this.ui.showToast(toApiError(err).message),
-    });
-  }
-
-  accept(rec: ExtractedRecordResponse, rawValue: string) {
-    const parsed = Number(rawValue);
-    this.api.accept(rec.id, { value: Number.isFinite(parsed) ? parsed : undefined }).subscribe({
-      next: () => {
-        this.ui.showToast('Accepted');
-        this.refresh();
+      error: (err) => {
+        this.uploading.set(false);
+        this.error.set(toApiError(err).message);
       },
-      // A 409 here is the sign-off guard; its message names the year and explains itself.
-      error: (err) => this.ui.showToast(toApiError(err).message),
-    });
-  }
-
-  reject(rec: ExtractedRecordResponse) {
-    this.api.reject(rec.id).subscribe({
-      next: () => this.refresh(),
-      error: (err) => this.ui.showToast(toApiError(err).message),
     });
   }
 }

@@ -8,6 +8,9 @@ export interface ExtractedRecordResponse {
   targetId: string;
   targetName: string;
   value: number;
+  /** The unit `value` is in, after conversion into the target's own unit. */
+  unit: string;
+  /** What the document printed, which may differ — 1,240 kWh read, 1.24 MWh stored. */
   unitAsRead: string | null;
   fiscalYear: number;
   month: number | null;
@@ -23,6 +26,8 @@ export interface ExtractedDocumentResponse {
   failureReason: string | null;
   uploadedBy: string;
   createdAt: string;
+  /** Absent until the document has been read. */
+  modelUsed: string | null;
   records: ExtractedRecordResponse[];
 }
 

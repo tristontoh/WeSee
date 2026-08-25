@@ -14,6 +14,8 @@ public record ExtractedDocumentResponse(
         String failureReason,
         String uploadedBy,
         Instant createdAt,
+        /** Which model read it — provenance the detail screen shows beside the figures. */
+        String modelUsed,
         List<ExtractedRecordResponse> records
 ) {
     public static ExtractedDocumentResponse from(ExtractedDocument document, List<ExtractedRecordResponse> records) {
@@ -24,6 +26,7 @@ public record ExtractedDocumentResponse(
                 document.getFailureReason(),
                 document.getUploadedBy(),
                 document.getCreatedAt(),
+                document.getModelUsed(),
                 records);
     }
 }
