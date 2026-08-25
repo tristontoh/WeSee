@@ -109,11 +109,15 @@ after typing a value, the document comes first and the values follow from it.
 - Extraction runs **asynchronously after commit** (`ExtractionRequestedEvent` → `ExtractionWorker`,
   fixed in `ff5d6f2`), and output is checked by `ProposalValidator` against the tenant's closed
   set of factors and indicators, with `UnitConverter` reconciling document units to indicator units.
-- The engine sits behind a one-method `DocumentExtractor` interface, and **Gemini is the
-  implementation** (`wesee.extraction.provider`, default `gemini`; `gemini-3.7-flash` by default and
-  configurable, since model names turn over faster than this code will). `StubDocumentExtractor` is
-  no longer a placeholder but a test double, pinned by `application-test.yml` and reachable only by
-  asking for it — a missing key stops startup rather than falling back to invented figures.
+- The engine sits behind a one-method `DocumentExtractor` interface, and **Gemini is the only
+  implementation** (`gemini-3.7-flash` by default and configurable, since model names turn over
+  faster than this code will). A missing key stops startup; there is nothing to fall back to.
+- **The test suite fakes the API, not the extractor.** An in-process stand-in used to supply a fixed
+  reading so the e2e suite could run offline, which put a class capable of inventing figures into
+  production code. It is gone: `frontend/e2e/gemini-mock.mjs` answers over HTTP instead
+  (`GEMINI_BASE_URL`, set by `make backend-e2e`), so the real prompt, schema and parsing all run and
+  only the model is fake. Provenance stays honest — `modelUsed` records what actually answered, so
+  mock-backed records read `mock` rather than a model name.
 - Three decisions inside the Gemini path carry most of the weight:
   - The response schema **pins `targetId` to an enum of the tenant's own ids**, making an
     unresolvable proposal structurally impossible rather than merely rejected downstream. This
@@ -165,8 +169,8 @@ an implementation plan, then commits** — and the specs record the alternatives
 and why, not just the decision. Commit subjects are lowercase, scoped, and describe behaviour
 (`feat(extraction): read uploaded documents and propose the records they imply`). Code comments
 follow the same habit: they explain the non-obvious *reason* for a choice — see the note on
-`@ConditionalOnProperty` vs `@ConditionalOnMissingBean` in `StubDocumentExtractor`, or why the
-Emissions Dashboard appears in both nav sets in `nav.ts`.
+`rec.unit` rather than `rec.unitAsRead` in the document detail screen, or why the Emissions
+Dashboard appears in both nav sets in `nav.ts`.
 
 ## Open items
 
@@ -187,9 +191,9 @@ Known and deliberate, rather than forgotten:
 - **A packaged artifact would embed the local API key.** Maven copies
   `application-local.properties` into `target/classes`. Fine for local development, wrong for
   anything deployed — use `GEMINI_API_KEY` there.
-- **The two extraction e2e specs need `make backend-stub`.** They assert the fixed extractor's known
-  1,240 kWh reading, and the fixture they upload is a PDF containing no figures, so a real model
-  correctly finds nothing. Replacing them would need a committed sample bill, which a public repo
-  cannot have.
+- **The extraction e2e specs need `make backend-e2e`.** They upload a PDF containing no figures at
+  all, so the model has to be faked — `gemini-3.7-flash` reading that fixture would correctly find
+  nothing. Testing against a real bill instead would mean committing one, which a public repo
+  cannot do.
 - **`gemini-3.7-flash` is on introductory pricing** that doubles on 2027-01-01. The model id is
   configurable for exactly this reason.

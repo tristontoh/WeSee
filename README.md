@@ -88,14 +88,14 @@ Two things worth knowing before reading the code:
 ```bash
 make infra         # optional: Postgres on :5432, database wesee_esg
 make backend       # cd backend && mvn spring-boot:run    → :8080
-make backend-stub  # same, with the fixed extractor — no API key needed
+make backend-e2e   # same, pointed at the e2e Gemini mock — no real key needed
 make frontend      # cd frontend && npx ng serve --port 4210  → :4210
 ```
 
-**`make backend` needs a Gemini key.** Document extraction defaults to `gemini`, and selecting it
-without a key stops startup rather than starting a backend that fails on first upload — it will
-never quietly fall back to the fixed extractor, whose invented figures a reviewer could not tell
-from read ones. Either export `GEMINI_API_KEY`, or put the key in
+**`make backend` needs a Gemini key.** Startup stops without one rather than producing a backend
+that fails on first upload. There is deliberately nothing to fall back to: a stand-in that invented
+figures could have them accepted into the assurance hash, and a reviewer could not tell those from
+figures that were read. Either export `GEMINI_API_KEY`, or put the key in
 `backend/src/main/resources/application-local.properties` (gitignored by `*-local.properties`, and
 loaded because the `local` profile is active after `dev`):
 
@@ -106,9 +106,9 @@ wesee.extraction.gemini.api-key=…
 One caveat with that file: Maven copies it into `target/classes`, so an artifact built from
 `mvn package` would embed the key. Use the environment variable for anything deployed.
 
-`make backend-stub` needs no key and is what the two extraction specs in the e2e suite require —
-they assert on the fixed extractor's known 1,240 kWh reading, so they fail against a real model
-(correctly: the fixture PDF they upload contains no figures at all).
+`make backend-e2e` is what the extraction specs in the e2e suite require. It points
+`GEMINI_BASE_URL` at `frontend/e2e/gemini-mock.mjs`, which Playwright starts for you — the real
+extractor runs, and only the model is faked. See [Testing](#testing).
 
 Flyway runs migrations `V1`–`V52` on boot and seeds the reference data (sectors, Bursa matters,
 indicator definitions, emission factors). Hibernate runs with `ddl-auto: validate` and never
@@ -123,7 +123,7 @@ which is gitignored: this repo is public, so dev credentials live outside it.
 Backend config: `backend/src/main/resources/application.yml`, with the datasource in
 `application-dev.yml` (defaults to `postgres`/`root` on `localhost:5432/wesee_esg`). Overridable
 via `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`, `UPLOADS_DIR`,
-`EXTRACTION_PROVIDER` (`gemini` | `stub`), `GEMINI_API_KEY`, `GEMINI_MODEL`, and the `SMTP_*`
+`GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL`, and the `SMTP_*`
 variables. API docs at http://localhost:8080/swagger-ui.html.
 
 | Part | Port | Stack |
@@ -134,16 +134,20 @@ variables. API docs at http://localhost:8080/swagger-ui.html.
 ## Testing
 
 ```bash
-cd backend  && mvn test            # 58 unit tests
-cd frontend && npx playwright test # ~84 e2e tests against a running backend (see make backend-stub)
+cd backend  && mvn test            # 70 unit tests
+cd frontend && npx playwright test # 84 e2e tests against a running backend (see make backend-e2e)
 ```
 
-No test reaches a model: `application-test.yml` pins the fixed extractor, and the Gemini bean is
-conditional without `matchIfMissing`, so a suite cannot reach the network by forgetting to override
-something. What the unit tests cover is the logic that is easiest to get quietly wrong — unit
-conversion, proposal validation against the closed set, the sign-off guard, JWT, and for extraction:
-the media-type sniff, exact decimal parsing, the closed-set enum in the response schema, and that a
-missing key fails at construction rather than on first upload.
+**No test reaches a real model, and none needs a key.** The extraction specs run the real extractor
+— real prompt, real response schema, real parsing — against `frontend/e2e/gemini-mock.mjs`, which
+Playwright starts as a second `webServer`. Faking at the HTTP boundary rather than shipping a
+fake extractor keeps a class capable of inventing figures out of the application entirely; the
+records it produces record their provenance as `mock`, not as a model name.
+
+The unit tests cover the logic that is easiest to get quietly wrong — unit conversion, proposal
+validation against the closed set, the sign-off guard, JWT, and for extraction: the media-type
+sniff, exact decimal parsing, the closed-set enum in the response schema, and that a missing key
+fails at construction rather than on first upload.
 
 The balance is deliberate: behaviour is verified end-to-end through the real API, with unit tests
 reserved for pure calculation. Note the backend has no `@SpringBootTest` — **a successful boot is
