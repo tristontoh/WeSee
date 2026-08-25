@@ -58,6 +58,7 @@ const STEPS: { key: StepKey; label: string }[] = [
       <div *ngIf="error() && !planBlocked()" style="background:#FBEAE7;border:1px solid #F0C4BC;color:#8C3A2E;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;">{{ error() }}</div>
 
       <ng-container *ngIf="!planBlocked()">
+        <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;margin-bottom:12px;">Loading…</div>
         <!-- ---------- step nav ---------- -->
         <div style="display:flex;gap:0;background:#fff;border:1px solid #E9ECE6;border-radius:14px;padding:6px;margin-bottom:16px;">
           <button *ngFor="let s of steps; let i = index" type="button" (click)="go(s.key)"
@@ -100,7 +101,6 @@ const STEPS: { key: StepKey; label: string }[] = [
               </select>
               <button (click)="saveOwner(o, owner.value, lv.value)" [style]="btn" style="width:100%;height:34px;font-size:12px;padding:0;">Set</button>
             </div>
-            <div *ngIf="loading()" style="color:#8A968F;font-size:13.5px;">Loading matters…</div>
             <div *ngIf="!loading() && !ownership().length" style="color:#8A968F;font-size:13.5px;">No matters to assign.</div>
           </ng-container>
 
