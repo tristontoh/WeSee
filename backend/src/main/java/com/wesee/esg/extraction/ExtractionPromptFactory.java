@@ -47,11 +47,21 @@ final class ExtractionPromptFactory {
         prompt.append("""
 
                 Rules:
+                - Read the whole document and propose every figure that matches one of the options \
+                above — not only the first or the most prominent one. A bill usually carries \
+                several.
                 - Propose only figures you actually read on the document. If you cannot find a \
                 figure, return no record for it rather than an estimate. Returning an empty list \
                 is a correct answer for a document that carries none.
+                - Match on what a figure means, not on whether it happens to share the same unit \
+                as an option. An amount of money is not a community-investment figure just \
+                because both are in MYR. If nothing above genuinely covers a figure, leave it out.
                 - One bill often implies two records: the activity itself (an emission factor) and \
                 the indicator that reports it. Propose both when both apply.
+                - When a document breaks a quantity into components — peak and off-peak \
+                electricity, several meters, a line per month — propose each component against \
+                the factor, and propose their total against the matching indicator. Say in \
+                sourceSnippet when a figure is a sum, and quote the lines it was added from.
                 - Report unitAsRead exactly as the document prints it. Do not convert between \
                 units — converting is done afterwards, and a value converted twice is wrong by \
                 orders of magnitude while still looking plausible.

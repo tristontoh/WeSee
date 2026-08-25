@@ -99,4 +99,35 @@ class ExtractionPromptFactoryTest {
     void asksForTheSourceTextVerbatim() {
         assertTrue(ExtractionPromptFactory.promptFor(CONTEXT).toLowerCase().contains("verbatim"));
     }
+
+    /**
+     * A TNB large-power bill prints peak and off-peak consumption and no total. Asked only for
+     * "the figures", a model proposes the two components and no indicator at all — so the reading
+     * lands in emission activity and the indicator it also belongs to stays empty.
+     */
+    @Test
+    void asksForATotalWhenTheDocumentOnlyPrintsComponents() {
+        String prompt = ExtractionPromptFactory.promptFor(CONTEXT).toLowerCase();
+
+        assertTrue(prompt.contains("component"), prompt);
+        assertTrue(prompt.contains("total"), prompt);
+    }
+
+    /** Everything on the page that has somewhere to go, not just the first line that matches. */
+    @Test
+    void asksForEveryFigureThatMatchesAnOption() {
+        assertTrue(ExtractionPromptFactory.promptFor(CONTEXT).toLowerCase().contains("every figure"));
+    }
+
+    /**
+     * The schema's enum cannot tell meaning from unit: an amount due in RM would validate against
+     * a MYR indicator that means community investment. Only the prompt can refuse that.
+     */
+    @Test
+    void tellsTheModelToMatchOnMeaningRatherThanOnUnit() {
+        String prompt = ExtractionPromptFactory.promptFor(CONTEXT).toLowerCase();
+
+        assertTrue(prompt.contains("same unit"), prompt);
+        assertTrue(prompt.contains("leave it out") || prompt.contains("no option"), prompt);
+    }
 }
