@@ -96,6 +96,29 @@ public class EmailService {
         }
     }
 
+    public void sendPasswordResetEmail(UUID companyId, String toEmail, String toName, String resetUrl) {
+        Sender sender = resolveSender(companyId);
+        if (sender == null) {
+            log.info("No SMTP configured for company {} or the platform — skipping password reset email to {}; reset link: {}", companyId, toEmail, resetUrl);
+            return;
+        }
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(sender.fromAddress());
+            message.setTo(toEmail);
+            message.setSubject("Reset your WeSee password");
+            message.setText(
+                    "Hi " + toName + ",\n\n" +
+                    "We received a request to reset your WeSee password. Click the link below to choose a new one:\n\n" + resetUrl + "\n\n" +
+                    "This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.\n\n" +
+                    "— WeSee ESG Reporting Platform"
+            );
+            sender.mailSender().send(message);
+        } catch (Exception e) {
+            log.warn("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
     /** Sends a real test email using the given (not-yet-persisted-as-tested) settings, reporting success/failure back to the caller synchronously. */
     public TestEmailResponse sendTestEmail(CompanyEmailSettings settings, String toEmail) {
         return sendTestEmail(toConfig(settings), toEmail);

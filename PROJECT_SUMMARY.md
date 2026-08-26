@@ -14,7 +14,7 @@ disclose under IFRS S1/S2 → set performance targets → sign off → export a 
 can also be uploaded and read by the platform, which proposes the records it implies for a human
 to confirm.
 
-The stack is deliberately two-part: **Angular 19 SPA** on `:4210` and a **Java 21 / Spring Boot
+The stack is deliberately two-part: **React 19 SPA** on `:4210` and a **Java 21 / Spring Boot
 3.3 monolith** on `:8080`, over **PostgreSQL**. There is no separate service layer, message
 broker, or Python component (an earlier FastAPI gateway was removed — see commit `ec23e1c`).
 
@@ -22,7 +22,7 @@ broker, or Python component (an earlier FastAPI gateway was removed — see comm
 
 ```
 backend/    Java 21 / Spring Boot 3.3.5 — the entire API (347 source files, 30 controllers)
-frontend/   Angular 19 standalone-component SPA — the entire UI
+frontend/   React 19 + Vite SPA (HashRouter) — the entire UI
 infra/      docker-compose for local Postgres
 docs/       design specs and implementation plans, one pair per milestone
 data/       runtime upload storage (untracked)
@@ -32,7 +32,7 @@ Makefile    make infra | backend | frontend
 ## Architecture
 
 ```
-Angular 19 (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──►  PostgreSQL (Flyway V1–V52)
+React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──►  PostgreSQL (Flyway V1–V68)
                                        │
                                        ├── DocumentExtractor (swappable; stub today)
                                        └── local filesystem uploads (./data/uploads)
@@ -66,15 +66,24 @@ Angular 19 (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──► 
 
 ### Frontend
 
-- Angular 19 with **standalone components and lazy `loadComponent` routes**
-  ([app.routes.ts](frontend/src/app/app.routes.ts)) — no NgModules, and **no UI component
-  library**: dependencies are only Angular, RxJS, and zone.js. All styling and every icon
-  (inline SVG paths in [nav.ts](frontend/src/app/core/nav.ts)) are hand-written.
-- `core/` holds one typed API service per backend domain plus the JWT interceptor, error
-  normalization, auth guards, and app state.
-- Navigation is **derived from role and plan**, not hardcoded per user: three nav sets
-  (`workspace`, `compliance-hub`, `admin`) in `nav.ts`, filtered by `adminOnly` and by the
-  backend feature flags, each with its own post-login landing route.
+- React 19 on Vite 6, routed by a **HashRouter** ([App.tsx](frontend/src/App.tsx)) — every route
+  lives behind `#`. Styling is Tailwind 4 driven by a token layer in
+  [index.css](frontend/src/index.css); icons come from `lucide-react`.
+- `api/` holds one typed client per backend domain over a shared `apiClient`
+  ([client.ts](frontend/src/api/client.ts)) that attaches the JWT, normalizes error bodies, and
+  handles multipart uploads and blob downloads.
+- Navigation is **derived from role and plan**: `AuthenticatedLayout` in `App.tsx` filters the nav
+  against `PlanContext` (feature gating) and [permissions.ts](frontend/src/permissions.ts) (role
+  groups), with platform admins getting their own set.
+- [capabilities.ts](frontend/src/capabilities.ts) is the switchboard for subsystems the frontend can
+  render but a backend might not serve. All four — AI, custom roles, the activity log, password
+  reset — are now **on**, since the backend serves them all; the file stays because it is where an
+  entry point asks before rendering, rather than shipping a control that 404s.
+- Per-company RBAC: a `custom_role` holds a delimited set of permission keys from the `permission`
+  catalog, and controllers gate on `@PreAuthorize("@perm.check('module.action')")`
+  ([PermissionGateService](backend/src/main/java/com/wesee/esg/permission/PermissionGateService.java)),
+  which re-reads the database every request so a role edit takes effect without re-login.
+  COMPANY_ADMIN passes implicitly and can never be gated out of its own company.
 
 ## Feature areas
 
@@ -109,11 +118,13 @@ after typing a value, the document comes first and the values follow from it.
 - Extraction runs **asynchronously after commit** (`ExtractionRequestedEvent` → `ExtractionWorker`,
   fixed in `ff5d6f2`), and output is checked by `ProposalValidator` against the tenant's closed
   set of factors and indicators, with `UnitConverter` reconciling document units to indicator units.
-- The engine sits behind a one-method `DocumentExtractor` interface, and **Gemini is the
-  implementation** (`wesee.extraction.provider`, default `gemini`; `gemini-3.7-flash` by default and
-  configurable, since model names turn over faster than this code will). `StubDocumentExtractor` is
-  no longer a placeholder but a test double, pinned by `application-test.yml` and reachable only by
-  asking for it — a missing key stops startup rather than falling back to invented figures.
+- The engine sits behind a one-method `DocumentExtractor` interface, and **Gemini is the only
+  implementation** (`gemini-3.7-flash` by default and configurable, since model names turn over
+  faster than this code will). A missing key stops startup; there is nothing to fall back to.
+- **Nothing fakes the extractor, anywhere.** A stand-in that supplied a fixed reading once lived in
+  production code so the e2e suite could run offline; a later HTTP-level mock replaced it; both are
+  gone. There is one backend and one Gemini. `modelUsed` therefore always records a real model, and
+  extraction is covered by unit tests rather than end to end — see the trade-off below.
 - Three decisions inside the Gemini path carry most of the weight:
   - The response schema **pins `targetId` to an enum of the tenant's own ids**, making an
     unresolvable proposal structurally impossible rather than merely rejected downstream. This
@@ -145,7 +156,7 @@ reserved for pure calculation.
 ```bash
 make infra      # optional: Postgres on :5432, db wesee_esg
 make backend    # mvn spring-boot:run  → :8080
-make frontend   # npx ng serve --port 4210 → :4210
+make frontend   # npm run dev -- --port 4210 → :4210
 ```
 
 Open http://localhost:4210. Migration `V14` seeds the `PLATFORM_ADMIN` account; local company
@@ -165,8 +176,8 @@ an implementation plan, then commits** — and the specs record the alternatives
 and why, not just the decision. Commit subjects are lowercase, scoped, and describe behaviour
 (`feat(extraction): read uploaded documents and propose the records they imply`). Code comments
 follow the same habit: they explain the non-obvious *reason* for a choice — see the note on
-`@ConditionalOnProperty` vs `@ConditionalOnMissingBean` in `StubDocumentExtractor`, or why the
-Emissions Dashboard appears in both nav sets in `nav.ts`.
+`rec.unit` rather than `rec.unitAsRead` in the document detail screen, or why the Emissions
+Dashboard appears in both nav sets in `nav.ts`.
 
 ## Open items
 
@@ -182,14 +193,20 @@ Known and deliberate, rather than forgotten:
 - **Extraction is single-process.** If the instance dies mid-run a document stays `EXTRACTING` and
   needs a manual retry; the code says so where it happens. Scaling out means an outbox table and a
   poller rather than an in-process `@Async` listener.
+- **`GET /company/users` is not permission-gated.** Every other route on `CompanyController` carries
+  a `@perm.check`; this one is reachable by any authenticated member of the tenant, so a Contributor
+  can list colleague names, emails and roles. It stays open because indicator entry uses it to fill
+  an "Authorizing Officer" picker, and `team.view` is not granted to the default Member role. Gating
+  it means giving that picker its own narrower endpoint first.
 - **xlsx, csv and docx cannot be extracted**, only stored as evidence. They fail with a readable
   message rather than being parsed.
 - **A packaged artifact would embed the local API key.** Maven copies
   `application-local.properties` into `target/classes`. Fine for local development, wrong for
   anything deployed — use `GEMINI_API_KEY` there.
-- **The two extraction e2e specs need `make backend-stub`.** They assert the fixed extractor's known
-  1,240 kWh reading, and the fixture they upload is a PDF containing no figures, so a real model
-  correctly finds nothing. Replacing them would need a committed sample bill, which a public repo
-  cannot have.
+- **Extraction is not covered end to end.** Doing so needs either a fake model — which is what the
+  in-process stand-in was, and it had no business in production code — or real calls, which cost
+  money and are not deterministic. A real bill as a fixture is also not committable to a public
+  repo. So the boundary is unit-tested (prompt, schema, parsing, conversion, validation) and the
+  upload-to-record path is checked by hand.
 - **`gemini-3.7-flash` is on introductory pricing** that doubles on 2027-01-01. The model id is
   configurable for exactly this reason.

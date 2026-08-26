@@ -26,6 +26,8 @@ public record MeResponse(
         String address,
         String bio,
         boolean hasAvatar,
-        boolean mfaSetupRequired
+        boolean mfaSetupRequired,
+        /** Granted keys of the user's custom role; empty for COMPANY_ADMIN and platform roles. */
+        List<String> permissions
 ) {
 }

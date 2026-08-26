@@ -13,4 +13,7 @@ public interface TeamInviteRepository extends JpaRepository<TeamInvite, UUID> {
     Optional<TeamInvite> findByToken(String token);
 
     boolean existsByCompanyIdAndEmailIgnoreCaseAndAcceptedAtIsNullAndRevokedAtIsNull(UUID companyId, String email);
+
+    /** A role is still in use while an unaccepted invite names it, not only while a user holds it. */
+    boolean existsByCustomRoleIdAndAcceptedAtIsNullAndRevokedAtIsNull(UUID customRoleId);
 }

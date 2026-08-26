@@ -10,10 +10,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'npx ng serve --port 4210',
-    url: 'http://localhost:4210',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: 'npm run dev -- --port 4210',
+      url: 'http://localhost:4210',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
 });

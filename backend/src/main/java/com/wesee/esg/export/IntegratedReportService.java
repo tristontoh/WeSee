@@ -87,7 +87,8 @@ public class IntegratedReportService {
     }
 
     @Transactional
-    public GeneratedReport generateReport(int fiscalYear) {
+    /** @param record whether this counts as issuing the report; false for a preview. */
+    public GeneratedReport generateReport(int fiscalYear, boolean record) {
         UUID companyId = currentUserProvider.requireCompanyId();
         Company company = companyRepository.findById(companyId).orElseThrow(() -> new NotFoundException("Company not found"));
         AppUser reviewer = appUserRepository.findById(currentUserProvider.getPrincipal().userId()).orElse(null);
@@ -177,7 +178,10 @@ public class IntegratedReportService {
 
         byte[] pdf = pdfRenderer.render("integrated-esg-report", ctx);
 
-        exportService.logClientGeneratedExport(new LogExportRequest("Integrated ESG Report", ExportFormat.PDF, fiscalYear));
+        if (record) {
+            exportService.logClientGeneratedExport(
+                    new LogExportRequest("Integrated ESG Report", ExportFormat.PDF, fiscalYear));
+        }
 
         String filename = "WeSee_ESG_Integrated_Report_FY" + fiscalYear + ".pdf";
         return new GeneratedReport(pdf, filename);

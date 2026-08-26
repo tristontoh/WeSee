@@ -1,6 +1,7 @@
 package com.wesee.esg.user;
 
 import com.wesee.esg.common.BaseEntity;
+import com.wesee.esg.permission.CustomRole;
 import com.wesee.esg.tenant.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -44,6 +45,16 @@ public class AppUser extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Role role;
+
+    /**
+     * Required for every non-{@code COMPANY_ADMIN} tenant user (enforced in CompanyService, not
+     * a DB constraint) — the sole source of what a member can do, since custom roles fully
+     * replace any implicit COMPANY_CONTRIBUTOR/CONSULTANT permission set. COMPANY_ADMIN never
+     * has one: it implicitly passes every permission check (see PermissionGateService).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "custom_role_id")
+    private CustomRole customRole;
 
     @Column(name = "token_version", nullable = false)
     private Integer tokenVersion = 0;

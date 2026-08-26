@@ -1,5 +1,6 @@
 package com.wesee.esg.reference;
 
+import com.wesee.esg.permission.dto.PermissionResponse;
 import com.wesee.esg.reference.dto.FeatureFlagResponse;
 import com.wesee.esg.reference.dto.IndicatorDefinitionResponse;
 import com.wesee.esg.reference.dto.MatterResponse;
@@ -56,4 +57,11 @@ public class ReferenceController {
     public List<PlanPricingResponse> planPricing() {
         return referenceService.listPlanPricing();
     }
+
+    /** The full catalog of grantable custom-role permission keys — see V54__permission_catalog.sql. */
+    @GetMapping("/permissions")
+    public List<PermissionResponse> permissions() {
+        return referenceService.listPermissions();
+    }
+
 }

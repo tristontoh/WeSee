@@ -14,15 +14,22 @@ public class GeminiProperties {
     private String model = "gemini-3.7-flash";
 
     /**
-     * Fails rather than falling back. The fixed extractor proposes a plausible 1,240 kWh reading,
-     * and a reviewer cannot tell an invented figure from a read one — accepting it would put a
-     * number that was never on a document inside the assurance hash.
+     * Where the client sends requests. Unset in every real configuration — only the e2e harness
+     * overrides it, pointing at a local mock so the suite can exercise the whole review path
+     * without a network call, a key, or a per-run cost.
+     */
+    private String baseUrl;
+
+    /**
+     * Fails at startup rather than on someone's first upload. There is nothing to fall back to by
+     * design: a stand-in that invented figures would put numbers that were never on a document
+     * inside the assurance hash, and a reviewer could not tell which was which.
      */
     String requireApiKey() {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
-                    "wesee.extraction.provider is gemini but no API key is set. Set GEMINI_API_KEY, "
-                            + "or set EXTRACTION_PROVIDER=stub to run against the fixed extractor.");
+                    "Document extraction needs a Gemini API key. Set GEMINI_API_KEY, or put "
+                            + "wesee.extraction.gemini.api-key in application-local.properties.");
         }
         return apiKey;
     }
@@ -41,5 +48,17 @@ public class GeminiProperties {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    boolean hasBaseUrl() {
+        return baseUrl != null && !baseUrl.isBlank();
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
     }
 }

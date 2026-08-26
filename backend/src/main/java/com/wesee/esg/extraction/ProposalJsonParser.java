@@ -23,18 +23,34 @@ final class ProposalJsonParser {
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-    private record Response(List<ProposedRecord> records) {
+    private record Response(List<ProposedRecord> records,
+                            List<DocumentTranscription.Field> fields,
+                            List<DocumentTranscription.Table> tables) {
     }
 
     private ProposalJsonParser() {
     }
 
     static List<ProposedRecord> parse(String json) {
+        Response response = read(json);
+        // Absent rather than empty: valid JSON that omits the array read nothing, which is an
+        // outcome, not a failure.
+        return response.records() != null ? response.records() : List.of();
+    }
+
+    /**
+     * The copy of the page that travels with the proposals. A second pass over the same small
+     * string rather than one method returning both: the two are consumed at different points and
+     * keeping the signatures separate is worth more than the parse.
+     */
+    static DocumentTranscription parseTranscription(String json) {
+        Response response = read(json);
+        return new DocumentTranscription(response.fields(), response.tables());
+    }
+
+    private static Response read(String json) {
         try {
-            Response response = MAPPER.readValue(json, Response.class);
-            // Absent rather than empty: valid JSON that omits the array read nothing, which is an
-            // outcome, not a failure.
-            return response.records() != null ? response.records() : List.of();
+            return MAPPER.readValue(json, Response.class);
         } catch (JsonProcessingException e) {
             throw new ExtractionFailedException("The model's reply was not usable JSON", e);
         }

@@ -19,19 +19,25 @@ public record PlatformSettingsResponse(
         long sessionExpirationMinutes,
         Instant lastTestAt,
         Boolean lastTestSuccess,
-        String lastTestMessage
+        String lastTestMessage,
+        String stripePublishableKey,
+        boolean stripeSecretKeySet,
+        boolean stripeWebhookSecretSet,
+        boolean stripeEnabled
 ) {
     public static PlatformSettingsResponse from(PlatformSettings s, long sessionExpirationMinutes) {
         return new PlatformSettingsResponse(
                 true, s.getSmtpHost(), s.getSmtpPort(), s.getSmtpUsername(), s.getFromAddress(),
                 Boolean.TRUE.equals(s.getEnabled()), s.getSmtpPasswordEncrypted() != null,
                 s.getAppBaseUrl(), s.getPlatformName(), s.getSupportEmail(), Boolean.TRUE.equals(s.getRequire2fa()),
-                sessionExpirationMinutes, s.getLastTestAt(), s.getLastTestSuccess(), s.getLastTestMessage()
+                sessionExpirationMinutes, s.getLastTestAt(), s.getLastTestSuccess(), s.getLastTestMessage(),
+                s.getStripePublishableKey(), s.getStripeSecretKeyEncrypted() != null,
+                s.getStripeWebhookSecretEncrypted() != null, Boolean.TRUE.equals(s.getStripeEnabled())
         );
     }
 
     public static PlatformSettingsResponse notConfigured(long sessionExpirationMinutes) {
         return new PlatformSettingsResponse(false, null, 587, null, null, false, false, null, null, null, false,
-                sessionExpirationMinutes, null, null, null);
+                sessionExpirationMinutes, null, null, null, null, false, false, false);
     }
 }

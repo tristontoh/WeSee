@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,6 +33,18 @@ class GeminiDocumentExtractorTest {
                 () -> new GeminiDocumentExtractor(properties(null)));
 
         assertTrue(thrown.getMessage().contains("GEMINI_API_KEY"), thrown.getMessage());
+    }
+
+    /**
+     * The e2e harness runs the real extractor against a local mock, so a configured base url has to
+     * reach the client rather than being quietly ignored.
+     */
+    @Test
+    void acceptsABaseUrlPointingSomewhereOtherThanTheRealApi() {
+        GeminiProperties properties = properties("e2e-not-a-real-key");
+        properties.setBaseUrl("http://localhost:8099");
+
+        assertDoesNotThrow(() -> new GeminiDocumentExtractor(properties));
     }
 
     /**

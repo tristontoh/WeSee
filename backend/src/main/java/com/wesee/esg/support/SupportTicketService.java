@@ -1,5 +1,7 @@
 package com.wesee.esg.support;
 
+import com.wesee.esg.activitylog.ActivityEventType;
+import com.wesee.esg.activitylog.PlatformActivityLogService;
 import com.wesee.esg.common.exceptions.ForbiddenException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.security.CurrentUserProvider;
@@ -25,15 +27,18 @@ public class SupportTicketService {
     private final AppUserRepository appUserRepository;
     private final CompanyRepository companyRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final PlatformActivityLogService activityLogService;
 
     public SupportTicketService(SupportTicketRepository supportTicketRepository,
                                  AppUserRepository appUserRepository,
                                  CompanyRepository companyRepository,
-                                 CurrentUserProvider currentUserProvider) {
+                                 CurrentUserProvider currentUserProvider,
+                                 PlatformActivityLogService activityLogService) {
         this.supportTicketRepository = supportTicketRepository;
         this.appUserRepository = appUserRepository;
         this.companyRepository = companyRepository;
         this.currentUserProvider = currentUserProvider;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -51,7 +56,12 @@ public class SupportTicketService {
         ticket.setPriority(request.priority() != null ? request.priority() : TicketPriority.LOW);
         ticket.setStatus(TicketStatus.OPEN);
 
-        return toResponse(supportTicketRepository.save(ticket));
+        SupportTicket saved = supportTicketRepository.save(ticket);
+        Company company = companyRepository.findById(saved.getCompanyId()).orElse(null);
+        activityLogService.record(saved.getCompanyId(), company != null ? company.getName() : "Unknown company",
+                ActivityEventType.SUPPORT_TICKET, "Logged ticket: \"" + saved.getSubject() + "\"");
+
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)

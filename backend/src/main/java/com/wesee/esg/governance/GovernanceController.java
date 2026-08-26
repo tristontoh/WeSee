@@ -46,6 +46,7 @@ public class GovernanceController {
     }
 
     @PutMapping("/structure/{level}")
+    @PreAuthorize("@perm.check('governance.edit')")
     public GovernanceLevelResponse updateLevel(@PathVariable OversightLevel level, @Valid @RequestBody UpdateGovernanceLevelRequest request) {
         return governanceService.updateLevel(level, request);
     }
@@ -56,6 +57,7 @@ public class GovernanceController {
     }
 
     @PutMapping("/ownership/{matterId}")
+    @PreAuthorize("@perm.check('governance.edit')")
     public MatterOwnershipResponse updateOwnership(@PathVariable String matterId, @Valid @RequestBody UpdateMatterOwnershipRequest request) {
         return governanceService.updateOwnership(matterId, request);
     }

@@ -1,5 +1,7 @@
 package com.wesee.esg.reference;
 
+import com.wesee.esg.permission.PermissionRepository;
+import com.wesee.esg.permission.dto.PermissionResponse;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.reference.dto.FeatureFlagResponse;
 import com.wesee.esg.reference.dto.IndicatorDefinitionResponse;
@@ -33,6 +35,7 @@ public class ReferenceService {
     private final CompanyRepository companyRepository;
     private final FeatureFlagRepository featureFlagRepository;
     private final PlanPricingRepository planPricingRepository;
+    private final PermissionRepository permissionRepository;
 
     public ReferenceService(SustainabilityMatterRepository matterRepository,
                              IndicatorDefinitionRepository indicatorDefinitionRepository,
@@ -41,7 +44,8 @@ public class ReferenceService {
                              CurrentUserProvider currentUserProvider,
                              CompanyRepository companyRepository,
                              FeatureFlagRepository featureFlagRepository,
-                             PlanPricingRepository planPricingRepository) {
+                             PlanPricingRepository planPricingRepository,
+                             PermissionRepository permissionRepository) {
         this.matterRepository = matterRepository;
         this.indicatorDefinitionRepository = indicatorDefinitionRepository;
         this.sectorRepository = sectorRepository;
@@ -50,6 +54,7 @@ public class ReferenceService {
         this.companyRepository = companyRepository;
         this.featureFlagRepository = featureFlagRepository;
         this.planPricingRepository = planPricingRepository;
+        this.permissionRepository = permissionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -173,4 +178,10 @@ public class ReferenceService {
         return companyRepository.findById(currentUserProvider.requireCompanyId())
                 .orElseThrow(() -> new NotFoundException("Company not found"));
     }
+
+    @Transactional(readOnly = true)
+    public List<PermissionResponse> listPermissions() {
+        return permissionRepository.findAllByOrderByDisplayOrderAsc().stream().map(PermissionResponse::from).toList();
+    }
+
 }

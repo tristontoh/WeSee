@@ -44,11 +44,13 @@ public class AssuranceController {
     }
 
     @PostMapping("/signoff/{fiscalYear}")
+    @PreAuthorize("@perm.check('assurance.signoff')")
     public SignOffResponse signOff(@PathVariable int fiscalYear, @Valid @RequestBody CreateSignOffRequest request) {
         return assuranceService.signOff(fiscalYear, request);
     }
 
     @DeleteMapping("/signoff/{fiscalYear}")
+    @PreAuthorize("@perm.check('assurance.signoff')")
     public SignOffResponse revoke(@PathVariable int fiscalYear, @RequestBody(required = false) RevokeSignOffRequest request) {
         return assuranceService.revoke(fiscalYear, request != null ? request : new RevokeSignOffRequest(null));
     }

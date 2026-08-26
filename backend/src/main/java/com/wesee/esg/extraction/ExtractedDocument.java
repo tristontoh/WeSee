@@ -9,6 +9,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -44,4 +46,12 @@ public class ExtractedDocument extends TenantOwnedEntity {
 
     @Column(name = "extracted_at")
     private Instant extractedAt;
+
+    /**
+     * What the document says, as printed. Descriptive only — nothing here is a proposal, so nothing
+     * here is accepted or rejected, and it never reaches the assurance hash.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "transcription", columnDefinition = "jsonb")
+    private DocumentTranscription transcription;
 }

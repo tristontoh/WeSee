@@ -35,20 +35,20 @@ public class CompliancePolicyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('governance.manage_policies')")
     public CompliancePolicyResponse createPolicy(@Valid @RequestBody CreateCompliancePolicyRequest request) {
         return compliancePolicyService.createPolicy(request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('governance.manage_policies')")
     public ResponseEntity<Void> deletePolicy(@PathVariable UUID id) {
         compliancePolicyService.deletePolicy(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/review")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('governance.manage_policies')")
     public CompliancePolicyResponse markReviewed(@PathVariable UUID id, @RequestBody(required = false) MarkPolicyReviewedRequest request) {
         return compliancePolicyService.markReviewed(id, request != null ? request.documentUrl() : null);
     }

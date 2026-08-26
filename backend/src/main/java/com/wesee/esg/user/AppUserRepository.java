@@ -16,4 +16,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
      * transaction can share a timestamp. The founding admin leads; role changes must not reorder the team list.
      */
     List<AppUser> findByCompanyIdOrderByCreatedAtAscIdAsc(UUID companyId);
+
+    /** Guards deletion of a custom role that people are still assigned to — see CustomRoleService. */
+    boolean existsByCustomRoleId(UUID customRoleId);
+
+    /** Backs the last-admin guard in CompanyService — a company must never lose its final active admin. */
+    long countByCompanyIdAndRoleAndActiveTrue(UUID companyId, Role role);
 }

@@ -1,5 +1,7 @@
 package com.wesee.esg.auth;
 
+import com.wesee.esg.activitylog.ActivityEventType;
+import com.wesee.esg.activitylog.PlatformActivityLogService;
 import com.wesee.esg.auth.dto.AcceptInviteRequest;
 import com.wesee.esg.auth.dto.AuthResponse;
 import com.wesee.esg.auth.dto.InvitePreviewResponse;
@@ -16,6 +18,7 @@ import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.emailverification.EmailVerificationService;
 import com.wesee.esg.mfa.MfaService;
+import com.wesee.esg.passwordreset.PasswordResetService;
 import com.wesee.esg.platform.PlatformSettingsService;
 import com.wesee.esg.security.CurrentUserProvider;
 import com.wesee.esg.security.JwtProperties;
@@ -55,6 +58,8 @@ public class AuthService {
     private final UserSessionService userSessionService;
     private final EmailVerificationService emailVerificationService;
     private final PlatformSettingsService platformSettingsService;
+    private final PasswordResetService passwordResetService;
+    private final PlatformActivityLogService activityLogService;
     private final long jwtExpirationMinutes;
 
     public AuthService(AppUserRepository appUserRepository,
@@ -68,6 +73,8 @@ public class AuthService {
                         UserSessionService userSessionService,
                         EmailVerificationService emailVerificationService,
                         PlatformSettingsService platformSettingsService,
+                        PasswordResetService passwordResetService,
+                        PlatformActivityLogService activityLogService,
                         JwtProperties jwtProperties) {
         this.appUserRepository = appUserRepository;
         this.companyRepository = companyRepository;
@@ -80,7 +87,28 @@ public class AuthService {
         this.userSessionService = userSessionService;
         this.emailVerificationService = emailVerificationService;
         this.platformSettingsService = platformSettingsService;
+        this.passwordResetService = passwordResetService;
+        this.activityLogService = activityLogService;
         this.jwtExpirationMinutes = jwtProperties.getExpirationMinutes();
+    }
+
+    /**
+     * Forgotten-password flow. All three delegate: the token's lifecycle belongs to
+     * PasswordResetService, and AuthService stays the single entry point the controller talks to.
+     */
+    @Transactional
+    public void requestPasswordReset(String email) {
+        passwordResetService.requestReset(email);
+    }
+
+    @Transactional(readOnly = true)
+    public void validatePasswordResetToken(String token) {
+        passwordResetService.validate(token);
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        passwordResetService.resetPassword(token, newPassword);
     }
 
     @Transactional
@@ -106,6 +134,9 @@ public class AuthService {
         user = appUserRepository.save(user);
 
         emailVerificationService.sendVerificationEmail(user);
+
+        activityLogService.record(company.getId(), company.getName(), ActivityEventType.SIGNUP,
+                user.getName() + " registered a new workspace");
 
         return new RegisterResponse(user.getEmail());
     }
@@ -290,7 +321,10 @@ public class AuthService {
                 user.getAddress(),
                 user.getBio(),
                 user.getAvatarPath() != null,
-                mfaSetupRequired
+                mfaSetupRequired,
+                // Empty for COMPANY_ADMIN, which holds no custom role and passes every check
+                // implicitly — see PermissionGateService.
+                user.getCustomRole() != null ? user.getCustomRole().getPermissionKeys() : java.util.List.of()
         );
     }
 }

@@ -89,6 +89,9 @@ public class ExtractionWorker {
             }
 
             document.setModelUsed(result.modelUsed());
+            // Saved whether or not any proposal survived validation: a document the model could
+            // read but had nowhere to put is still worth having a copy of.
+            document.setTranscription(result.transcription());
             document.setExtractedAt(Instant.now());
             document.setStatus(ExtractionStatus.READY);
         } catch (Exception e) {

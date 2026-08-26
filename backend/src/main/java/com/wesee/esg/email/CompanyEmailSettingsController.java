@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/company/email-settings")
-@PreAuthorize("hasRole('COMPANY_ADMIN')")
 public class CompanyEmailSettingsController {
 
     private final CompanyEmailSettingsService service;
@@ -24,16 +23,19 @@ public class CompanyEmailSettingsController {
     }
 
     @GetMapping
+    @PreAuthorize("@perm.check('settings.view') or @perm.check('settings.manage')")
     public EmailSettingsResponse get() {
         return service.get();
     }
 
     @PutMapping
+    @PreAuthorize("@perm.check('settings.manage')")
     public EmailSettingsResponse update(@Valid @RequestBody UpdateEmailSettingsRequest request) {
         return service.update(request);
     }
 
     @PostMapping("/test")
+    @PreAuthorize("@perm.check('settings.manage')")
     public TestEmailResponse sendTest() {
         return service.sendTest();
     }

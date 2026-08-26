@@ -82,7 +82,7 @@ public class MaterialityController {
 
     /** Board/management validation step (Bursa Malaysia's Identify → Prioritise → Validate process). */
     @PatchMapping("/assessments/{id}/validate")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('materiality.validate')")
     public AssessmentDetailResponse validateAssessment(@PathVariable UUID id) {
         return materialityService.validateAssessment(id);
     }

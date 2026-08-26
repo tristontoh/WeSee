@@ -48,11 +48,10 @@ wesee:
   uploads:
     dir: ${UPLOADS_DIR:./data/uploads}
   extraction:
-    # gemini reads real documents; stub proposes a fixed reading and is what the test profile
-    # pins. There is no automatic fallback between them — selecting gemini without a key stops
-    # startup, because invented figures must never stand in for read ones.
-    provider: ${EXTRACTION_PROVIDER:gemini}
     gemini:
+      # Empty means the real Google endpoint. Set it only to route through a proxy or a regional
+      # endpoint. There is no fixed-reading fallback: without a key, startup stops.
+      base-url: ${GEMINI_BASE_URL:}
       # Never a literal here — this file is committed and the repo is public. Set GEMINI_API_KEY,
       # or put the key in the gitignored application-local.properties.
       api-key: ${GEMINI_API_KEY:}

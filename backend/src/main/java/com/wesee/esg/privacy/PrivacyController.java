@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/privacy")
-@PreAuthorize("hasRole('COMPANY_ADMIN')")
+@PreAuthorize("@perm.check('settings.manage')")
 public class PrivacyController {
 
     private final PrivacyService privacyService;
