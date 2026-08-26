@@ -6,19 +6,6 @@ target/
 node_modules/
 dist/
 
-# The same three names without a trailing slash. Since the move out of iCloud these paths are
-# symlinks to the .nosync copies, and a trailing-slash pattern matches directories only — without
-# these, `git add -A` would commit the symlinks themselves.
-target
-node_modules
-dist
-
-# Build output kept out of iCloud: ~/Desktop is synced on this machine, and syncing 300 MB of
-# regenerable output raced Maven (duplicate "Xxx 2.class" files) and made Spring's component scan
-# read at ~54 KB/s, so startup hung for minutes. iCloud skips any name ending .nosync; the original
-# paths are symlinks to these, so every tool still finds them where it expects.
-*.nosync/
-
 # The upstream EsgEasy checkout the frontend was taken from. Kept locally as a
 # reference for porting; it is a whole second copy of the project, not our source.
 ESGPlatform-main/

@@ -21,18 +21,10 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    // Resolve through the node_modules symlink rather than to its real path. The dependency tree
-    // lives in node_modules.nosync so iCloud skips it; without this, TypeScript realpaths every
-    // import into that directory, which the default exclude does not cover, and then allowJs makes
-    // it infer types from React's JavaScript instead of treating it as an untyped module.
-    "preserveSymlinks": true,
     "noEmit": true
   },
-  // Roots are named rather than excluded. The dependency tree lives in node_modules.nosync so
-  // iCloud skips it (see the root .gitignore), which means TypeScript's default exclude — it
-  // matches on the name "node_modules" — no longer covers it, and tsc would type-check the whole
-  // tree. Excluding that path instead breaks @types discovery, because node_modules/@types is a
-  // symlink and resolves into the excluded directory. Listing the roots avoids both.
+  // Roots are named rather than relying on the default exclude, so tsc checks exactly the source
+  // that belongs to this app and nothing that happens to sit beside it.
   "include": [
     "src",
     "e2e",

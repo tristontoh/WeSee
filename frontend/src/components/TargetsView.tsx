@@ -134,13 +134,19 @@ export default function TargetsView() {
   // Delete confirm state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  /*
+   * First-load only, so saving a target does not blank the list the reader is working in. Ported
+   * from the Angular screens (bafa217), where the pattern was settled before the client changed.
+   */
+  const [loading, setLoading] = useState(true);
+
   const refreshTargets = () => {
     targetsApi.list().then((data) => {
       setTargets(data);
       const drafts: Record<string, string> = {};
       data.forEach((t) => { drafts[t.id] = String(t.currentProgress); });
       setProgressDrafts(drafts);
-    });
+    }).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -407,8 +413,12 @@ export default function TargetsView() {
         </div>
       )}
 
-      {/* EMPTY STATES */}
-      {targets.length === 0 ? (
+      {/* EMPTY STATES — "none yet" only once it is known there are none. */}
+      {loading && targets.length === 0 ? (
+        <div className="text-center p-12 bg-white border border-navy-100/50 rounded-3xl">
+          <p className="text-sm text-navy-400">Loading targets…</p>
+        </div>
+      ) : targets.length === 0 ? (
         <div className="text-center p-12 bg-white border border-navy-100/50 rounded-3xl space-y-3">
           <Target className="w-8 h-8 text-navy-300 mx-auto" />
           <h5 className="text-xs font-bold text-navy-950">No targets defined yet</h5>
