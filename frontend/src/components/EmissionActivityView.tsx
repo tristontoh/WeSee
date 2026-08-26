@@ -38,13 +38,6 @@ export default function EmissionActivityView() {
   const [scope, setScope] = useState<EmissionScopeType>('SCOPE_1');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  /*
-   * First-load only. Changing the year refetches, and a spinner replacing a table the reader is
-   * already looking at reads as the data having been thrown away — so this is gated on there being
-   * nothing to show yet. Ported from the Angular screens (59718e8, bafa217), which is where the
-   * pattern was worked out before the client was replaced.
-   */
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     climateApi.listEmissionFactors()
@@ -58,8 +51,7 @@ export default function EmissionActivityView() {
   const loadEntries = (fiscalYear: number) => {
     climateApi.listActivityEntries(fiscalYear)
       .then(setEntries)
-      .catch((err: ApiError) => setError(err.message))
-      .finally(() => setLoading(false));
+      .catch((err: ApiError) => setError(err.message));
   };
 
   useEffect(() => loadEntries(year), [year]);
@@ -160,10 +152,7 @@ export default function EmissionActivityView() {
           ENTRIES · {year} ({entries.length})
         </div>
 
-        {/* "Nothing here" and "not read yet" are different facts, and only one of them means the
-            reader should add something. */}
-        {loading && !entries.length && <p className="text-sm text-gray-400">Loading activity…</p>}
-        {!loading && !entries.length && <p className="text-sm text-gray-500">No entries for {year}.</p>}
+        {!entries.length && <p className="text-sm text-gray-500">No entries for {year}.</p>}
 
         <div className="divide-y divide-gray-100">
           {entries.map((e) => (

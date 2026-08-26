@@ -366,19 +366,13 @@ export function IfrsS1Form() {
   const [disclosure, setDisclosure] = useState<S1DisclosureSections>(EMPTY_S1_DISCLOSURE);
   const [openPillar, setOpenPillar] = useState<'governance' | 'risk' | 'metrics' | null>('governance');
 
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    // Both, then settle: the form is only really ready when the segments and the disclosure have
-    // both arrived, and reporting otherwise would just move the empty moment.
-    Promise.allSettled([
-      climateApi.listSegments().then((data) => {
-        const mapped = data.map(fromSegment);
-        setSegments(mapped);
-        if (mapped.length > 0) setActiveSegmentId(mapped[0].id);
-      }),
-      climateApi.getS1Disclosure().then((data) => setDisclosure(fromS1DisclosureResponse(data))),
-    ]).finally(() => setLoading(false));
+    climateApi.listSegments().then((data) => {
+      const mapped = data.map(fromSegment);
+      setSegments(mapped);
+      if (mapped.length > 0) setActiveSegmentId(mapped[0].id);
+    });
+    climateApi.getS1Disclosure().then((data) => setDisclosure(fromS1DisclosureResponse(data)));
   }, []);
 
   // Visual confirmation only — every field edit already persists immediately via the API calls below.
@@ -489,13 +483,6 @@ export function IfrsS1Form() {
 
   return (
     <div className="space-y-6">
-
-      {/* Above the pillars, not inside one. Nested in a single pillar's markup it only showed if
-          you happened to land on that pillar — the same correction as 0862927 on the Angular
-          governance screen. */}
-      {loading && (
-        <p className="text-sm text-navy-400">Loading disclosures…</p>
-      )}
 
       {/* Overview Block */}
       <div className="bg-white border border-navy-100 p-6 rounded-3xl space-y-2">
