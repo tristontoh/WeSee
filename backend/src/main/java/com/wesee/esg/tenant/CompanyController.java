@@ -8,6 +8,7 @@ import com.wesee.esg.tenant.dto.CreateTenantUserRequest;
 import com.wesee.esg.tenant.dto.CreateTenantUserResponse;
 import com.wesee.esg.tenant.dto.TeamInviteResponse;
 import com.wesee.esg.tenant.dto.TenantUserResponse;
+import com.wesee.esg.tenant.dto.UpdateCompanyIdentityRequest;
 import com.wesee.esg.tenant.dto.UpdateCompanyProfileRequest;
 import com.wesee.esg.tenant.dto.UpdatePlanRequest;
 import com.wesee.esg.tenant.dto.UpdateUserRoleRequest;
@@ -51,80 +52,94 @@ public class CompanyController {
     }
 
     @PatchMapping("/plan")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('billing.manage')")
     public CompanyResponse updatePlan(@Valid @RequestBody UpdatePlanRequest request) {
         return companyService.updatePlan(request);
     }
 
+    /**
+     * Reporting configuration: which sector applies, the size band, whether the sector module is on.
+     * `indicators.edit` is accepted because the sector-module switch lives on the Indicators screen
+     * and the default Member role is expected to work it; the identity fields below are not on this
+     * endpoint precisely so that they need the stricter permission.
+     */
     @PatchMapping("/profile")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('settings.manage') or @perm.check('indicators.edit')")
     public CompanyResponse updateProfile(@Valid @RequestBody UpdateCompanyProfileRequest request) {
         return companyService.updateProfile(request);
     }
 
+    /** Corporate identity — the registration number, addresses and contact a disclosure names. */
+    @PatchMapping("/{companyId}/identity")
+    @PreAuthorize("@perm.check('settings.manage')")
+    public CompanyGroupMemberResponse updateIdentity(@PathVariable UUID companyId,
+                                                     @Valid @RequestBody UpdateCompanyIdentityRequest request) {
+        return companyService.updateIdentity(companyId, request);
+    }
+
     @GetMapping("/group")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('settings.view') or @perm.check('settings.manage')")
     public List<CompanyGroupMemberResponse> group() {
         return companyService.getGroup();
     }
 
     @PostMapping("/subsidiaries")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('settings.manage')")
     public CompanyGroupMemberResponse createSubsidiary(@Valid @RequestBody CreateSubsidiaryRequest request) {
         return companyService.createSubsidiary(request);
     }
 
     @PostMapping("/switch/{companyId}")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('settings.manage')")
     public CompanyGroupMemberResponse switchCompany(@PathVariable UUID companyId) {
         return companyService.switchCompany(companyId);
     }
 
     @DeleteMapping("/subsidiaries/{companyId}")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('settings.manage')")
     public ResponseEntity<Void> deleteSubsidiary(@PathVariable UUID companyId) {
         companyService.deleteSubsidiary(companyId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/users")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.manage')")
     public CreateTenantUserResponse createUser(@Valid @RequestBody CreateTenantUserRequest request) {
         return companyService.createUser(request);
     }
 
     @PatchMapping("/users/{userId}/role")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.manage')")
     public TenantUserResponse updateUserRole(@PathVariable UUID userId, @Valid @RequestBody UpdateUserRoleRequest request) {
         return companyService.updateUserRole(userId, request);
     }
 
     @PatchMapping("/users/{userId}/active")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.manage')")
     public TenantUserResponse setUserActive(@PathVariable UUID userId, @RequestParam boolean active) {
         return companyService.setUserActive(userId, active);
     }
 
     @GetMapping("/invites")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.view') or @perm.check('team.manage')")
     public List<TeamInviteResponse> listInvites() {
         return companyService.listInvites();
     }
 
     @PostMapping("/invites")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.manage')")
     public TeamInviteResponse createInvite(@Valid @RequestBody CreateTenantUserRequest request) {
         return companyService.createInvite(request);
     }
 
     @PostMapping("/invites/{inviteId}/resend")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.manage')")
     public TeamInviteResponse resendInvite(@PathVariable UUID inviteId) {
         return companyService.resendInvite(inviteId);
     }
 
     @DeleteMapping("/invites/{inviteId}")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('team.manage')")
     public ResponseEntity<Void> revokeInvite(@PathVariable UUID inviteId) {
         companyService.revokeInvite(inviteId);
         return ResponseEntity.noContent().build();

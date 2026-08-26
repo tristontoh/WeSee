@@ -84,7 +84,11 @@ public class GeminiDocumentExtractor implements DocumentExtractor {
         }
 
         List<ProposedRecord> records = ProposalJsonParser.parse(json);
-        log.debug("Extracted {} proposal(s) from a {} with {}", records.size(), mediaType, answeredBy);
-        return new ExtractionResult(answeredBy, records);
+        DocumentTranscription transcription = ProposalJsonParser.parseTranscription(json);
+
+        log.debug("Extracted {} proposal(s), {} field(s) and {} table(s) from a {} with {}",
+                records.size(), transcription.fields().size(), transcription.tables().size(),
+                mediaType, answeredBy);
+        return new ExtractionResult(answeredBy, records, transcription);
     }
 }

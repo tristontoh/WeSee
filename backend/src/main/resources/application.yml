@@ -49,8 +49,8 @@ wesee:
     dir: ${UPLOADS_DIR:./data/uploads}
   extraction:
     gemini:
-      # Only the e2e harness sets this, pointing at a local mock. Empty everywhere else, which
-      # means the real API. There is no fixed-reading fallback: without a key, startup stops.
+      # Empty means the real Google endpoint. Set it only to route through a proxy or a regional
+      # endpoint. There is no fixed-reading fallback: without a key, startup stops.
       base-url: ${GEMINI_BASE_URL:}
       # Never a literal here — this file is committed and the repo is public. Set GEMINI_API_KEY,
       # or put the key in the gitignored application-local.properties.

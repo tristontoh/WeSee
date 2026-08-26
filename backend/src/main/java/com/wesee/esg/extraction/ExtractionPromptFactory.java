@@ -75,6 +75,35 @@ final class ExtractionPromptFactory {
         prompt.append("- Use fiscal year ").append(context.defaultFiscalYear())
                 .append(" unless the document states a different one.\n");
 
+        prompt.append("""
+
+                Separately from those records, transcribe the document itself.
+
+                - Put every labelled value printed outside a table into "fields" — the account
+                number, the billing period, the tariff, the invoice number, the amount payable, the
+                due date, the address. Keep the label in the language it is printed in.
+                - Put every table on the page into "tables", with its column headings and one entry
+                per row. A meter table has a row per reading; transcribe all of them, including
+                rows for units other than the one you proposed a figure for, and including rows for
+                a tenant or a sub-meter.
+                - Transcribe exactly as printed. Keep the thousands separators, the currency
+                prefixes, the units and the negative signs. Do not convert, round, total, reorder
+                or translate anything here.
+                - Alongside each label, table title and column heading, give a short English gloss in
+                the matching "...English" property — "Tempoh Bil" glosses to "Billing period". The
+                original stays as printed; the gloss is only there so a reader who does not read the
+                document's language can follow it. Leave a gloss out when the text is already
+                English.
+                - Gloss the descriptive cells of a table too, through "rowsEnglish", which has the
+                same shape as "rows": a line item like "Baki Terdahulu" is prose and glosses to
+                "Previous balance". Put an empty string wherever a cell is a figure, a date, a code
+                or an identifier — translating one of those would invent data. Never gloss the
+                "value" of a field for the same reason: those are the figures themselves.
+                - This is a copy of the page, not a set of proposals. A figure with no matching
+                option belongs here and nowhere else — an amount payable is transcribed as an
+                amount payable, and must not also appear as a record.
+                """);
+
         return prompt.toString();
     }
 
@@ -106,13 +135,67 @@ final class ExtractionPromptFactory {
                         "fiscalYear", "confidence", "sourceSnippet")))
                 .build();
 
+        Map<String, Schema> top = new LinkedHashMap<>();
+        top.put("records", arrayOf(record, "The reportable figures this document implies."));
+        top.put("fields", arrayOf(transcribedField(),
+                "Every labelled value printed outside a table, in the order it appears."));
+        top.put("tables", arrayOf(transcribedTable(),
+                "Every table on the page, transcribed as printed."));
+
+        // Only records is required: a document can legitimately carry no table, and a transcription
+        // that came back empty should not fail the whole read.
         return Schema.builder()
                 .type(new Type(Type.Known.OBJECT))
-                .properties(Map.of("records", Schema.builder()
-                        .type(new Type(Type.Known.ARRAY))
-                        .items(record)
-                        .build()))
+                .properties(top)
                 .required(List.of("records"))
+                .build();
+    }
+
+    private static Schema transcribedField() {
+        Map<String, Schema> properties = new LinkedHashMap<>();
+        properties.put("label", field(Type.Known.STRING, "The label as printed, in its own language."));
+        properties.put("labelEnglish", field(Type.Known.STRING,
+                "A short English gloss of the label. Omit when the label is already English."));
+        properties.put("value", field(Type.Known.STRING, "The value as printed."));
+
+        return Schema.builder()
+                .type(new Type(Type.Known.OBJECT))
+                .properties(properties)
+                .required(new ArrayList<>(List.of("label", "value")))
+                .build();
+    }
+
+    private static Schema transcribedTable() {
+        Schema cells = arrayOf(field(Type.Known.STRING, "One cell, as printed."), "One row of cells.");
+
+        Map<String, Schema> properties = new LinkedHashMap<>();
+        properties.put("title", field(Type.Known.STRING, "The heading above the table, if it has one."));
+        properties.put("titleEnglish", field(Type.Known.STRING,
+                "A short English gloss of the title. Omit when it is already English."));
+        properties.put("columns", arrayOf(field(Type.Known.STRING, "One column heading."),
+                "The column headings, left to right."));
+        properties.put("columnsEnglish", arrayOf(field(Type.Known.STRING, "One English gloss."),
+                "An English gloss per column heading, in the same order as \"columns\"."));
+        properties.put("rows", arrayOf(cells, "One entry per row, top to bottom."));
+        properties.put("rowsEnglish", arrayOf(
+                arrayOf(field(Type.Known.STRING,
+                        "An English gloss for the cell in this position, or an empty string for a "
+                                + "cell that is a figure, date, code or identifier."),
+                        "One row of glosses, positionally matching the same row of \"rows\"."),
+                "Glosses for the descriptive cells, in the same shape as \"rows\"."));
+
+        return Schema.builder()
+                .type(new Type(Type.Known.OBJECT))
+                .properties(properties)
+                .required(new ArrayList<>(List.of("columns", "rows")))
+                .build();
+    }
+
+    private static Schema arrayOf(Schema items, String description) {
+        return Schema.builder()
+                .type(new Type(Type.Known.ARRAY))
+                .items(items)
+                .description(description)
                 .build();
     }
 

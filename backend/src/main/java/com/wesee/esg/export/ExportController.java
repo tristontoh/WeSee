@@ -35,9 +35,17 @@ public class ExportController {
         this.ifrsReportService = ifrsReportService;
     }
 
+    /**
+     * Serves the report, and records it in the export history unless the caller opts out.
+     *
+     * <p>{@code record=false} is what the preview uses: rendering a draft to look at is not
+     * issuing a report, and logging both made the history — which is the sign-off ledger —
+     * unable to tell a glance from a disclosure.
+     */
     @GetMapping("/integrated-report.pdf")
-    public ResponseEntity<byte[]> integratedReport(@RequestParam int fiscalYear) {
-        IntegratedReportService.GeneratedReport report = integratedReportService.generateReport(fiscalYear);
+    public ResponseEntity<byte[]> integratedReport(@RequestParam int fiscalYear,
+                                                    @RequestParam(defaultValue = "true") boolean record) {
+        IntegratedReportService.GeneratedReport report = integratedReportService.generateReport(fiscalYear, record);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename(report.filename()).build());
         return ResponseEntity.ok().headers(headers).contentType(MediaType.APPLICATION_PDF).body(report.content());
@@ -45,8 +53,9 @@ public class ExportController {
 
     @GetMapping("/ifrs-s1-report.pdf")
     @PreAuthorize("@planGate.check('ifrs-s1-s2')")
-    public ResponseEntity<byte[]> ifrsS1Report(@RequestParam int fiscalYear) {
-        IfrsReportService.GeneratedReport report = ifrsReportService.generateS1Report(fiscalYear);
+    public ResponseEntity<byte[]> ifrsS1Report(@RequestParam int fiscalYear,
+                                                @RequestParam(defaultValue = "true") boolean record) {
+        IfrsReportService.GeneratedReport report = ifrsReportService.generateS1Report(fiscalYear, record);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename(report.filename()).build());
         return ResponseEntity.ok().headers(headers).contentType(MediaType.APPLICATION_PDF).body(report.content());
@@ -54,8 +63,9 @@ public class ExportController {
 
     @GetMapping("/ifrs-s2-report.pdf")
     @PreAuthorize("@planGate.check('ifrs-s1-s2')")
-    public ResponseEntity<byte[]> ifrsS2Report(@RequestParam int fiscalYear) {
-        IfrsReportService.GeneratedReport report = ifrsReportService.generateS2Report(fiscalYear);
+    public ResponseEntity<byte[]> ifrsS2Report(@RequestParam int fiscalYear,
+                                                @RequestParam(defaultValue = "true") boolean record) {
+        IfrsReportService.GeneratedReport report = ifrsReportService.generateS2Report(fiscalYear, record);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(ContentDisposition.attachment().filename(report.filename()).build());
         return ResponseEntity.ok().headers(headers).contentType(MediaType.APPLICATION_PDF).body(report.content());
@@ -86,7 +96,7 @@ public class ExportController {
     }
 
     @PatchMapping("/history/{id}/sign-off")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('reports.signoff')")
     public ExportHistoryResponse signOff(@PathVariable UUID id) {
         return exportService.signOff(id);
     }

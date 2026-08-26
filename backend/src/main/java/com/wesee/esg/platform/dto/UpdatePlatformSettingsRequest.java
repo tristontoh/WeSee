@@ -15,6 +15,12 @@ public record UpdatePlatformSettingsRequest(
         String appBaseUrl,
         String platformName,
         String supportEmail,
-        @NotNull Boolean require2fa
+        @NotNull Boolean require2fa,
+        String stripePublishableKey,
+        /** Blank/omitted keeps the existing stored secret key. */
+        String stripeSecretKey,
+        /** Blank/omitted keeps the existing stored webhook secret. */
+        String stripeWebhookSecret,
+        @NotNull Boolean stripeEnabled
 ) {
 }

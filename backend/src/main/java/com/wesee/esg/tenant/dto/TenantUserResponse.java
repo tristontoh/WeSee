@@ -10,6 +10,8 @@ public record TenantUserResponse(
         String name,
         String email,
         Role role,
+        UUID customRoleId,
+        String customRoleName,
         boolean active,
         Instant createdAt
 ) {

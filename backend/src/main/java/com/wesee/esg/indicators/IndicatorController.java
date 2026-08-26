@@ -61,7 +61,7 @@ public class IndicatorController {
 
     /** Board/management sign-off on a reported figure (Bursa's Identify → Prioritise → Validate process, applied to data). */
     @PatchMapping("/{indicatorId}/values/{fiscalYear}/approve")
-    @PreAuthorize("hasRole('COMPANY_ADMIN')")
+    @PreAuthorize("@perm.check('indicators.approve')")
     public IndicatorResponse approveValue(@PathVariable String indicatorId, @PathVariable int fiscalYear) {
         return indicatorService.approveValue(indicatorId, fiscalYear);
     }

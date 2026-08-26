@@ -15,10 +15,14 @@ import com.wesee.esg.tenant.CompanyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Year;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 public class EmissionsService {
@@ -48,6 +52,7 @@ public class EmissionsService {
     );
 
     private final EmissionValueRepository emissionValueRepository;
+    private final EmissionActivityEntryRepository activityEntryRepository;
     private final Scope3CategoryRepository scope3CategoryRepository;
     private final Scope3ValueRepository scope3ValueRepository;
     private final TransitionReliefRuleRepository transitionReliefRuleRepository;
@@ -55,12 +60,14 @@ public class EmissionsService {
     private final CompanyRepository companyRepository;
 
     public EmissionsService(EmissionValueRepository emissionValueRepository,
+                             EmissionActivityEntryRepository activityEntryRepository,
                              Scope3CategoryRepository scope3CategoryRepository,
                              Scope3ValueRepository scope3ValueRepository,
                              TransitionReliefRuleRepository transitionReliefRuleRepository,
                              CurrentUserProvider currentUserProvider,
                              CompanyRepository companyRepository) {
         this.emissionValueRepository = emissionValueRepository;
+        this.activityEntryRepository = activityEntryRepository;
         this.scope3CategoryRepository = scope3CategoryRepository;
         this.scope3ValueRepository = scope3ValueRepository;
         this.transitionReliefRuleRepository = transitionReliefRuleRepository;
@@ -73,10 +80,8 @@ public class EmissionsService {
         UUID companyId = currentUserProvider.requireCompanyId();
         Company company = companyRepository.findById(companyId).orElseThrow(() -> new NotFoundException("Company not found"));
 
-        List<EmissionPointDto> scope1 = emissionValueRepository.findByCompanyIdAndScopeOrderByFiscalYearAsc(companyId, EmissionScope.SCOPE_1).stream()
-                .map(v -> new EmissionPointDto(v.getFiscalYear(), v.getValue())).toList();
-        List<EmissionPointDto> scope2 = emissionValueRepository.findByCompanyIdAndScopeOrderByFiscalYearAsc(companyId, EmissionScope.SCOPE_2).stream()
-                .map(v -> new EmissionPointDto(v.getFiscalYear(), v.getValue())).toList();
+        List<EmissionPointDto> scope1 = scopeSeries(companyId, EmissionScope.SCOPE_1);
+        List<EmissionPointDto> scope2 = scopeSeries(companyId, EmissionScope.SCOPE_2);
 
         if (!scope3CategoryRepository.existsByCompanyId(companyId)) {
             seedStandardScope3Categories(companyId);
@@ -119,6 +124,38 @@ public class EmissionsService {
             category.setStandardCategoryNumber(std.number());
             scope3CategoryRepository.save(category);
         }
+    }
+
+    /**
+     * One scope's figures per year, from the two places they can come from.
+     *
+     * A figure entered by hand wins for the year it covers — accepting a bill must never quietly
+     * rewrite a number somebody put their name to. A year with no entered figure falls back to the
+     * total of that scope's accepted activity entries, which is what connects an accepted bill to
+     * the reports: before this, activity entries were read by nothing but their own screen, so a
+     * workspace that only ever uploaded documents reported no emissions at all.
+     *
+     * Where both exist the derived total is not lost — it is on the Emission Activity screen, and
+     * the difference between the two is exactly what a reviewer should be looking at.
+     */
+    private List<EmissionPointDto> scopeSeries(UUID companyId, EmissionScope scope) {
+        Map<Integer, BigDecimal> entered = new HashMap<>();
+        for (EmissionValue v : emissionValueRepository.findByCompanyIdAndScopeOrderByFiscalYearAsc(companyId, scope)) {
+            entered.put(v.getFiscalYear(), v.getValue());
+        }
+
+        Map<Integer, BigDecimal> derived = new HashMap<>();
+        for (Object[] row : activityEntryRepository.sumTco2eByFiscalYear(companyId, scope)) {
+            derived.put((Integer) row[0], (BigDecimal) row[1]);
+        }
+
+        return Stream.concat(entered.keySet().stream(), derived.keySet().stream())
+                .distinct()
+                .sorted()
+                .map(year -> entered.containsKey(year)
+                        ? new EmissionPointDto(year, entered.get(year), false)
+                        : new EmissionPointDto(year, derived.get(year), true))
+                .toList();
     }
 
     private boolean isInRelief(int fiscalYear, int firstReportingYear, int reliefYears) {

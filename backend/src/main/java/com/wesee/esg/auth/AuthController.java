@@ -2,6 +2,8 @@ package com.wesee.esg.auth;
 
 import com.wesee.esg.auth.dto.AcceptInviteRequest;
 import com.wesee.esg.auth.dto.AuthResponse;
+import com.wesee.esg.auth.dto.ForgotPasswordRequest;
+import com.wesee.esg.auth.dto.ForgotPasswordResponse;
 import com.wesee.esg.auth.dto.InvitePreviewResponse;
 import com.wesee.esg.auth.dto.LoginRequest;
 import com.wesee.esg.auth.dto.LoginResponse;
@@ -10,6 +12,7 @@ import com.wesee.esg.auth.dto.OnboardingRequest;
 import com.wesee.esg.auth.dto.RegisterRequest;
 import com.wesee.esg.auth.dto.RegisterResponse;
 import com.wesee.esg.auth.dto.ResendVerificationRequest;
+import com.wesee.esg.auth.dto.ResetPasswordRequest;
 import com.wesee.esg.auth.dto.ResendVerificationResponse;
 import com.wesee.esg.auth.dto.SessionMetadata;
 import com.wesee.esg.auth.dto.UpdateProfileRequest;
@@ -63,6 +66,27 @@ public class AuthController {
         authService.resendVerification(request.email());
         return ResponseEntity.ok(new ResendVerificationResponse(
                 "If an account exists for that email and it isn't verified yet, we've sent a new verification link."));
+    }
+
+    /** Deliberately the same reply whether or not the email is registered — see PasswordResetService.requestReset. */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request.email());
+        return ResponseEntity.ok(new ForgotPasswordResponse(
+                "If an account exists for that email, we've sent a password reset link."));
+    }
+
+    /** Lets the reset screen reject a dead link before asking for a new password. */
+    @GetMapping("/reset-password/{token}")
+    public ResponseEntity<Void> validateResetToken(@PathVariable String token) {
+        authService.validatePasswordResetToken(token);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reset-password/{token}")
+    public ResponseEntity<Void> resetPassword(@PathVariable String token, @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(token, request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login")

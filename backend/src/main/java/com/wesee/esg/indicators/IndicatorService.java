@@ -192,6 +192,7 @@ public class IndicatorService {
         entry.setValue(request.value());
         entry.setEnteredBy(user.getName());
         entry.setSourceDocName(request.sourceDocName());
+        entry.setSourceDocPath(request.sourceDocPath());
         entry.setComment(request.comment());
         auditEntryRepository.save(entry);
 

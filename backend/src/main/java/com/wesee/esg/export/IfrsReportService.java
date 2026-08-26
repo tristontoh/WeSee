@@ -56,7 +56,8 @@ public class IfrsReportService {
     }
 
     @Transactional
-    public GeneratedReport generateS1Report(int fiscalYear) {
+    /** @param record whether this counts as issuing the report; false for a preview. */
+    public GeneratedReport generateS1Report(int fiscalYear, boolean record) {
         Company company = requireCompany();
         AppUser reviewer = currentReviewer();
         List<BusinessSegmentResponse> segments = ifrsService.listSegments();
@@ -67,12 +68,16 @@ public class IfrsReportService {
         ctx.setVariable("s1", s1Disclosure);
 
         byte[] pdf = pdfRenderer.render("ifrs-s1-report", ctx);
-        exportService.logClientGeneratedExport(new LogExportRequest("IFRS S1 Report", ExportFormat.PDF, fiscalYear));
+        if (record) {
+            exportService.logClientGeneratedExport(
+                    new LogExportRequest("IFRS S1 Report", ExportFormat.PDF, fiscalYear));
+        }
         return new GeneratedReport(pdf, "WeSee_IFRS_S1_Report_FY" + fiscalYear + ".pdf");
     }
 
     @Transactional
-    public GeneratedReport generateS2Report(int fiscalYear) {
+    /** @param record whether this counts as issuing the report; false for a preview. */
+    public GeneratedReport generateS2Report(int fiscalYear, boolean record) {
         Company company = requireCompany();
         AppUser reviewer = currentReviewer();
         IfrsS2Response s2 = ifrsService.getS2();
@@ -90,7 +95,10 @@ public class IfrsReportService {
         ctx.setVariable("scope3ValueByCategoryId", ReportSupport.scope3ValueByCategoryId(emissions, fiscalYear));
 
         byte[] pdf = pdfRenderer.render("ifrs-s2-report", ctx);
-        exportService.logClientGeneratedExport(new LogExportRequest("IFRS S2 Report", ExportFormat.PDF, fiscalYear));
+        if (record) {
+            exportService.logClientGeneratedExport(
+                    new LogExportRequest("IFRS S2 Report", ExportFormat.PDF, fiscalYear));
+        }
         return new GeneratedReport(pdf, "WeSee_IFRS_S2_Report_FY" + fiscalYear + ".pdf");
     }
 

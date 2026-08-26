@@ -12,12 +12,16 @@ public record CreateTenantUserResponse(
         String name,
         String email,
         Role role,
+        UUID customRoleId,
+        String customRoleName,
         boolean active,
         Instant createdAt,
         String temporaryPassword
 ) {
     public static CreateTenantUserResponse from(AppUser u, String temporaryPassword) {
         return new CreateTenantUserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(),
+                u.getCustomRole() != null ? u.getCustomRole().getId() : null,
+                u.getCustomRole() != null ? u.getCustomRole().getName() : null,
                 Boolean.TRUE.equals(u.getActive()), u.getCreatedAt(), temporaryPassword);
     }
 }

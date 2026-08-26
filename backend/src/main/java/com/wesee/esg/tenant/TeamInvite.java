@@ -1,11 +1,15 @@
 package com.wesee.esg.tenant;
 
 import com.wesee.esg.common.TenantOwnedEntity;
+import com.wesee.esg.permission.CustomRole;
 import com.wesee.esg.user.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,6 +33,11 @@ public class TeamInvite extends TenantOwnedEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private Role role;
+
+    /** Required for non-COMPANY_ADMIN invites — copied onto the AppUser when the invite is accepted. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "custom_role_id")
+    private CustomRole customRole;
 
     @Column(nullable = false, unique = true, length = 64)
     private String token;

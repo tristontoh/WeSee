@@ -70,6 +70,23 @@ public class PlatformSettingsService {
             }
         }
 
+        if (request.stripeSecretKey() != null && !request.stripeSecretKey().isBlank()) {
+            settings.setStripeSecretKeyEncrypted(cryptoService.encrypt(request.stripeSecretKey()));
+        }
+        if (request.stripeWebhookSecret() != null && !request.stripeWebhookSecret().isBlank()) {
+            settings.setStripeWebhookSecretEncrypted(cryptoService.encrypt(request.stripeWebhookSecret()));
+        }
+
+        if (Boolean.TRUE.equals(request.stripeEnabled())) {
+            boolean publishableMissing = request.stripePublishableKey() == null || request.stripePublishableKey().isBlank();
+            if (publishableMissing) {
+                throw new IllegalArgumentException("Publishable key is required to enable Stripe payments");
+            }
+            if (settings.getStripeSecretKeyEncrypted() == null) {
+                throw new IllegalArgumentException("Secret key is required when configuring Stripe for the first time");
+            }
+        }
+
         settings.setSmtpHost(request.smtpHost());
         settings.setSmtpPort(request.smtpPort());
         settings.setSmtpUsername(request.smtpUsername());
@@ -79,6 +96,8 @@ public class PlatformSettingsService {
         settings.setPlatformName(request.platformName());
         settings.setSupportEmail(request.supportEmail());
         settings.setRequire2fa(request.require2fa());
+        settings.setStripePublishableKey(request.stripePublishableKey());
+        settings.setStripeEnabled(request.stripeEnabled());
         settings = repository.save(settings);
 
         return PlatformSettingsResponse.from(settings, sessionExpirationMinutes);

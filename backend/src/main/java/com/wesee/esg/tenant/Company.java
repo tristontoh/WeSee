@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -81,4 +82,53 @@ public class Company extends BaseEntity {
      *  `active`, which platform admins also toggle for unrelated suspension reasons. */
     @Column(name = "closed_at")
     private Instant closedAt;
+
+    // --- Identity ---
+
+    @Column(name = "registration_number", length = 100)
+    private String registrationNumber;
+
+    @Column(name = "ticker_code", length = 20)
+    private String tickerCode;
+
+    @Column(name = "date_of_incorporation")
+    private LocalDate dateOfIncorporation;
+
+    @Column(name = "country_of_incorporation", length = 100)
+    private String countryOfIncorporation;
+
+    // --- Classification ---
+
+    /** The actual stock exchange board — distinct from {@link #marketClassification}, which drives plan gating. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "listing_board", length = 30)
+    private ListingBoard listingBoard;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "company_type", length = 30)
+    private CompanyType companyType;
+
+    // --- Contact & Location ---
+
+    @Column(name = "registered_office_address", length = 500)
+    private String registeredOfficeAddress;
+
+    /** Only populated when it differs from the registered office. */
+    @Column(name = "business_address", length = 500)
+    private String businessAddress;
+
+    @Column(name = "contact_person_name", length = 200)
+    private String contactPersonName;
+
+    @Column(name = "contact_person_designation", length = 150)
+    private String contactPersonDesignation;
+
+    @Column(name = "contact_person_email", length = 255)
+    private String contactPersonEmail;
+
+    @Column(name = "contact_person_phone", length = 50)
+    private String contactPersonPhone;
+
+    @Column(name = "tax_identification_number", length = 100)
+    private String taxIdentificationNumber;
 }

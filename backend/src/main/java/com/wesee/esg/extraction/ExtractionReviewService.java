@@ -7,10 +7,13 @@ import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.extraction.dto.AcceptRecordRequest;
 import com.wesee.esg.extraction.dto.ExtractedRecordResponse;
+import com.wesee.esg.reference.AggregationRule;
 import com.wesee.esg.indicators.IndicatorAuditEntry;
 import com.wesee.esg.indicators.IndicatorAuditEntryRepository;
 import com.wesee.esg.indicators.IndicatorValue;
+import com.wesee.esg.indicators.IndicatorService;
 import com.wesee.esg.indicators.IndicatorValueRepository;
+import com.wesee.esg.indicators.dto.SetIndicatorValueRequest;
 import com.wesee.esg.security.CurrentUserProvider;
 import com.wesee.esg.user.AppUser;
 import com.wesee.esg.user.AppUserRepository;
@@ -31,6 +34,7 @@ public class ExtractionReviewService {
     private final IndicatorAuditEntryRepository auditEntryRepository;
     private final SignOffRecordRepository signOffRepository;
     private final EmissionActivityService emissionActivityService;
+    private final IndicatorService indicatorService;
     private final AppUserRepository appUserRepository;
     private final CurrentUserProvider currentUserProvider;
 
@@ -39,6 +43,7 @@ public class ExtractionReviewService {
                                     IndicatorAuditEntryRepository auditEntryRepository,
                                     SignOffRecordRepository signOffRepository,
                                     EmissionActivityService emissionActivityService,
+                                    IndicatorService indicatorService,
                                     AppUserRepository appUserRepository,
                                     CurrentUserProvider currentUserProvider) {
         this.recordRepository = recordRepository;
@@ -46,6 +51,7 @@ public class ExtractionReviewService {
         this.auditEntryRepository = auditEntryRepository;
         this.signOffRepository = signOffRepository;
         this.emissionActivityService = emissionActivityService;
+        this.indicatorService = indicatorService;
         this.appUserRepository = appUserRepository;
         this.currentUserProvider = currentUserProvider;
     }
@@ -103,6 +109,33 @@ public class ExtractionReviewService {
                                        Integer fiscalYear, Integer month, BigDecimal value) {
         String definitionId = record.getIndicatorDefinition().getId();
 
+        /*
+         * A bill covers one month, and most consumption indicators roll twelve of those up
+         * (IND-ENG-01 and IND-WAT-01 are both SUM). Writing the annual figure directly — which is
+         * what this did — meant accepting February's bill and then March's left the year showing
+         * March alone, because each accept overwrote the total instead of adding a month.
+         *
+         * So a dated reading goes through IndicatorService.setMonthlyValue, exactly as a hand-typed
+         * monthly figure does: it stores the month, writes the audit entry, and recomputes the
+         * annual value with the indicator's own aggregation rule. Only an undated reading, or an
+         * indicator that is genuinely entered as a single annual figure, still writes the year.
+         */
+        if (routesThroughMonthly(record.getIndicatorDefinition().getAggregationRule(), month)) {
+            indicatorService.setMonthlyValue(definitionId, fiscalYear, month,
+                    new SetIndicatorValueRequest(value,
+                            record.getDocument().getOriginalFileName(),
+                            record.getDocument().getStoredPath(),
+                            "Extracted from " + record.getDocument().getOriginalFileName()));
+
+            // The annual row is created or updated by the recompute inside setMonthlyValue; its id
+            // is what the record points at, so the report figure stays traceable to this reading.
+            return indicatorValueRepository
+                    .findByCompanyIdAndIndicatorDefinitionIdAndFiscalYear(companyId, definitionId, fiscalYear)
+                    .map(IndicatorValue::getId)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No annual value after recomputing " + definitionId + " FY" + fiscalYear));
+        }
+
         IndicatorValue indicatorValue = indicatorValueRepository
                 .findByCompanyIdAndIndicatorDefinitionIdAndFiscalYear(companyId, definitionId, fiscalYear)
                 .orElseGet(() -> {
@@ -131,6 +164,16 @@ public class ExtractionReviewService {
         auditEntryRepository.save(audit);
 
         return indicatorValue.getId();
+    }
+
+    /**
+     * Whether a reading belongs in the monthly ledger rather than written straight onto the year.
+     *
+     * Both conditions matter. Without a month there is nowhere in the ledger to put it, and a
+     * DIRECT_ANNUAL indicator has no ledger at all — setMonthlyValue rejects those outright.
+     */
+    static boolean routesThroughMonthly(AggregationRule rule, Integer month) {
+        return month != null && rule != null && rule != AggregationRule.DIRECT_ANNUAL;
     }
 
     /** WeSeePrincipal carries no name, so the user is looked up — as IndicatorService does. */

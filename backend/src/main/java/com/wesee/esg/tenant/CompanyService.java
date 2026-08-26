@@ -1,8 +1,12 @@
 package com.wesee.esg.tenant;
 
+import com.wesee.esg.activitylog.ActivityEventType;
+import com.wesee.esg.activitylog.PlatformActivityLogService;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.email.EmailService;
+import com.wesee.esg.permission.CustomRole;
+import com.wesee.esg.permission.CustomRoleService;
 import com.wesee.esg.platform.PlatformSettingsService;
 import com.wesee.esg.security.CurrentUserProvider;
 import com.wesee.esg.tenant.dto.CompanyGroupMemberResponse;
@@ -13,6 +17,7 @@ import com.wesee.esg.tenant.dto.CreateTenantUserResponse;
 import com.wesee.esg.tenant.dto.TeamInviteResponse;
 import com.wesee.esg.tenant.dto.TenantSummaryResponse;
 import com.wesee.esg.tenant.dto.TenantUserResponse;
+import com.wesee.esg.tenant.dto.UpdateCompanyIdentityRequest;
 import com.wesee.esg.tenant.dto.UpdateCompanyProfileRequest;
 import com.wesee.esg.tenant.dto.UpdatePlanRequest;
 import com.wesee.esg.tenant.dto.UpdateTenantStatusRequest;
@@ -46,12 +51,16 @@ public class CompanyService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final PlatformSettingsService platformSettingsService;
+    private final CustomRoleService customRoleService;
+    private final PlatformActivityLogService activityLogService;
     private final SecureRandom random = new SecureRandom();
 
     public CompanyService(CompanyRepository companyRepository, SectorRepository sectorRepository,
                            AppUserRepository appUserRepository, TeamInviteRepository teamInviteRepository,
                            CurrentUserProvider currentUserProvider, PasswordEncoder passwordEncoder,
-                           EmailService emailService, PlatformSettingsService platformSettingsService) {
+                           EmailService emailService, PlatformSettingsService platformSettingsService,
+                           CustomRoleService customRoleService,
+                           PlatformActivityLogService activityLogService) {
         this.companyRepository = companyRepository;
         this.sectorRepository = sectorRepository;
         this.appUserRepository = appUserRepository;
@@ -60,6 +69,37 @@ public class CompanyService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.platformSettingsService = platformSettingsService;
+        this.customRoleService = customRoleService;
+        this.activityLogService = activityLogService;
+    }
+
+    /**
+     * Resolves the custom role to assign for a given target role, enforcing the invariant that
+     * custom roles fully replace any implicit COMPANY_CONTRIBUTOR/CONSULTANT permission set:
+     * COMPANY_ADMIN never has one (implicitly all-permissions, see PermissionGateService), every
+     * other tenant role must have one, resolved against the caller's own company.
+     */
+    private CustomRole resolveCustomRole(Role role, UUID customRoleId) {
+        if (role == Role.COMPANY_ADMIN) {
+            return null;
+        }
+        if (customRoleId == null) {
+            throw new IllegalArgumentException("A custom role is required for non-admin users");
+        }
+        return customRoleService.requireOwnedRole(customRoleId);
+    }
+
+    /**
+     * Lockout-prevention safety net: a company must always retain at least one active
+     * COMPANY_ADMIN able to manage it. Called before demoting or deactivating one.
+     */
+    private void requireNotLastActiveAdmin(UUID companyId, AppUser target) {
+        if (target.getRole() != Role.COMPANY_ADMIN || !Boolean.TRUE.equals(target.getActive())) {
+            return;
+        }
+        if (appUserRepository.countByCompanyIdAndRoleAndActiveTrue(companyId, Role.COMPANY_ADMIN) <= 1) {
+            throw new ConflictException("Cannot remove the last admin — promote another user to Company Admin first");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -70,8 +110,11 @@ public class CompanyService {
     @Transactional
     public CompanyResponse updatePlan(UpdatePlanRequest request) {
         Company company = currentCompany();
+        SubscriptionPlan previousPlan = company.getSubscriptionPlan();
         company.setSubscriptionPlan(request.plan());
-        return CompanyResponse.from(companyRepository.save(company));
+        CompanyResponse response = CompanyResponse.from(companyRepository.save(company));
+        logPlanChange(company, previousPlan, request.plan());
+        return response;
     }
 
     @Transactional
@@ -127,9 +170,70 @@ public class CompanyService {
         subsidiary.setOnboardingCompleted(true);
         subsidiary.setActive(true);
         subsidiary.setParentCompany(root);
+
+        if (request.sectorCode() != null && !request.sectorCode().isBlank()) {
+            Sector sector = sectorRepository.findById(request.sectorCode())
+                    .orElseThrow(() -> new NotFoundException("Unknown sector code: " + request.sectorCode()));
+            subsidiary.setSector(sector);
+        }
+
+        subsidiary.setRegistrationNumber(request.registrationNumber());
+        subsidiary.setTickerCode(request.tickerCode());
+        subsidiary.setDateOfIncorporation(request.dateOfIncorporation());
+        subsidiary.setCountryOfIncorporation(request.countryOfIncorporation());
+        subsidiary.setListingBoard(request.listingBoard());
+        subsidiary.setCompanyType(request.companyType());
+        subsidiary.setRegisteredOfficeAddress(request.registeredOfficeAddress());
+        subsidiary.setBusinessAddress(request.businessAddress());
+        subsidiary.setContactPersonName(request.contactPersonName());
+        subsidiary.setContactPersonDesignation(request.contactPersonDesignation());
+        subsidiary.setContactPersonEmail(request.contactPersonEmail());
+        subsidiary.setContactPersonPhone(request.contactPersonPhone());
+        subsidiary.setTaxIdentificationNumber(request.taxIdentificationNumber());
+
         subsidiary = companyRepository.save(subsidiary);
 
         return CompanyGroupMemberResponse.from(subsidiary, false);
+    }
+
+    /**
+     * Edits the corporate identity of any company in the caller's own group, the root included —
+     * a name typed wrong at signup has to be fixable, and only the root has that problem.
+     *
+     * A company outside the group is reported as not found rather than forbidden: whether a given
+     * UUID exists is not something one tenant should be able to learn about another.
+     */
+    @Transactional
+    public CompanyGroupMemberResponse updateIdentity(UUID targetCompanyId, UpdateCompanyIdentityRequest request) {
+        Company target = companyRepository.findById(targetCompanyId)
+                .orElseThrow(() -> new NotFoundException("Company not found"));
+        Company root = groupRoot(currentCompany());
+        if (!groupRoot(target).getId().equals(root.getId())) {
+            throw new NotFoundException("Company not found");
+        }
+
+        target.setName(request.name().trim());
+        target.setRegistrationNumber(blankToNull(request.registrationNumber()));
+        target.setTickerCode(blankToNull(request.tickerCode()));
+        target.setDateOfIncorporation(request.dateOfIncorporation());
+        target.setCountryOfIncorporation(blankToNull(request.countryOfIncorporation()));
+        target.setListingBoard(request.listingBoard());
+        target.setCompanyType(request.companyType());
+        target.setRegisteredOfficeAddress(blankToNull(request.registeredOfficeAddress()));
+        target.setBusinessAddress(blankToNull(request.businessAddress()));
+        target.setContactPersonName(blankToNull(request.contactPersonName()));
+        target.setContactPersonDesignation(blankToNull(request.contactPersonDesignation()));
+        target.setContactPersonEmail(blankToNull(request.contactPersonEmail()));
+        target.setContactPersonPhone(blankToNull(request.contactPersonPhone()));
+        target.setTaxIdentificationNumber(blankToNull(request.taxIdentificationNumber()));
+
+        Company saved = companyRepository.save(target);
+        return CompanyGroupMemberResponse.from(saved, saved.getId().equals(currentUserProvider.requireCompanyId()));
+    }
+
+    /** A cleared form field arrives as "", which should read as absent rather than as an empty value. */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     @Transactional
@@ -188,6 +292,7 @@ public class CompanyService {
             throw new IllegalArgumentException("Cannot assign platform-level role: " + request.role());
         }
 
+        CustomRole customRole = resolveCustomRole(request.role(), request.customRoleId());
         String temporaryPassword = generateTemporaryPassword();
 
         AppUser user = new AppUser();
@@ -196,6 +301,7 @@ public class CompanyService {
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setRole(request.role());
+        user.setCustomRole(customRole);
         user = appUserRepository.save(user);
 
         return CreateTenantUserResponse.from(user, temporaryPassword);
@@ -222,6 +328,7 @@ public class CompanyService {
             throw new IllegalArgumentException("Cannot assign platform-level role: " + request.role());
         }
 
+        CustomRole customRole = resolveCustomRole(request.role(), request.customRoleId());
         Company company = currentCompany();
         AppUser inviter = appUserRepository.findById(currentUserProvider.getPrincipal().userId()).orElse(null);
 
@@ -230,6 +337,7 @@ public class CompanyService {
         invite.setName(request.name());
         invite.setEmail(request.email());
         invite.setRole(request.role());
+        invite.setCustomRole(customRole);
         invite.setToken(generateInviteToken());
         invite.setInvitedByName(inviter != null ? inviter.getName() : "Unknown");
         invite.setExpiresAt(Instant.now().plus(INVITE_VALIDITY_DAYS, ChronoUnit.DAYS));
@@ -278,8 +386,8 @@ public class CompanyService {
     }
 
     private String buildInviteUrl(String token) {
-        // Path routing, not hash — see EmailVerificationService for why.
-        return platformSettingsService.getEffectiveAppBaseUrl() + "/accept-invite?token=" + token;
+        // Hash routing, not path — see EmailVerificationService for why.
+        return platformSettingsService.getEffectiveAppBaseUrl() + "/#/accept-invite?token=" + token;
     }
 
     private String generateInviteToken() {
@@ -297,7 +405,12 @@ public class CompanyService {
         if (!ASSIGNABLE_ROLES.contains(request.role())) {
             throw new IllegalArgumentException("Cannot assign platform-level role: " + request.role());
         }
+        if (request.role() != Role.COMPANY_ADMIN) {
+            requireNotLastActiveAdmin(user.getCompany().getId(), user);
+        }
+        CustomRole customRole = resolveCustomRole(request.role(), request.customRoleId());
         user.setRole(request.role());
+        user.setCustomRole(customRole);
         return toTenantUserResponse(appUserRepository.save(user));
     }
 
@@ -306,6 +419,9 @@ public class CompanyService {
         AppUser user = requireOwnedUser(userId);
         if (userId.equals(currentUserProvider.getPrincipal().userId())) {
             throw new ConflictException("You cannot deactivate your own account");
+        }
+        if (!active) {
+            requireNotLastActiveAdmin(user.getCompany().getId(), user);
         }
         user.setActive(active);
         return toTenantUserResponse(appUserRepository.save(user));
@@ -323,6 +439,8 @@ public class CompanyService {
 
     private TenantUserResponse toTenantUserResponse(AppUser u) {
         return new TenantUserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(),
+                u.getCustomRole() != null ? u.getCustomRole().getId() : null,
+                u.getCustomRole() != null ? u.getCustomRole().getName() : null,
                 Boolean.TRUE.equals(u.getActive()), u.getCreatedAt());
     }
 
@@ -342,8 +460,11 @@ public class CompanyService {
     @Transactional
     public TenantSummaryResponse adminUpdatePlan(UUID companyId, UpdatePlanRequest request) {
         Company company = findCompany(companyId);
+        SubscriptionPlan previousPlan = company.getSubscriptionPlan();
         company.setSubscriptionPlan(request.plan());
-        return toSummary(companyRepository.save(company));
+        TenantSummaryResponse response = toSummary(companyRepository.save(company));
+        logPlanChange(company, previousPlan, request.plan());
+        return response;
     }
 
     @Transactional
@@ -357,8 +478,7 @@ public class CompanyService {
     public List<TenantUserResponse> listTenantUsers(UUID companyId) {
         findCompany(companyId);
         return appUserRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId).stream()
-                .map(u -> new TenantUserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(),
-                        Boolean.TRUE.equals(u.getActive()), u.getCreatedAt()))
+                .map(this::toTenantUserResponse)
                 .toList();
     }
 
@@ -387,4 +507,14 @@ public class CompanyService {
                 primaryContact != null ? primaryContact.getEmail() : null
         );
     }
+
+    /** No entry when the plan is re-saved unchanged — the log records changes, not writes. */
+    private void logPlanChange(Company company, SubscriptionPlan previousPlan, SubscriptionPlan newPlan) {
+        if (previousPlan == newPlan) {
+            return;
+        }
+        activityLogService.record(company.getId(), company.getName(), ActivityEventType.PLAN_CHANGE,
+                "Subscription plan changed from " + previousPlan + " to " + newPlan);
+    }
+
 }

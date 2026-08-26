@@ -24,6 +24,18 @@ public record ExtractedRecordResponse(
         Integer month,
         BigDecimal confidence,
         String sourceSnippet,
+        /**
+         * The sustainability matter this reading belongs to — "Water Management", "Energy
+         * Consumption & GHG Footprint". It is what makes a water bill distinguishable from an
+         * electricity bill in a list of filenames, and it comes from the indicator's own matter
+         * rather than from guessing at the id or the file name.
+         *
+         * Null for an emission-factor reading: a factor carries a scope, not a matter. Every
+         * document that produces one also produces the paired indicator reading, so the document
+         * still gets classified.
+         */
+        String matterId,
+        String matterName,
         RecordStatus status
 ) {
     public static ExtractedRecordResponse from(ExtractedRecord record) {
@@ -41,6 +53,8 @@ public record ExtractedRecordResponse(
                 record.getMonth(),
                 record.getConfidence(),
                 record.getSourceSnippet(),
+                emission ? null : record.getIndicatorDefinition().getMatter().getId(),
+                emission ? null : record.getIndicatorDefinition().getMatter().getName(),
                 record.getStatus());
     }
 }

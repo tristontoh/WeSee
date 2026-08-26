@@ -63,4 +63,19 @@ public class PlatformSettings extends BaseEntity {
 
     @Column(name = "last_test_message", length = 1000)
     private String lastTestMessage;
+
+    /** Publishable key is meant to ship to the client, so it's stored and returned in plaintext. */
+    @Column(name = "stripe_publishable_key", length = 255)
+    private String stripePublishableKey;
+
+    /** AES/GCM-encrypted (see {@link com.wesee.esg.security.SecretCryptoService}) — never stored or returned in plaintext. */
+    @Column(name = "stripe_secret_key_encrypted", length = 1000)
+    private String stripeSecretKeyEncrypted;
+
+    /** AES/GCM-encrypted — never stored or returned in plaintext. */
+    @Column(name = "stripe_webhook_secret_encrypted", length = 1000)
+    private String stripeWebhookSecretEncrypted;
+
+    @Column(name = "stripe_enabled", nullable = false)
+    private Boolean stripeEnabled = false;
 }

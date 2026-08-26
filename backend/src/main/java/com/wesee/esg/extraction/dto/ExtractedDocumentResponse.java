@@ -1,5 +1,6 @@
 package com.wesee.esg.extraction.dto;
 
+import com.wesee.esg.extraction.DocumentTranscription;
 import com.wesee.esg.extraction.ExtractedDocument;
 import com.wesee.esg.extraction.ExtractionStatus;
 
@@ -16,6 +17,8 @@ public record ExtractedDocumentResponse(
         Instant createdAt,
         /** Which model read it — provenance the detail screen shows beside the figures. */
         String modelUsed,
+        /** What the document says, as printed. Descriptive; nothing here is reviewed. */
+        DocumentTranscription transcription,
         List<ExtractedRecordResponse> records
 ) {
     public static ExtractedDocumentResponse from(ExtractedDocument document, List<ExtractedRecordResponse> records) {
@@ -27,6 +30,8 @@ public record ExtractedDocumentResponse(
                 document.getUploadedBy(),
                 document.getCreatedAt(),
                 document.getModelUsed(),
+                document.getTranscription() != null
+                        ? document.getTranscription() : DocumentTranscription.empty(),
                 records);
     }
 }

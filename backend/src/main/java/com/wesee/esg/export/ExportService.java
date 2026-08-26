@@ -1,5 +1,7 @@
 package com.wesee.esg.export;
 
+import com.wesee.esg.activitylog.ActivityEventType;
+import com.wesee.esg.activitylog.PlatformActivityLogService;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.indicators.IndicatorValue;
@@ -41,6 +43,7 @@ public class ExportService {
     private final CompanyRepository companyRepository;
     private final AppUserRepository appUserRepository;
     private final ExportHistoryItemRepository historyRepository;
+    private final PlatformActivityLogService activityLogService;
 
     public ExportService(IndicatorDefinitionRepository indicatorDefinitionRepository,
                           IndicatorValueRepository indicatorValueRepository,
@@ -49,7 +52,8 @@ public class ExportService {
                           CurrentUserProvider currentUserProvider,
                           CompanyRepository companyRepository,
                           AppUserRepository appUserRepository,
-                          ExportHistoryItemRepository historyRepository) {
+                          ExportHistoryItemRepository historyRepository,
+                          PlatformActivityLogService activityLogService) {
         this.indicatorDefinitionRepository = indicatorDefinitionRepository;
         this.indicatorValueRepository = indicatorValueRepository;
         this.tenantIndicatorRepository = tenantIndicatorRepository;
@@ -58,6 +62,7 @@ public class ExportService {
         this.companyRepository = companyRepository;
         this.appUserRepository = appUserRepository;
         this.historyRepository = historyRepository;
+        this.activityLogService = activityLogService;
     }
 
     @Transactional
@@ -185,5 +190,10 @@ public class ExportService {
         item.setFiscalYear(fiscalYear);
         item.setGeneratedByName(user != null ? user.getName() : "Unknown");
         historyRepository.save(item);
+
+        Company company = companyRepository.findById(companyId).orElse(null);
+        activityLogService.record(companyId, company != null ? company.getName() : "Unknown company",
+                ActivityEventType.EXPORT_SUCCESS,
+                "Successfully generated " + type + " export for FY" + fiscalYear);
     }
 }

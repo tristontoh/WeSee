@@ -11,6 +11,8 @@ public record TeamInviteResponse(
         String name,
         String email,
         Role role,
+        UUID customRoleId,
+        String customRoleName,
         String invitedByName,
         Instant createdAt,
         Instant expiresAt,
@@ -19,7 +21,10 @@ public record TeamInviteResponse(
 ) {
     public static TeamInviteResponse from(TeamInvite invite, String inviteUrl) {
         return new TeamInviteResponse(
-                invite.getId(), invite.getName(), invite.getEmail(), invite.getRole(), invite.getInvitedByName(),
+                invite.getId(), invite.getName(), invite.getEmail(), invite.getRole(),
+                invite.getCustomRole() != null ? invite.getCustomRole().getId() : null,
+                invite.getCustomRole() != null ? invite.getCustomRole().getName() : null,
+                invite.getInvitedByName(),
                 invite.getCreatedAt(), invite.getExpiresAt(), invite.getExpiresAt().isBefore(Instant.now()), inviteUrl
         );
     }
