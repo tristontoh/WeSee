@@ -34,6 +34,7 @@ import { COMPLIANCE_STATUS_STYLES } from '../utils/complianceStatus';
 import { climateApi, EmissionsResponse, IfrsS2Response } from '../api/climateApi';
 import { assuranceApi, SignOffResponse, AssuranceLevel } from '../api/assuranceApi';
 import { ApiError } from '../api/client';
+import { usePlan } from '../contexts/PlanContext';
 
 // Mirrors IndicatorsView's default "Focus Year" — the most recent fiscal year tracked by this app.
 const CURRENT_FISCAL_YEAR = 2026;
@@ -155,25 +156,66 @@ export default function Dashboard() {
   const [signOff, setSignOff] = useState<SignOffResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { hasFeature } = usePlan();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Complete' | 'In Progress' | 'Needs Attention'>('All');
 
   useEffect(() => {
-    Promise.all([
+    /*
+     * Two things this has to get right, and it got both wrong before.
+     *
+     * Only ask for what the plan includes. Half of these endpoints are gated above the workspace's
+     * tier, so on Starter five of them answered 403 every time the dashboard opened — wasted
+     * round trips, and a console full of "Access Denied" that buries real errors.
+     *
+     * And allSettled, not all: Promise.all rejects on the first failure and abandons the rest, so
+     * one gated endpoint could stop indicators or materiality — data the reader is entitled to —
+     * from ever reaching the screen. Each panel now stands or falls on its own request.
+     */
+    const requests: Promise<unknown>[] = [
       indicatorsApi.list().then(setIndicators),
-      targetsApi.list().then(setTargets),
       materialityApi.listAssessments().then(setAssessments),
-      governanceApi.getOwnership().then(setOwnership),
       exportApi.history().then(setExportHistory),
-      compliancePolicyApi.list().then(setCompliancePolicies),
-      climateApi.getEmissions().then(setEmissions),
-      climateApi.getS2().then(setIfrsS2),
-      assuranceApi.completion(CURRENT_FISCAL_YEAR).then((r) => setAssuranceCompletion(r.completionPercent)),
-      assuranceApi.get(CURRENT_FISCAL_YEAR).then(setSignOff).catch((e) => {
-        if (!(e instanceof ApiError && e.status === 404)) console.error(e);
-        setSignOff(null);
-      }),
-    ]).finally(() => setLoading(false));
+    ];
+
+    if (hasFeature('targets')) {
+      requests.push(targetsApi.list().then(setTargets));
+    }
+    if (hasFeature('governance')) {
+      requests.push(governanceApi.getOwnership().then(setOwnership));
+      requests.push(compliancePolicyApi.list().then(setCompliancePolicies));
+    }
+    if (hasFeature('climate-module')) {
+      requests.push(climateApi.getEmissions().then(setEmissions));
+    }
+    if (hasFeature('ifrs-s1-s2')) {
+      requests.push(climateApi.getS2().then(setIfrsS2));
+    }
+    if (hasFeature('assurance-workspace')) {
+      requests.push(
+        assuranceApi.completion(CURRENT_FISCAL_YEAR).then((r) => setAssuranceCompletion(r.completionPercent)),
+        // 404 is the ordinary answer for a year nobody has signed off yet, not a failure.
+        assuranceApi.get(CURRENT_FISCAL_YEAR).then(setSignOff).catch((e) => {
+          if (!(e instanceof ApiError && e.status === 404)) console.error(e);
+          setSignOff(null);
+        }),
+      );
+    }
+
+    Promise.allSettled(requests)
+      .then((results) => {
+        // A 403 that slips through — a plan downgraded mid-session — is expected and stays quiet.
+        // Anything else is worth seeing.
+        results.forEach((r) => {
+          if (r.status !== 'rejected') return;
+          const reason = r.reason;
+          if (reason instanceof ApiError && reason.status === 403) return;
+          console.error(reason);
+        });
+      })
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- Matter-level summaries, derived from real indicator data ---

@@ -28,6 +28,10 @@ coverage/
 !.vscode/tasks.json
 .history/*
 
+# Throwaway browser probes. Two of these were committed by accident from another session, one
+# of them carrying a local login — they are scratch, never source.
+tmp-*.mjs
+
 # System files
 .DS_Store
 Thumbs.db

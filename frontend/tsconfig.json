@@ -21,6 +21,12 @@
       ]
     },
     "allowImportingTsExtensions": true,
+    // Resolve through the node_modules symlink rather than to its real path. The dependency tree
+    // lives in node_modules.nosync so iCloud skips it; without this, TypeScript realpaths every
+    // import into that directory, which the default exclude does not cover, and then allowJs makes
+    // it infer types from React's JavaScript instead of treating it as an untyped module — every
+    // ReactNode and useState<T> then fails to resolve.
+    "preserveSymlinks": true,
     "noEmit": true
   },
   // Roots are named rather than relying on the default exclude, so tsc checks exactly the source
