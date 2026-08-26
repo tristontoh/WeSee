@@ -21,17 +21,36 @@ enter those values by hand.
 
 ---
 
-## Step 1 — Upload
+## Step 1 — Choose the document and check it
 
 **Document Extraction** in the left menu.
 
-Drop the file on the dashed area, or **Choose a document**. When it is accepted you get:
+Drop the file on the dashed area, or **Choose a document**. Nothing is sent yet: the page shows
+the file itself, so you can confirm you picked the right bill — and the right page of it — before
+anything is read. **Choose another** swaps it out.
 
-> **tnb-bill-july.pdf is being read** — the figures appear in Documents when it finishes.
+Scroll the preview to read the bill as printed. This is the moment to catch the wrong month or the
+wrong premise, while it still costs nothing.
 
-Reading happens in the background, so you can upload the next one straight away or leave the page.
+## Step 2 — Process
 
-## Step 2 — Open it in Documents
+**Process** sends it. A dialog follows the run through four stages:
+
+| Stage | What is happening |
+|---|---|
+| Uploading the document | The file is on its way |
+| Queued to be read | Accepted, waiting its turn |
+| Reading the figures | The model is reading it — the long step |
+| Ready to review | Done, with the figures it found |
+
+There is no percentage, because there is nothing honest to put on one: the stages are all that is
+known. Reading typically takes a few seconds to a minute depending on the document.
+
+**Close and keep reading** dismisses the dialog without stopping anything — the result still lands
+in Documents, and the confirmation on the page keeps following it. If it fails, the reason is shown
+and **Retry reading** tries again; nothing is written to your data either way.
+
+## Step 3 — Open it in Documents
 
 **Documents** in the left menu, or **View document** on the confirmation.
 
@@ -45,7 +64,7 @@ Each row tells you where the document has got to:
 | Nothing usable was found | Read, but no figure matched anything you report on |
 | Could not be read | Failed — the reason is on the row |
 
-## Step 3 — Check each figure against the bill
+## Step 4 — Check each figure against the bill
 
 Click the row. The document is on the left, what was read from it on the right. **Read them
 together** — that pairing is the whole point of the screen.
@@ -73,7 +92,7 @@ quote names the lines it was added from, so you can check the arithmetic:
 **3. The right line.** A bill has several numbers on it. Confirm the quote points at the line you
 would have typed from — not last month's reading, and not the amount payable.
 
-## Step 4 — Accept or reject
+## Step 5 — Accept or reject
 
 - **Accept** — the value is written to your data. Correct the number in the box first if the
   reading is off; what you accept is what is stored.
@@ -82,7 +101,7 @@ would have typed from — not last month's reading, and not the amount payable.
 You can also do this from the Documents list once you trust a reading, but the first time it is
 worth doing it beside the document.
 
-## Step 5 — Find it in your report
+## Step 6 — Find it in your report
 
 | Accepted as | Appears in |
 |---|---|

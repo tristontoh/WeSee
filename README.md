@@ -58,15 +58,17 @@ SMTP, feature flags).
 ## Architecture
 
 ```
-Angular 19 (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──►  PostgreSQL
+React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──►  PostgreSQL
                                         │
                                         ├── DocumentExtractor → Gemini (swappable)
                                         └── uploads on local disk (./data/uploads)
 ```
 
 The **Java Spring Boot backend** (`backend/`) is the whole backend — auth, reporting, and document
-extraction in one process on :8080. The **Angular** app (`frontend/`) is the whole UI on :4210.
-A two-part, pure Java + Angular stack; no gateway, broker, or Python service.
+extraction in one process on :8080. The **React** app (`frontend/`) is the whole UI on :4210,
+served by Vite and mounted under a HashRouter — every route lives behind `#`, so links into the
+app (verification and invite emails included) carry the fragment.
+A two-part, pure Java + React stack; no gateway, broker, or Python service.
 
 Two things worth knowing before reading the code:
 
@@ -80,7 +82,7 @@ Two things worth knowing before reading the code:
 ## Requirements
 
 - **Java 21 + Maven** for the backend.
-- **Node 18+** for the Angular frontend.
+- **Node 20+** for the React frontend (Vite 6).
 - **PostgreSQL** (local, or `make infra` for Docker).
 
 ## Quick start (dev)
@@ -88,8 +90,7 @@ Two things worth knowing before reading the code:
 ```bash
 make infra         # optional: Postgres on :5432, database wesee_esg
 make backend       # cd backend && mvn spring-boot:run    → :8080
-make backend-e2e   # same, pointed at the e2e Gemini mock — no real key needed
-make frontend      # cd frontend && npx ng serve --port 4210  → :4210
+make frontend      # cd frontend && npm run dev -- --port 4210  → :4210
 ```
 
 **`make backend` needs a Gemini key.** Startup stops without one rather than producing a backend
@@ -105,10 +106,6 @@ wesee.extraction.gemini.api-key=…
 
 One caveat with that file: Maven copies it into `target/classes`, so an artifact built from
 `mvn package` would embed the key. Use the environment variable for anything deployed.
-
-`make backend-e2e` is what the extraction specs in the e2e suite require. It points
-`GEMINI_BASE_URL` at `frontend/e2e/gemini-mock.mjs`, which Playwright starts for you — the real
-extractor runs, and only the model is faked. See [Testing](#testing).
 
 Flyway runs migrations `V1`–`V52` on boot and seeds the reference data (sectors, Bursa matters,
 indicator definitions, emission factors). Hibernate runs with `ddl-auto: validate` and never
@@ -128,21 +125,21 @@ variables. API docs at http://localhost:8080/swagger-ui.html.
 
 | Part | Port | Stack |
 |---|---|---|
-| frontend | 4210 | Angular 19 |
+| frontend | 4210 | React 19 + Vite 6 + Tailwind 4 |
 | backend | 8080 | Java Spring Boot (Java 21) |
 
 ## Testing
 
 ```bash
 cd backend  && mvn test            # 70 unit tests
-cd frontend && npx playwright test # 84 e2e tests against a running backend (see make backend-e2e)
+cd frontend && npx playwright test # e2e against a running backend on :8080
 ```
 
-**No test reaches a real model, and none needs a key.** The extraction specs run the real extractor
-— real prompt, real response schema, real parsing — against `frontend/e2e/gemini-mock.mjs`, which
-Playwright starts as a second `webServer`. Faking at the HTTP boundary rather than shipping a
-fake extractor keeps a class capable of inventing figures out of the application entirely; the
-records it produces record their provenance as `mock`, not as a model name.
+**Extraction has no e2e coverage, by choice.** Exercising it end to end means calling the real
+model, which costs money and answers differently each run — so there is one backend and no test
+harness beside it. Extraction's logic is covered by unit tests instead: the prompt, the response
+schema, the parsing, unit conversion and proposal validation are all tested directly, and those
+are where it would go quietly wrong.
 
 The unit tests cover the logic that is easiest to get quietly wrong — unit conversion, proposal
 validation against the closed set, the sign-off guard, JWT, and for extraction: the media-type
@@ -157,7 +154,7 @@ the only check on Spring Data derived query method names**, which `mvn compile` 
 
 ```
 backend/    Java Spring Boot — the backend (auth, reporting, extraction)
-frontend/   Angular 19 — the UI (Workspace / Compliance Hub / Admin navs)
+frontend/   React 19 + Vite — the UI (workspace, compliance, platform admin)
 infra/      docker-compose (Postgres, optional)
 docs/       design spec + implementation plan per milestone
 data/       runtime uploads (gitignored — real bills never get committed)
