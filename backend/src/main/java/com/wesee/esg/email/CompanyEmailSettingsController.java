@@ -22,8 +22,14 @@ public class CompanyEmailSettingsController {
         this.service = service;
     }
 
+    /*
+     * settings.manage for reading too. V57's default Member role carries settings.view, so the
+     * looser gate let every contributor read the workspace's SMTP host, username and from-address
+     * — outbound mail configuration nobody but an administrator has a reason to see. The password
+     * was never in the response, so this was exposure rather than a credential leak.
+     */
     @GetMapping
-    @PreAuthorize("@perm.check('settings.view') or @perm.check('settings.manage')")
+    @PreAuthorize("@perm.check('settings.manage')")
     public EmailSettingsResponse get() {
         return service.get();
     }

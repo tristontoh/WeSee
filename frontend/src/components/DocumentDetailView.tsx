@@ -81,19 +81,34 @@ export default function DocumentDetailView() {
   }, [id]);
 
   useEffect(() => {
+    /*
+     * `cancelled` rather than only a captured url: the cleanup used to run with objectUrl still
+     * null whenever teardown beat the response — navigating away mid-fetch, or StrictMode's double
+     * invoke — and the url created afterwards then had no owner left to revoke it, pinning the
+     * whole file (up to the 10 MB cap) for the tab's lifetime. It also let a slower request for a
+     * previous document paint its bytes beside the current document's transcription.
+     */
+    let cancelled = false;
     let objectUrl: string | null = null;
 
     extractionApi.file(id)
       .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        setSrc(objectUrl);
+        const url = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url;
+        setSrc(url);
       })
       // Left silent on purpose: the document's own record still renders, and a preview that cannot
       // load should not replace the figures with an error.
-      .catch(() => setPreview('none'));
+      .catch(() => {
+        if (!cancelled) setPreview('none');
+      });
 
-    // Revoked, or every visit to this screen leaks the whole file.
     return () => {
+      cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [id]);

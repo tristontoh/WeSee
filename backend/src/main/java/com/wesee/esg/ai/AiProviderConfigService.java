@@ -64,7 +64,13 @@ public class AiProviderConfigService {
         return AiProviderConfigResponse.from(config);
     }
 
-    @Transactional
+    /*
+     * Deliberately NOT @Transactional, for the reason AiDraftService gives: the only work here is a
+     * blocking call to a third party, and the read that precedes it is transactional on its own.
+     * Wrapping the two held a pooled JDBC connection idle for as long as the provider took to
+     * answer — up to 70 seconds on a hang — so a few concurrent "Test connection" clicks could
+     * exhaust the pool and stall requests that have nothing to do with the AI settings.
+     */
     public TestAiConnectionResponse testConnection() {
         DecryptedAiProviderConfig decrypted = resolveDecrypted(currentUserProvider.requireCompanyId());
         try {

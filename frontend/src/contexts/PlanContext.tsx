@@ -13,6 +13,8 @@ interface PlanContextProps {
   plan: PlanType;
   setPlan: (plan: PlanType) => void;
   hasFeature: (featureKey: string) => boolean;
+  /** False until the server's flags replace the seeded defaults, so callers can re-run once. */
+  flagsLoaded: boolean;
   isFeatureVisible: (featureKey: string) => boolean;
   getFeatureDetails: (featureKey: string) => { name: string; requiredPlan: PlanType; description: string };
 }
@@ -70,6 +72,7 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Live gating rules from the backend — seeded with the hardcoded defaults so there's no
   // flash-of-wrong-content before the fetch resolves (or if it fails while logged out).
   const [featureFlags, setFeatureFlags] = useState<Record<string, FeatureFlagState>>(defaultFlags);
+  const [flagsLoaded, setFlagsLoaded] = useState(false);
 
   useEffect(() => {
     referenceApi.featureFlags()
@@ -84,7 +87,9 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .catch(() => {
         // Not logged in yet, offline, etc. — keep the fallback defaults.
-      });
+      })
+      // Settled either way: a caller waiting to re-run should not wait forever on a failed fetch.
+      .finally(() => setFlagsLoaded(true));
   }, []);
 
   const setPlan = (newPlan: PlanType) => {
@@ -122,7 +127,7 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <PlanContext.Provider value={{ plan, setPlan, hasFeature, isFeatureVisible, getFeatureDetails }}>
+    <PlanContext.Provider value={{ plan, setPlan, hasFeature, flagsLoaded, isFeatureVisible, getFeatureDetails }}>
       {children}
     </PlanContext.Provider>
   );

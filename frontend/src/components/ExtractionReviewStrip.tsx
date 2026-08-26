@@ -61,7 +61,13 @@ export default function ExtractionReviewStrip({ doc, onReviewed, onError }: Extr
     setBusyId(r.id);
     const edit = editFor(r);
     const run = accept
-      ? extractionApi.accept(r.id, { fiscalYear: edit.fiscalYear, month: edit.month ?? undefined })
+      ? extractionApi.accept(r.id, {
+          fiscalYear: edit.fiscalYear,
+          month: edit.month ?? undefined,
+          // Says "whole year" out loud, because an omitted month reads as "no opinion" and the
+          // backend then keeps the month the model proposed.
+          clearMonth: edit.month === null,
+        })
       : extractionApi.reject(r.id);
 
     run

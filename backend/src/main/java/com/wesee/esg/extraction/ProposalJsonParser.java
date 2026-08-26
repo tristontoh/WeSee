@@ -38,10 +38,25 @@ final class ProposalJsonParser {
         return response.records() != null ? response.records() : List.of();
     }
 
+    /** Both halves of one reply, so a full-page transcription is not deserialised twice. */
+    record Parsed(List<ProposedRecord> records, DocumentTranscription transcription) {
+    }
+
     /**
-     * The copy of the page that travels with the proposals. A second pass over the same small
-     * string rather than one method returning both: the two are consumed at different points and
-     * keeping the signatures separate is worth more than the parse.
+     * One pass for both. The two used to be read separately on the grounds that the string was
+     * small; a transcribed multi-meter bill carries every field and every cell, so it is not, and
+     * a malformed reply used to be parsed once before the second call threw on it anyway.
+     */
+    static Parsed parseAll(String json) {
+        Response response = read(json);
+        return new Parsed(
+                response.records() != null ? response.records() : List.of(),
+                new DocumentTranscription(response.fields(), response.tables()));
+    }
+
+    /**
+     * The copy of the page that travels with the proposals. Kept alongside {@link #parseAll} for
+     * callers that want only this half.
      */
     static DocumentTranscription parseTranscription(String json) {
         Response response = read(json);

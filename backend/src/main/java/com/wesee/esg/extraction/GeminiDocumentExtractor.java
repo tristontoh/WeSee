@@ -83,8 +83,9 @@ public class GeminiDocumentExtractor implements DocumentExtractor {
             throw new ExtractionFailedException("The model returned nothing for this document");
         }
 
-        List<ProposedRecord> records = ProposalJsonParser.parse(json);
-        DocumentTranscription transcription = ProposalJsonParser.parseTranscription(json);
+        ProposalJsonParser.Parsed parsed = ProposalJsonParser.parseAll(json);
+        List<ProposedRecord> records = parsed.records();
+        DocumentTranscription transcription = parsed.transcription();
 
         log.debug("Extracted {} proposal(s), {} field(s) and {} table(s) from a {} with {}",
                 records.size(), transcription.fields().size(), transcription.tables().size(),

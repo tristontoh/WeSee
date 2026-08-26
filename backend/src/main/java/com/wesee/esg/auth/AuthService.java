@@ -24,6 +24,8 @@ import com.wesee.esg.security.CurrentUserProvider;
 import com.wesee.esg.security.JwtProperties;
 import com.wesee.esg.security.JwtService;
 import com.wesee.esg.session.UserSessionService;
+import com.wesee.esg.permission.CustomRole;
+import com.wesee.esg.permission.CustomRoleRepository;
 import com.wesee.esg.tenant.Company;
 import com.wesee.esg.tenant.CompanyRepository;
 import com.wesee.esg.tenant.MarketClassification;
@@ -40,6 +42,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -51,6 +54,7 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final SectorRepository sectorRepository;
     private final TeamInviteRepository teamInviteRepository;
+    private final CustomRoleRepository customRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final CurrentUserProvider currentUserProvider;
@@ -60,12 +64,34 @@ public class AuthService {
     private final PlatformSettingsService platformSettingsService;
     private final PasswordResetService passwordResetService;
     private final PlatformActivityLogService activityLogService;
+
+    /**
+     * The permissions V57 gave every pre-existing company's "Member" role — every key whose
+     * endpoint was not COMPANY_ADMIN-gated at that migration. Reproduced here so a workspace
+     * registered today starts with the same default as one that predates the migration; the two
+     * must not drift.
+     */
+    private static final List<String> DEFAULT_MEMBER_PERMISSIONS = List.of(
+            "dashboard.view", "materiality.view", "materiality.edit", "indicators.view",
+            "indicators.edit", "targets.view", "targets.edit", "reports.view", "reports.generate",
+            "governance.view", "governance.edit", "ifrs.view", "ifrs.edit", "assurance.view",
+            "assurance.signoff", "api_access.view", "team.view", "billing.view", "settings.view");
+
+    private static CustomRole defaultMemberRole(Company company) {
+        CustomRole role = new CustomRole();
+        role.setCompanyId(company.getId());
+        role.setName("Member");
+        role.setDescription("Default role for non-admin team members.");
+        role.setPermissionKeys(DEFAULT_MEMBER_PERMISSIONS);
+        return role;
+    }
     private final long jwtExpirationMinutes;
 
     public AuthService(AppUserRepository appUserRepository,
                         CompanyRepository companyRepository,
                         SectorRepository sectorRepository,
                         TeamInviteRepository teamInviteRepository,
+                        CustomRoleRepository customRoleRepository,
                         PasswordEncoder passwordEncoder,
                         JwtService jwtService,
                         CurrentUserProvider currentUserProvider,
@@ -80,6 +106,7 @@ public class AuthService {
         this.companyRepository = companyRepository;
         this.sectorRepository = sectorRepository;
         this.teamInviteRepository = teamInviteRepository;
+        this.customRoleRepository = customRoleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.currentUserProvider = currentUserProvider;
@@ -123,6 +150,14 @@ public class AuthService {
         company.setSubscriptionPlan(SubscriptionPlan.STARTER);
         company.setOnboardingCompleted(false);
         company = companyRepository.save(company);
+
+        /*
+         * V57 seeded one of these per company that existed when it ran, but nothing created one for
+         * a workspace registered afterwards. A non-admin needs a custom role — resolveCustomRole
+         * rejects the invite without one — so every new workspace failed on its first attempt to
+         * invite anyone who was not an admin, while older tenants worked.
+         */
+        customRoleRepository.save(defaultMemberRole(company));
 
         AppUser user = new AppUser();
         user.setCompany(company);
@@ -217,6 +252,11 @@ public class AuthService {
         user.setName(request.name());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(invite.getRole());
+        // The invite already carries the role the admin chose, and TeamInvite documents it as
+        // "copied onto the AppUser when the invite is accepted". Without this the new account has
+        // no custom role at all, so @perm.check denies every key and the person lands on an app
+        // with nothing in it — every invited non-admin was locked out.
+        user.setCustomRole(invite.getCustomRole());
         user = appUserRepository.save(user);
 
         invite.setAcceptedAt(Instant.now());

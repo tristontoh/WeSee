@@ -120,8 +120,14 @@ public class CompanyController {
         return companyService.setUserActive(userId, active);
     }
 
+    /*
+     * team.manage, not team.view. The response embeds each pending invite's accept URL, which
+     * contains the raw token, and POST /auth/invites/{token}/accept is deliberately unauthenticated
+     * — so read access here is enough to claim somebody else's pending COMPANY_ADMIN invite before
+     * they do. V57's default Member role grants team.view to every backfilled contributor.
+     */
     @GetMapping("/invites")
-    @PreAuthorize("@perm.check('team.view') or @perm.check('team.manage')")
+    @PreAuthorize("@perm.check('team.manage')")
     public List<TeamInviteResponse> listInvites() {
         return companyService.listInvites();
     }

@@ -67,7 +67,9 @@ public class ExtractionReviewService {
 
         BigDecimal value = request.value() != null ? request.value() : record.getValue();
         Integer fiscalYear = request.fiscalYear() != null ? request.fiscalYear() : record.getFiscalYear();
-        Integer month = request.month() != null ? request.month() : record.getMonth();
+        Integer month = Boolean.TRUE.equals(request.clearMonth())
+                ? null
+                : request.month() != null ? request.month() : record.getMonth();
 
         Set<Integer> signedYears = signOffRepository.findByCompanyIdOrderByFiscalYearDesc(companyId).stream()
                 .map(SignOffRecord::getFiscalYear)

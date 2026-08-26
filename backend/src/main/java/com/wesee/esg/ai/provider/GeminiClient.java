@@ -64,7 +64,7 @@ public class GeminiClient implements AiProviderClient {
                 if (content != null) {
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-                    text = parts != null && !parts.isEmpty() ? String.valueOf(parts.get(0).get("text")) : "";
+                    text = parts != null && !parts.isEmpty() ? textOrEmpty(parts.get(0).get("text")) : "";
                 }
             }
 
@@ -84,4 +84,10 @@ public class GeminiClient implements AiProviderClient {
             throw new AiProviderException("Gemini request failed" + status + " — check that your API key and model name are correct", e);
         }
     }
+
+    /** A JSON field that is absent or null is no text at all, never the string "null". */
+    private static String textOrEmpty(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
 }

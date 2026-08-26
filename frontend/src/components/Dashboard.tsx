@@ -156,7 +156,7 @@ export default function Dashboard() {
   const [signOff, setSignOff] = useState<SignOffResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { hasFeature } = usePlan();
+  const { hasFeature, plan, flagsLoaded } = usePlan();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Complete' | 'In Progress' | 'Needs Attention'>('All');
@@ -215,8 +215,11 @@ export default function Dashboard() {
         });
       })
       .finally(() => setLoading(false));
+    // Re-run when the server's flags land or the plan changes: mounted before either, this effect
+    // would otherwise be frozen to the seeded defaults for the life of the screen, and a feature
+    // re-tiered by a platform admin would apply everywhere except here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [plan, flagsLoaded]);
 
   // --- Matter-level summaries, derived from real indicator data ---
   const matterSummaries: MatterSummary[] = applicableMatters

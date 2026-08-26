@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.List;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.UUID;
@@ -53,6 +54,17 @@ public class PasswordResetService {
     }
 
     private void sendResetEmail(AppUser user) {
+        /*
+         * Retire the account's outstanding links before issuing another. Without this, clicking
+         * "Forgot password" five times leaves five independently valid credentials, each good for
+         * the full hour — so a link recovered from a forwarded mail or a shared inbox still resets
+         * the password long after the person has used the newest one.
+         */
+        Instant now = Instant.now();
+        List<PasswordResetToken> outstanding = tokenRepository.findByUserIdAndUsedAtIsNull(user.getId());
+        outstanding.forEach(previous -> previous.setUsedAt(now));
+        tokenRepository.saveAll(outstanding);
+
         PasswordResetToken tokenEntity = new PasswordResetToken();
         tokenEntity.setUserId(user.getId());
         tokenEntity.setToken(generateToken());

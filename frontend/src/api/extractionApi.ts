@@ -95,6 +95,8 @@ export interface AcceptRecordRequest {
   value?: number;
   fiscalYear?: number;
   month?: number;
+  /** Files the reading against the whole year. Omitting `month` cannot say this — see the DTO. */
+  clearMonth?: boolean;
 }
 
 /** A document is still being worked on by the backend and the queue should keep polling. */

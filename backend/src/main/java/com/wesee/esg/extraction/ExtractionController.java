@@ -73,7 +73,7 @@ public class ExtractionController {
     @PostMapping("/records/{id}/accept")
     public ExtractedRecordResponse accept(@PathVariable UUID id,
                                            @RequestBody(required = false) AcceptRecordRequest request) {
-        return reviewService.accept(id, request != null ? request : new AcceptRecordRequest(null, null, null));
+        return reviewService.accept(id, request != null ? request : new AcceptRecordRequest(null, null, null, null));
     }
 
     @PostMapping("/records/{id}/reject")
