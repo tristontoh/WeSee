@@ -1,11 +1,13 @@
-# Node
+# Node — slash-less too, for the .nosync symlinks; see the root .gitignore.
 node_modules/
+node_modules
 npm-debug.log
 yarn-error.log
 *.log
 
 # Build output
 dist/
+dist
 build/
 coverage/
 

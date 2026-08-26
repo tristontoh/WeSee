@@ -6,6 +6,18 @@ target/
 node_modules/
 dist/
 
+# Also without a trailing slash: these three paths are symlinks to .nosync copies, and a
+# trailing-slash pattern matches directories only — without these, `git add -A` commits the links.
+target
+node_modules
+dist
+
+# Build output kept out of iCloud's reach. ~/Desktop is synced on this machine, and syncing
+# regenerable output duplicates it into "Xxx 2.class" copies that break the build outright —
+# Maven refuses to start with four EsgBackendApplication classes on the path. iCloud skips any
+# name ending .nosync; the original paths are symlinks to these, so every tool still finds them.
+*.nosync/
+
 # The upstream EsgEasy checkout the frontend was taken from. Kept locally as a
 # reference for porting; it is a whole second copy of the project, not our source.
 ESGPlatform-main/
