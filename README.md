@@ -87,6 +87,8 @@ Two things worth knowing before reading the code:
 
 ## Quick start (dev)
 
+Step-by-step, including the traps: **[RUNNING.md](RUNNING.md)**.
+
 ```bash
 make infra         # optional: Postgres on :5432, database wesee_esg
 make backend       # cd backend && mvn spring-boot:run    → :8080
@@ -121,7 +123,7 @@ Backend config: `backend/src/main/resources/application.yml`, with the datasourc
 `application-dev.yml` (defaults to `postgres`/`root` on `localhost:5432/wesee_esg`). Overridable
 via `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`, `UPLOADS_DIR`,
 `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL`, and the `SMTP_*`
-variables. API docs at http://localhost:8080/swagger-ui.html.
+variables. API docs at http://localhost:8080/swagger-ui/index.html.
 
 | Part | Port | Stack |
 |---|---|---|
