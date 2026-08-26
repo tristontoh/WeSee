@@ -230,9 +230,16 @@ export default function DocumentsView() {
   const documentsRef = useRef(documents);
   documentsRef.current = documents;
 
+  /*
+   * First load only, so a refetch never blanks a list the reader is working in — an empty list and
+   * an unread one are different facts, and only one of them means "add something".
+   */
+  const [loading, setLoading] = useState(true);
+
   const reload = () => extractionApi.list()
     .then(setDocuments)
-    .catch((err: ApiError) => setError(err.message));
+    .catch((err: ApiError) => setError(err.message))
+    .finally(() => setLoading(false));
 
   // Re-fetched by the top bar's refresh control, not only by the poll below — the poll stops once
   // every document is terminal, so a document removed elsewhere would otherwise linger.
@@ -267,7 +274,13 @@ export default function DocumentsView() {
 
       {/* An empty screen is an invitation, so it points at the one thing to do next rather than
           just reporting that there is nothing. */}
-      {!documents.length && !error && (
+      {loading && !documents.length && !error && (
+        <Card padded="lg">
+          <p className="text-sm text-gray-400 text-center">Loading documents…</p>
+        </Card>
+      )}
+
+      {!loading && !documents.length && !error && (
         <Card padded="lg">
           <div className="flex flex-col items-center text-center">
             <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">

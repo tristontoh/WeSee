@@ -39,6 +39,8 @@ const labelClass = 'text-xs font-semibold text-gray-700';
 export default function AddCompanyModal({ onClose, onCreated }: AddCompanyModalProps) {
   const { showToast } = useToast();
   const [sectors, setSectors] = useState<SectorResponse[]>([]);
+  /** An empty picker and one still being fetched look identical, and only one of them is a dead end. */
+  const [sectorsLoading, setSectorsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Identity
@@ -63,7 +65,7 @@ export default function AddCompanyModal({ onClose, onCreated }: AddCompanyModalP
   const [taxIdentificationNumber, setTaxIdentificationNumber] = useState('');
 
   useEffect(() => {
-    referenceApi.sectors().then(setSectors).catch(() => setSectors([]));
+    referenceApi.sectors().then(setSectors).catch(() => setSectors([])).finally(() => setSectorsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function AddCompanyModal({ onClose, onCreated }: AddCompanyModalP
                 <Select
                   className="w-full"
                   aria-label="Sector"
-                  placeholder="Select a sector…"
+                  placeholder={sectorsLoading ? 'Loading sectors…' : sectors.length ? 'Select a sector…' : 'No sectors available'}
                   value={sectorCode}
                   onChange={setSectorCode}
                   options={sectors.map((s) => ({ value: s.code, label: s.name }))}

@@ -59,6 +59,8 @@ export default function ApiAccessView() {
   const canManage = canAccess(user?.role, MANAGEMENT_ROLES);
 
   const [tokens, setTokens] = useState<ApiTokenResponse[]>([]);
+  /** First load only — revoking or creating a token must not blank the list. */
+  const [loading, setLoading] = useState(true);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState('');
@@ -71,7 +73,7 @@ export default function ApiAccessView() {
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
 
   const refreshTokens = () => {
-    apiTokenApi.list().then(setTokens).catch((e) => console.error(e));
+    apiTokenApi.list().then(setTokens).catch((e) => console.error(e)).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -156,7 +158,9 @@ export default function ApiAccessView() {
 
       {/* TOKEN LIST */}
       <Card className="bg-white border-navy-100 overflow-hidden" padded="none">
-        {tokens.length === 0 ? (
+        {loading && tokens.length === 0 ? (
+          <p className="text-sm text-navy-400 p-6 text-center">Loading tokens…</p>
+        ) : tokens.length === 0 ? (
           <div className="p-16 text-center space-y-2">
             <KeyRound className="w-10 h-10 text-navy-300 mx-auto" />
             <h5 className="text-xs font-bold text-navy-950">No API tokens yet</h5>

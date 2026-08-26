@@ -13,11 +13,13 @@ import { referenceApi, PermissionResponse } from '../api/referenceApi';
 
 interface RolesViewProps {
   roles: CustomRoleResponse[];
+  /** Owned by the parent along with the roles themselves, so the two cannot disagree. */
+  rolesLoading?: boolean;
   canManage: boolean;
   onRolesChanged: () => void;
 }
 
-export default function RolesView({ roles, canManage, onRolesChanged }: RolesViewProps) {
+export default function RolesView({ roles, rolesLoading = false, canManage, onRolesChanged }: RolesViewProps) {
   const { showToast } = useToast();
   const [permissions, setPermissions] = useState<PermissionResponse[]>([]);
   const [editing, setEditing] = useState<CustomRoleResponse | 'new' | null>(null);
@@ -108,7 +110,9 @@ export default function RolesView({ roles, canManage, onRolesChanged }: RolesVie
         )}
       </div>
 
-      {roles.length === 0 ? (
+      {rolesLoading && roles.length === 0 ? (
+        <p className="text-sm text-navy-400 p-6 text-center">Loading roles…</p>
+      ) : roles.length === 0 ? (
         <Card className="bg-white border-navy-100 p-16 text-center space-y-2">
           <ShieldCheck className="w-10 h-10 text-navy-300 mx-auto" />
           <h5 className="text-xs font-bold text-navy-950">No custom roles yet</h5>

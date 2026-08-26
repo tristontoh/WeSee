@@ -56,6 +56,12 @@ export default function TeamView() {
 
   const [tab, setTab] = useState<'members' | 'roles'>('members');
   const [users, setUsers] = useState<TenantUserResponse[]>([]);
+  /*
+   * First load only, so a refetch never blanks a list the reader is working in — an empty list and
+   * an unread one are different facts, and only one of them means "add something".
+   */
+  const [loading, setLoading] = useState(true);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [pendingInvites, setPendingInvites] = useState<TeamInviteResponse[]>([]);
   const [customRoles, setCustomRoles] = useState<CustomRoleResponse[]>([]);
 
@@ -74,7 +80,7 @@ export default function TeamView() {
   const [viewingUser, setViewingUser] = useState<TenantUserResponse | null>(null);
 
   const refreshUsers = () => {
-    companyApi.listUsers().then(setUsers).catch((e) => console.error(e));
+    companyApi.listUsers().then(setUsers).catch((e) => console.error(e)).finally(() => setLoading(false));
   };
 
   const refreshInvites = () => {
@@ -84,7 +90,7 @@ export default function TeamView() {
 
   const refreshRoles = () => {
     if (!CAPABILITIES.customRoles) return;
-    customRoleApi.list().then(setCustomRoles).catch((e) => console.error(e));
+    customRoleApi.list().then(setCustomRoles).catch((e) => console.error(e)).finally(() => setRolesLoading(false));
   };
 
   useEffect(() => {
@@ -213,12 +219,14 @@ export default function TeamView() {
       )}
 
       {tab === 'roles' && canViewRoles ? (
-        <RolesView roles={customRoles} canManage={canManageRoles} onRolesChanged={refreshRoles} />
+        <RolesView roles={customRoles} rolesLoading={rolesLoading} canManage={canManageRoles} onRolesChanged={refreshRoles} />
       ) : (
       <>
       {/* USER LIST */}
       <Card className="bg-white border-navy-100 overflow-hidden" padded="none">
-        {users.length === 0 ? (
+        {loading && users.length === 0 ? (
+          <p className="text-sm text-navy-400 p-6 text-center">Loading team…</p>
+        ) : users.length === 0 ? (
           <div className="p-16 text-center space-y-2">
             <Users className="w-10 h-10 text-navy-300 mx-auto" />
             <h5 className="text-xs font-bold text-navy-950">No team members yet</h5>
