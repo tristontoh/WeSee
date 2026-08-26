@@ -1,9 +1,25 @@
 import { APIRequestContext, Page } from '@playwright/test';
 import { Client } from 'pg';
 
-export const API = 'http://localhost:8080/api/v1';
+/**
+ * Overridable so the suite can be pointed at a backend other than the one `make backend` starts —
+ * e.g. a second instance on a spare port while the usual one keeps running. Must match whatever
+ * VITE_API_BASE_URL the dev server under test was started with.
+ */
+export const API = `${process.env.E2E_API_BASE_URL ?? 'http://localhost:8080'}/api/v1`;
 
 export const SEED_ADMIN = { email: 'platform.admin@wesee.my', password: 'PlatformAdmin#2026' };
+
+/** Where the app keeps its JWT — see src/api/tokenStore.ts. */
+export const TOKEN_KEY = 'wesee_jwt_token';
+
+/**
+ * The app is mounted under a HashRouter, so every route lives behind `#`. Tests go through this
+ * rather than writing the fragment by hand, so a router change is one edit.
+ */
+export function route(path: string): string {
+  return `/#${path}`;
+}
 
 /** Unique per run so repeated runs never collide on the unique email constraint. */
 export function uniqueEmail(prefix = 'e2e'): string {
@@ -92,15 +108,26 @@ export async function upgradePlan(
 }
 
 /**
- * Marks a company's setup as done. Sign-in now lands a company that has not onboarded on
- * /onboarding, so any test asserting a different landing screen must complete this first.
+ * Marks a company's setup as done. Sign-in lands a company that has not onboarded on /onboarding,
+ * and AuthenticatedLayout redirects every other route there, so nothing else is reachable until
+ * this has run.
+ *
+ * `market` is not cosmetic: AuthService.planForMarket derives the plan from it (SME → STARTER,
+ * ACE_MARKET → GROWTH, MAIN_MARKET → ISSUER_READY), and MatterSetResolverService then picks the
+ * applicable matter set from plan + market — ISSUER_READY on MAIN_MARKET gets BURSA_MAIN instead of
+ * SEDG. That changes which indicators exist for the tenant at all, so a test naming a SEDG
+ * indicator (IND-ENG-01, say) must stay on the default.
  */
-export async function completeOnboarding(email: string, password = 'E2ePassw0rd!'): Promise<void> {
+export async function completeOnboarding(
+  email: string,
+  market: 'SME' | 'ACE_MARKET' | 'MAIN_MARKET' = 'SME',
+  password = 'E2ePassw0rd!',
+): Promise<void> {
   const token = await loginForToken(email, password);
   const res = await fetch(`${API}/auth/onboarding`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ market: 'MAIN_MARKET', sectorCode: null, frameworks: [], priorities: [] }),
+    body: JSON.stringify({ market, sectorCode: null, frameworks: [], priorities: [] }),
   });
   if (!res.ok) throw new Error(`completing onboarding failed: ${res.status}`);
 }
@@ -152,18 +179,17 @@ export async function fillAllIndicators(
   }
 }
 
-/** Signs a verified user in through the UI. */
+/** Signs a verified user in through the UI. Email and password are one step, not two. */
 export async function loginThroughUi(
   page: Page,
   email: string,
   password = 'E2ePassw0rd!',
 ): Promise<void> {
-  await page.goto('/login');
+  await page.goto(route('/login'));
   await page.locator('input[type=email]').fill(email);
-  await page.getByRole('button', { name: 'Next' }).click();
   await page.locator('input[type=password]').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  // Landing depends on plan: workspace tier goes to /indicators, ISSUER_READY to the
-  // compliance-hub overview, since /dashboard reads ISSUER_READY-only data.
-  await page.waitForURL(/\/(indicators|dashboard|onboarding|compliance-hub)/, { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Sign In' }).click();
+  // See permissions.postLoginPath: platform roles go to the operator console, a company that has
+  // not finished setup to onboarding, everyone else to the dashboard.
+  await page.waitForURL(/#\/(dashboard|onboarding|admin)/, { timeout: 15_000 });
 }

@@ -1,0 +1,225 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Primary Green Scale */
+  --color-primary-50: #f0fdf4;
+  --color-primary-100: #dcfce7;
+  --color-primary-200: #bbf7d0;
+  --color-primary-300: #86efac;
+  --color-primary-400: #4ade80;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+  --color-primary-800: #166534;
+  --color-primary-900: #14532d;
+  --color-primary-950: #052e16;
+
+  /* Navy/Charcoal Text Scale */
+  --color-navy-50: #f8fafc;
+  --color-navy-100: #f1f5f9;
+  --color-navy-200: #e2e8f0;
+  --color-navy-300: #cbd5e1;
+  --color-navy-400: #94a3b8;
+  --color-navy-500: #64748b;
+  --color-navy-600: #475569;
+  --color-navy-700: #334155;
+  --color-navy-800: #1e293b;
+  --color-navy-900: #0f172a;
+  --color-navy-950: #020617;
+
+  /* Background Neutral/Soft Green-Gray */
+  --color-bg-light: #f9fbfb;
+  --color-bg-card: #ffffff;
+
+  /* Status Colors */
+  --color-status-done-bg: #f0fdf4;
+  --color-status-done-text: #166534;
+  --color-status-done-border: #dcfce7;
+  --color-status-done-dot: #22c55e;
+
+  --color-status-progress-bg: #fffbeb;
+  --color-status-progress-text: #92400e;
+  --color-status-progress-border: #fef3c7;
+  --color-status-progress-dot: #f59e0b;
+
+  --color-status-stuck-bg: #fef2f2;
+  --color-status-stuck-text: #991b1b;
+  --color-status-stuck-border: #fee2e2;
+  --color-status-stuck-dot: #ef4444;
+
+  --color-status-review-bg: #eff6ff;
+  --color-status-review-text: #1e40af;
+  --color-status-review-border: #dbeafe;
+  --color-status-review-dot: #3b82f6;
+
+  /* Border Radii */
+  --radius-card: 20px;
+  --radius-button: 9999px;
+  --radius-input: 9999px;
+
+  /* Shadow */
+  --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.03);
+  --shadow-premium: 0 10px 25px -5px rgba(99, 102, 241, 0.15), 0 8px 16px -4px rgba(124, 58, 237, 0.1);
+}
+
+@layer utilities {
+  /*
+   * Scrolls without showing a bar. For tab strips only: a row of tabs that overflows is scrolled by
+   * trackpad or by the tab a click moves focus to, and a scrollbar under it reads as a second
+   * border below the active-tab underline. Wide data tables keep their bar — there the bar is the
+   * only thing telling a reader more columns exist.
+   */
+  .no-scrollbar {
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;       /* old Edge */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;                  /* Chrome, Safari */
+  }
+
+  .bg-organic-gradient {
+    background-image: radial-gradient(circle at 10% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 40%);
+  }
+
+  /*
+   * The app background. Five soft radial washes over a near-neutral base, carried over from the
+   * previous client — the one piece of its visual language kept deliberately. It sits on the
+   * outermost element of a screen; anything layered on top (main, cards) stays transparent so the
+   * wash reads as one continuous field instead of restarting and seaming at each boundary.
+   */
+  /*
+   * The signed-out ground: a photograph, not a wash. Carried over from the previous client, where
+   * every auth screen sat on it. The two overlays are a vignette — they keep the centre bright
+   * enough for a glass card to read against while darkening the edges so the card has a boundary.
+   */
+  .bg-auth-photo {
+    position: relative;
+    background-color: #0A0E27;
+    background-image:
+      radial-gradient(140% 110% at 50% 42%, transparent 55%, rgba(8, 12, 28, .32) 100%),
+      linear-gradient(180deg, rgba(8, 12, 28, .10) 0%, transparent 30%, transparent 68%, rgba(8, 12, 28, .28) 100%),
+      url('/assets/bg-mountains.jpeg');
+    background-size: cover, cover, cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /*
+   * The frosted card those screens float. Distinct from the opaque `Card` used inside the app: this
+   * one is translucent on purpose, because the photograph behind it is part of the design.
+   */
+  .glass-card {
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, .13));
+    backdrop-filter: blur(30px) saturate(140%);
+    -webkit-backdrop-filter: blur(30px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, .42);
+    border-radius: 28px;
+    box-shadow: 0 30px 80px rgba(5, 8, 30, .5), inset 0 1px 0 rgba(255, 255, 255, .28);
+  }
+
+  /* The hairline highlight along the card's top edge. */
+  .glass-card-sheen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+  }
+
+  .bg-app-mesh {
+    background-color: #edeeef;
+    background-image:
+      radial-gradient(120% 110% at 12% 6%, #dbe9f8 0%, transparent 52%),
+      radial-gradient(120% 120% at 90% 8%, #fbe7dd 0%, transparent 52%),
+      radial-gradient(130% 130% at 86% 96%, #dcecd7 0%, transparent 55%),
+      radial-gradient(120% 120% at 6% 98%, #f6e6d4 0%, transparent 52%),
+      radial-gradient(90% 90% at 50% 52%, #ece4f5 0%, transparent 62%);
+    background-attachment: fixed;
+  }
+}
+
+@keyframes slide-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out;
+}
+
+@keyframes panel-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-panel-in {
+  animation: panel-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * These four were referenced across the app but never defined, so the elements using them simply
+ * appeared with no transition — `animate-fade-in` alone is on twenty components (every dropdown,
+ * the dialogs, the toasts). Defined here rather than removed from the markup: the intent at each
+ * call site was right.
+ */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* One slow revolution — a "working on it" cue, not a spinner racing next to a progress bar. */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 6s linear infinite;
+}
+
+/*
+ * Breathes rather than blinks, and deliberately does not move: this is on a primary button, and a
+ * control that never stops changing size is both fussy to look at and impossible to click
+ * reliably. Only the glow travels.
+ */
+@keyframes pulse-slow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.28); }
+  50% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2.4s ease-in-out infinite;
+}
+
+/* A soft halo that grows outward and fades, replacing animate-ping's hard edge. */
+@keyframes aura {
+  0% { opacity: 0.55; transform: scale(0.9); }
+  70% { opacity: 0; transform: scale(1.45); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+.animate-aura {
+  animation: aura 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Everything above is decoration. Anyone who has asked not to see motion gets none of it. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-in,
+  .animate-panel-in,
+  .animate-spin-slow,
+  .animate-pulse-slow,
+  .animate-aura {
+    animation: none;
+  }
+}
