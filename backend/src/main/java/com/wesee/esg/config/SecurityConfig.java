@@ -7,6 +7,9 @@ import com.wesee.esg.security.JwtService;
 import com.wesee.esg.session.UserSessionRepository;
 import com.wesee.esg.user.AppUserRepository;
 import jakarta.persistence.EntityManager;
+import com.wesee.esg.security.TrialAccessFilter;
+import com.wesee.esg.tenant.CompanyRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -64,7 +67,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter,
-                                            ApiTokenAuthenticationFilter apiTokenAuthenticationFilter) throws Exception {
+                                            ApiTokenAuthenticationFilter apiTokenAuthenticationFilter,
+                                            TrialAccessFilter trialAccessFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -75,13 +79,24 @@ public class SecurityConfig {
                         // Reached before any session exists, by someone who cannot log in.
                         .requestMatchers("/api/v1/auth/forgot-password", "/api/v1/auth/reset-password/**").permitAll()
                         .requestMatchers("/api/v1/auth/invites/**").permitAll()
+                        .requestMatchers("/api/v1/webhooks/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(apiTokenAuthenticationFilter, JwtAuthenticationFilter.class);
+                .addFilterBefore(apiTokenAuthenticationFilter, JwtAuthenticationFilter.class)
+                // After the JWT filter, because it needs the authenticated company to know whose
+                // trial to check.
+                .addFilterAfter(trialAccessFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
+
+    /** Stripe signs its callbacks itself, so the webhook route authenticates by signature, not JWT. */
+    @Bean
+    public TrialAccessFilter trialAccessFilter(CompanyRepository companyRepository, ObjectMapper objectMapper) {
+        return new TrialAccessFilter(companyRepository, objectMapper);
+    }
+
 }

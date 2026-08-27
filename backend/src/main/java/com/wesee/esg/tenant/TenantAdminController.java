@@ -1,6 +1,7 @@
 package com.wesee.esg.tenant;
 
 import com.wesee.esg.tenant.dto.TenantSummaryResponse;
+import com.wesee.esg.tenant.dto.UpdateTenantTrialRequest;
 import com.wesee.esg.tenant.dto.TenantUserResponse;
 import com.wesee.esg.tenant.dto.UpdatePlanRequest;
 import com.wesee.esg.tenant.dto.UpdateTenantStatusRequest;
@@ -50,4 +51,10 @@ public class TenantAdminController {
     public List<TenantUserResponse> listUsers(@PathVariable UUID id) {
         return companyService.listTenantUsers(id);
     }
+
+    @PatchMapping("/{id}/trial")
+    public TenantSummaryResponse updateTrial(@PathVariable UUID id, @Valid @RequestBody UpdateTenantTrialRequest request) {
+        return companyService.adminUpdateTrial(id, request);
+    }
+
 }

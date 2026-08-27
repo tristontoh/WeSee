@@ -20,6 +20,8 @@ const EVENT_TYPE_FILTERS: { value: BackendActivityEventType | 'all'; label: stri
   { value: 'PLAN_CHANGE', label: 'Plan Change' },
   { value: 'SUPPORT_TICKET', label: 'Support Request' },
   { value: 'EXPORT_SUCCESS', label: 'Sync Success' },
+  { value: 'TRIAL_CONVERTED', label: 'Trial Converted' },
+  { value: 'TRIAL_REVOKED', label: 'Trial Revoked' },
 ];
 
 interface AdminAuditLogTabProps {

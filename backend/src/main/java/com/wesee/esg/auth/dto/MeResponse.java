@@ -5,6 +5,7 @@ import com.wesee.esg.tenant.SubscriptionPlan;
 import com.wesee.esg.user.Role;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +29,9 @@ public record MeResponse(
         boolean hasAvatar,
         boolean mfaSetupRequired,
         /** Granted keys of the user's custom role; empty for COMPANY_ADMIN and platform roles. */
-        List<String> permissions
+        List<String> permissions,
+        /** When the free trial runs out, and whether the company has since actually paid. */
+        Instant trialEndsAt,
+        boolean trialConverted
 ) {
 }

@@ -1,8 +1,13 @@
 package com.wesee.esg.tenant;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface CompanyRepository extends JpaRepository<Company, UUID> {
@@ -17,4 +22,16 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     /** The platform admin's all-tenants list. Ordered for the same reason, and to match it. */
     List<Company> findAllByOrderByCreatedAtAscIdAsc();
+
+    Optional<Company> findByStripeCustomerId(String stripeCustomerId);
+
+    /**
+     * Row-locking read for the checkout-confirmation critical section. Two tabs confirming the same
+     * session must serialise rather than race: the loser's stale in-memory copy would otherwise
+     * overwrite the winner's just-saved stripeCustomerId and stripeSubscriptionId with nulls.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Company c where c.id = :id")
+    Optional<Company> findByIdForUpdate(@Param("id") UUID id);
+
 }

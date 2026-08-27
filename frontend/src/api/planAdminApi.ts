@@ -10,13 +10,14 @@ import { FeatureFlagResponse } from './referenceApi';
 export interface PlanPricingResponse {
   plan: BackendSubscriptionPlan;
   monthlyPrice: number;
+  annualMonthlyPrice: number;
 }
 
 export const planAdminApi = {
   listPricing: () => apiClient.get<PlanPricingResponse[]>('/api/v1/admin/plan-pricing'),
 
-  updatePricing: (plan: BackendSubscriptionPlan, monthlyPrice: number) =>
-    apiClient.patch<PlanPricingResponse>(`/api/v1/admin/plan-pricing/${plan}`, { monthlyPrice }),
+  updatePricing: (plan: BackendSubscriptionPlan, monthlyPrice: number, annualMonthlyPrice: number) =>
+    apiClient.patch<PlanPricingResponse>(`/api/v1/admin/plan-pricing/${plan}`, { monthlyPrice, annualMonthlyPrice }),
 
   listFeatureFlags: () => apiClient.get<FeatureFlagResponse[]>('/api/v1/admin/reference/features'),
 

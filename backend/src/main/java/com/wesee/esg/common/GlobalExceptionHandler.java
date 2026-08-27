@@ -1,5 +1,6 @@
 package com.wesee.esg.common;
 
+import com.wesee.esg.billing.StripeException;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.ForbiddenException;
 import com.wesee.esg.common.exceptions.NotFoundException;
@@ -16,6 +17,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -52,6 +54,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of(409, "Conflict", ex.getMessage(), request.getRequestURI()));
+    }
+
+    /** 502, not 500: Stripe refusing or timing out is an upstream failure, not a fault in this app. */
+    @ExceptionHandler(StripeException.class)
+    public ResponseEntity<ApiError> handleStripeError(StripeException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiError.of(502, "Bad Gateway", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -100,6 +109,17 @@ public class GlobalExceptionHandler {
      * the published API contract, unlike Jackson's own message, which carries internal class
      * names.
      */
+    /**
+     * A required header that is absent is a malformed request, not a server fault. Without this the
+     * catch-all turned Stripe's webhook route into a 500 for any call lacking Stripe-Signature —
+     * which is what an unsigned probe looks like.
+     */
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiError> handleMissingHeader(MissingRequestHeaderException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiError.of(400, "Bad Request", "Missing required header: " + ex.getHeaderName(), request.getRequestURI()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex,
                                                          HttpServletRequest request) {

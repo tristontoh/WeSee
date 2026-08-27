@@ -12,6 +12,10 @@ import { planFromBackend, marketFromBackend, marketToBackend, FrontendMarket } f
 import { Role } from '../permissions';
 
 export interface UserProfile {
+  /** Null until onboarding completes — the clock starts there, not at registration. */
+  trialEndsAt: string | null;
+  /** Set by a PLATFORM_ADMIN once the company has actually paid. */
+  trialConverted: boolean;
   name: string;
   email: string;
   company: string;
@@ -37,7 +41,13 @@ export interface UserProfile {
   permissions: Set<string> | undefined;
 }
 
-function toUserProfile(me: MeResponse): UserProfile {
+/** One place decides whether a trial is over, so the route gate and the billing page cannot disagree. */
+export function isTrialExpired(user: Pick<UserProfile, 'trialEndsAt' | 'trialConverted'> | null): boolean {
+  if (!user || !user.trialEndsAt || user.trialConverted) return false;
+  return new Date(user.trialEndsAt).getTime() < Date.now();
+}
+
+export function toUserProfile(me: MeResponse): UserProfile {
   return {
     name: me.name,
     email: me.email,
@@ -56,6 +66,8 @@ function toUserProfile(me: MeResponse): UserProfile {
     hasAvatar: me.hasAvatar,
     mfaSetupRequired: me.mfaSetupRequired,
     permissions: me.permissions ? new Set(me.permissions) : undefined,
+    trialEndsAt: me.trialEndsAt ?? null,
+    trialConverted: me.trialConverted ?? false,
   };
 }
 

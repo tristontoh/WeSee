@@ -32,4 +32,20 @@ public class Invoice extends TenantOwnedEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private InvoiceStatus status = InvoiceStatus.PENDING;
+
+    /** Null for a hand-entered invoice; set for one synced from Stripe. The upsert key, because
+        webhooks redeliver the same event. */
+    @Column(name = "stripe_invoice_id", length = 255)
+    private String stripeInvoiceId;
+
+    @Column(length = 500)
+    private String description;
+
+    /** Stripe's hosted invoice page and generated PDF. */
+    @Column(name = "hosted_invoice_url", length = 1000)
+    private String hostedInvoiceUrl;
+
+    @Column(name = "pdf_url", length = 1000)
+    private String pdfUrl;
+
 }

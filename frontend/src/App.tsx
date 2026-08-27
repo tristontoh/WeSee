@@ -47,7 +47,8 @@ import {
 } from 'lucide-react';
 
 import { PlanProvider, usePlan, PlanType } from './contexts/PlanContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth, isTrialExpired } from './contexts/AuthContext';
+import TrialExpiredPage from './components/TrialExpiredPage';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { RefreshProvider } from './contexts/RefreshContext';
 import { Role, canAccess, hasPermission, MANAGEMENT_ROLES, PLATFORM_ROLES, TENANT_ROLES } from './permissions';
@@ -144,6 +145,13 @@ function AuthenticatedLayout({ children, allowedRoles, requiredPermissions }: { 
 
   // Platform-wide "require 2FA for all users" toggle (Platform Settings → Security) — every role
   // can reach /profile, which is where 2FA enrollment lives, so redirect there until they enroll.
+  // The free trial has run out and nobody has marked the company as paid (Platform Admin >
+  // Tenants). Platform-level roles belong to no company, so no trial applies to them.
+  const trialExpired = isTrialExpired(user) && !canAccess(user?.role, PLATFORM_ROLES);
+  if (trialExpired && location.pathname !== '/trial-expired') {
+    return <Navigate to="/trial-expired" replace />;
+  }
+
   const requiresMfaSetup = user && user.mfaSetupRequired;
   if (requiresMfaSetup && location.pathname !== '/profile') {
     return <Navigate to="/profile" replace />;
@@ -631,7 +639,13 @@ function AppContent() {
       />
       <Route
         path="/onboarding"
-        element={<OnboardingPage />} 
+        element={<OnboardingPage />}
+      />
+      {/* Outside AuthenticatedLayout: the gate above sends people here, so wrapping it in the
+          layout that does the sending would loop. */}
+      <Route
+        path="/trial-expired"
+        element={<TrialExpiredPage />}
       />
 
       {/* Public Pages */}

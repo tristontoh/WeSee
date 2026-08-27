@@ -319,6 +319,9 @@ public class AuthService {
         company.setMarketClassification(request.market());
         company.setSubscriptionPlan(planForMarket(request.market()));
         company.setOnboardingCompleted(true);
+        // The clock starts when the workspace is actually usable, not at registration — someone who
+        // signs up and finishes setting up a week later gets the full fourteen days.
+        company.setTrialEndsAt(Instant.now().plus(14, ChronoUnit.DAYS));
         company.setFrameworks(request.frameworks() != null ? request.frameworks() : java.util.List.of());
         company.setPriorities(request.priorities() != null ? request.priorities() : java.util.List.of());
 
@@ -364,7 +367,9 @@ public class AuthService {
                 mfaSetupRequired,
                 // Empty for COMPANY_ADMIN, which holds no custom role and passes every check
                 // implicitly — see PermissionGateService.
-                user.getCustomRole() != null ? user.getCustomRole().getPermissionKeys() : java.util.List.of()
+                user.getCustomRole() != null ? user.getCustomRole().getPermissionKeys() : java.util.List.of(),
+                company != null ? company.getTrialEndsAt() : null,
+                company != null && Boolean.TRUE.equals(company.getTrialConverted())
         );
     }
 }

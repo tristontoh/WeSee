@@ -7,9 +7,10 @@ import java.math.BigDecimal;
 
 public record PlanPricingResponse(
         SubscriptionPlan plan,
-        BigDecimal monthlyPrice
+        BigDecimal monthlyPrice,
+        BigDecimal annualMonthlyPrice
 ) {
     public static PlanPricingResponse from(PlanPricing p) {
-        return new PlanPricingResponse(p.getPlan(), p.getMonthlyPrice());
+        return new PlanPricingResponse(p.getPlan(), p.getMonthlyPrice(), p.getAnnualMonthlyPrice());
     }
 }

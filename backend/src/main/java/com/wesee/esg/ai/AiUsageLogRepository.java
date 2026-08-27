@@ -10,10 +10,15 @@ import java.util.UUID;
 
 public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
 
+    /**
+     * Aliases are quoted because Postgres folds an unquoted identifier to lower case: they came back
+     * as "requestcount" while the projection's getRequestCount() looked for "requestCount", so any
+     * company with a single usage row got a 500 rather than a chart.
+     *
+     * The note lives here rather than inside the string — Spring Data parses the query text, and a
+     * leading SQL comment stops it building the query at all, which fails at context startup.
+     */
     @Query(value = """
-            -- Quoted, because Postgres folds an unquoted identifier to lower case: the columns
-            -- came back as "requestcount" and the projection's getRequestCount() looked for
-            -- "requestCount", so any company with a single usage row got a 500 rather than a chart.
             SELECT date_trunc('month', created_at) AS "month",
                    count(*) AS "requestCount",
                    sum(CASE WHEN success THEN 1 ELSE 0 END) AS "successCount",

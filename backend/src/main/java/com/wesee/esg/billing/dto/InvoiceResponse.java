@@ -16,7 +16,10 @@ public record InvoiceResponse(
         LocalDate dueDate,
         BigDecimal amount,
         InvoiceStatus status,
-        Instant createdAt
+        String description,
+        Instant createdAt,
+        String hostedInvoiceUrl,
+        String pdfUrl
 ) {
     public static InvoiceResponse from(Invoice invoice, String companyName) {
         return new InvoiceResponse(
@@ -27,7 +30,10 @@ public record InvoiceResponse(
                 invoice.getDueDate(),
                 invoice.getAmount(),
                 invoice.getStatus(),
-                invoice.getCreatedAt()
+                invoice.getDescription(),
+                invoice.getCreatedAt(),
+                invoice.getHostedInvoiceUrl(),
+                invoice.getPdfUrl()
         );
     }
 }

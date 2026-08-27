@@ -5,7 +5,9 @@
 
 import { apiClient } from './client';
 
-export type BackendActivityEventType = 'SIGNUP' | 'PLAN_CHANGE' | 'SUPPORT_TICKET' | 'EXPORT_SUCCESS';
+export type BackendActivityEventType =
+  | 'SIGNUP' | 'PLAN_CHANGE' | 'SUPPORT_TICKET' | 'EXPORT_SUCCESS'
+  | 'TRIAL_CONVERTED' | 'TRIAL_REVOKED';
 
 export interface ActivityLogResponse {
   id: string;

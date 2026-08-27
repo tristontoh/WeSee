@@ -37,6 +37,7 @@ public class PlanPricingService {
         PlanPricing pricing = planPricingRepository.findById(plan)
                 .orElseThrow(() -> new NotFoundException("No pricing configured for plan: " + plan));
         pricing.setMonthlyPrice(request.monthlyPrice());
+        pricing.setAnnualMonthlyPrice(request.annualMonthlyPrice());
         return PlanPricingResponse.from(planPricingRepository.save(pricing));
     }
 }

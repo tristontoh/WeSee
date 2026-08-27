@@ -21,6 +21,7 @@ export default function AdminPlansTab({ showToast }: AdminPlansTabProps) {
   const [planPricingLoading, setPlanPricingLoading] = useState(true);
   const [editingPricePlan, setEditingPricePlan] = useState<BackendSubscriptionPlan | null>(null);
   const [priceDraft, setPriceDraft] = useState('');
+  const [annualPriceDraft, setAnnualPriceDraft] = useState('');
 
   const [featureFlagsAdmin, setFeatureFlagsAdmin] = useState<FeatureFlagResponse[]>([]);
   const [featureFlagsAdminLoading, setFeatureFlagsAdminLoading] = useState(true);
@@ -38,22 +39,24 @@ export default function AdminPlansTab({ showToast }: AdminPlansTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startEditPrice = (plan: BackendSubscriptionPlan, current: number) => {
+  const startEditPrice = (plan: BackendSubscriptionPlan, currentMonthly: number, currentAnnual: number) => {
     setEditingPricePlan(plan);
-    setPriceDraft(String(current));
+    setPriceDraft(String(currentMonthly));
+    setAnnualPriceDraft(String(currentAnnual));
   };
 
   const savePrice = (plan: BackendSubscriptionPlan) => {
-    const value = parseFloat(priceDraft);
-    if (Number.isNaN(value) || value < 0) {
-      showToast('Enter a valid price.', 'warning');
+    const monthly = parseFloat(priceDraft);
+    const annual = parseFloat(annualPriceDraft);
+    if (Number.isNaN(monthly) || monthly < 0 || Number.isNaN(annual) || annual < 0) {
+      showToast('Enter valid prices.', 'warning');
       return;
     }
-    planAdminApi.updatePricing(plan, value)
+    planAdminApi.updatePricing(plan, monthly, annual)
       .then((updated) => {
         setPlanPricing(prev => prev.map(p => p.plan === updated.plan ? updated : p));
         setEditingPricePlan(null);
-        showToast(`Updated ${PLAN_LABELS[plan]} pricing to $${value}/mo.`, 'success');
+        showToast(`Updated ${PLAN_LABELS[plan]} pricing — $${monthly}/mo monthly, $${annual}/mo billed annually.`, 'success');
       })
       .catch(() => showToast('Failed to update pricing.', 'warning'));
   };
@@ -104,40 +107,64 @@ export default function AdminPlansTab({ showToast }: AdminPlansTabProps) {
               </span>
 
               {isEditing ? (
-                <div className="mt-3 flex items-center space-x-2">
-                  <span className="text-lg font-bold text-gray-400">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={priceDraft}
-                    onChange={(e) => setPriceDraft(e.target.value)}
-                    autoFocus
-                    className="w-24 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-lg font-bold text-gray-900 font-mono outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                  <button
-                    onClick={() => savePrice(plan)}
-                    className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg cursor-pointer transition-colors"
-                    title="Save"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setEditingPricePlan(null)}
-                    className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-lg cursor-pointer transition-colors"
-                    title="Cancel"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                <div className="mt-3 space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Monthly</label>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-bold text-gray-400">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={priceDraft}
+                        onChange={(e) => setPriceDraft(e.target.value)}
+                        autoFocus
+                        className="w-24 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-lg font-bold text-gray-900 font-mono outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Billed annually (per mo)</label>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-bold text-gray-400">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={annualPriceDraft}
+                        onChange={(e) => setAnnualPriceDraft(e.target.value)}
+                        className="w-24 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-lg font-bold text-gray-900 font-mono outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <button
+                      onClick={() => savePrice(plan)}
+                      className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg cursor-pointer transition-colors"
+                      title="Save"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setEditingPricePlan(null)}
+                      className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-lg cursor-pointer transition-colors"
+                      title="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-3 flex items-center justify-between">
-                  <div className="flex items-baseline space-x-1">
-                    <span className="text-2xl font-bold text-gray-900 font-mono">${pricing?.monthlyPrice ?? '—'}</span>
-                    <span className="text-xs text-gray-400">/mo</span>
+                  <div className="space-y-0.5">
+                    <div className="flex items-baseline space-x-1">
+                      <span className="text-2xl font-bold text-gray-900 font-mono">${pricing?.monthlyPrice ?? '—'}</span>
+                      <span className="text-xs text-gray-400">/mo</span>
+                    </div>
+                    <div className="text-[10px] text-gray-400">${pricing?.annualMonthlyPrice ?? '—'}/mo billed annually</div>
                   </div>
                   <button
-                    onClick={() => startEditPrice(plan, pricing?.monthlyPrice ?? 0)}
+                    onClick={() => startEditPrice(plan, pricing?.monthlyPrice ?? 0, pricing?.annualMonthlyPrice ?? 0)}
                     className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
                     title="Edit price"
                   >

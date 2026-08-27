@@ -7,6 +7,9 @@ import { apiClient } from './client';
 import { BackendMarketClassification, BackendSubscriptionPlan } from './mappers';
 
 export interface MeResponse {
+  /** Null until onboarding completes; fourteen days out from then. */
+  trialEndsAt: string | null;
+  trialConverted: boolean;
   userId: string;
   name: string;
   email: string;

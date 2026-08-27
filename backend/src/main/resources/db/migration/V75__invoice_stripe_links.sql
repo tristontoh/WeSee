@@ -1,0 +1,2 @@
+ALTER TABLE invoice ADD COLUMN hosted_invoice_url VARCHAR(1000);
+ALTER TABLE invoice ADD COLUMN pdf_url VARCHAR(1000);

@@ -16,6 +16,8 @@ export interface TenantSummaryResponse {
   createdAt: string;
   primaryContactName: string | null;
   primaryContactEmail: string | null;
+  trialEndsAt: string | null;
+  trialConverted: boolean;
 }
 
 export type BackendRole = 'COMPANY_ADMIN' | 'COMPANY_CONTRIBUTOR' | 'CONSULTANT' | 'PLATFORM_ADMIN' | 'SUPERADMIN';
@@ -39,6 +41,9 @@ export const tenantAdminApi = {
 
   updateStatus: (id: string, active: boolean) =>
     apiClient.patch<TenantSummaryResponse>(`/api/v1/admin/tenants/${id}/status`, { active }),
+
+  updateTrial: (id: string, converted: boolean) =>
+    apiClient.patch<TenantSummaryResponse>(`/api/v1/admin/tenants/${id}/trial`, { converted }),
 
   listUsers: (id: string) => apiClient.get<TenantUserResponse[]>(`/api/v1/admin/tenants/${id}/users`),
 };

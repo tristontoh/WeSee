@@ -15,6 +15,8 @@ public record TenantSummaryResponse(
         boolean active,
         Instant createdAt,
         String primaryContactName,
-        String primaryContactEmail
+        String primaryContactEmail,
+        Instant trialEndsAt,
+        boolean trialConverted
 ) {
 }

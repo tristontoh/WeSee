@@ -18,6 +18,7 @@ import com.wesee.esg.tenant.dto.TeamInviteResponse;
 import com.wesee.esg.tenant.dto.TenantSummaryResponse;
 import com.wesee.esg.tenant.dto.TenantUserResponse;
 import com.wesee.esg.tenant.dto.UpdateCompanyIdentityRequest;
+import com.wesee.esg.tenant.dto.UpdateTenantTrialRequest;
 import com.wesee.esg.tenant.dto.UpdateCompanyProfileRequest;
 import com.wesee.esg.tenant.dto.UpdatePlanRequest;
 import com.wesee.esg.tenant.dto.UpdateTenantStatusRequest;
@@ -139,6 +140,28 @@ public class CompanyService {
     private Company currentCompany() {
         return companyRepository.findById(currentUserProvider.requireCompanyId())
                 .orElseThrow(() -> new NotFoundException("Company not found"));
+    }
+
+    /**
+     * Marks a trial as converted to paid. Manual on purpose: payment can arrive by bank transfer or
+     * an invoice settled offline, so the flag is an operator's statement of fact rather than
+     * something inferred from Stripe alone.
+     */
+    @Transactional
+    public TenantSummaryResponse adminUpdateTrial(UUID companyId, UpdateTenantTrialRequest request) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new NotFoundException("Company not found"));
+        boolean wasConverted = Boolean.TRUE.equals(company.getTrialConverted());
+        company.setTrialConverted(request.converted());
+        company = companyRepository.save(company);
+        if (Boolean.TRUE.equals(request.converted()) && !wasConverted) {
+            activityLogService.record(company.getId(), company.getName(), ActivityEventType.TRIAL_CONVERTED,
+                    "Trial manually marked as converted to paid");
+        } else if (!Boolean.TRUE.equals(request.converted()) && wasConverted) {
+            activityLogService.record(company.getId(), company.getName(), ActivityEventType.TRIAL_REVOKED,
+                    "Trial conversion was taken back");
+        }
+        return toSummary(company);
     }
 
     private Company groupRoot(Company company) {
@@ -504,7 +527,9 @@ public class CompanyService {
                 Boolean.TRUE.equals(company.getActive()),
                 company.getCreatedAt(),
                 primaryContact != null ? primaryContact.getName() : null,
-                primaryContact != null ? primaryContact.getEmail() : null
+                primaryContact != null ? primaryContact.getEmail() : null,
+                company.getTrialEndsAt(),
+                Boolean.TRUE.equals(company.getTrialConverted())
         );
     }
 

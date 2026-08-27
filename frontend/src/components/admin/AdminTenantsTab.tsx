@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, X, Filter, Archive, Check } from 'lucide-react';
+import { Search, X, Filter, Archive, Check, CreditCard } from 'lucide-react';
 import { tenantAdminApi } from '../../api/tenantAdminApi';
 import { planToBackend } from '../../api/mappers';
 import { PlanType } from '../../contexts/PlanContext';
@@ -54,6 +54,26 @@ export default function AdminTenantsTab({ tenants, tenantsLoading, onSelectTenan
         showToast(`Billing suspension state toggled for "${tenant.name}".`, 'info');
       })
       .catch(() => showToast(`Failed to update status for "${tenant.name}".`, 'warning'));
+  };
+
+  // Manual escape hatch for the free-trial gate (TrialAccessFilter) — there's no automated Stripe
+  // charge/webhook flow yet, so an admin marks a tenant converted-to-paid by hand once they've
+  // actually collected payment.
+  const handleToggleTrialConverted = (tenant: Tenant) => {
+    tenantAdminApi.updateTrial(tenant.id, !tenant.trialConverted)
+      .then((updated) => {
+        onTenantUpdated(toTenant(updated));
+        showToast(tenant.trialConverted
+          ? `"${tenant.name}" reverted to trial status.`
+          : `"${tenant.name}" marked as converted to paid.`, 'success');
+      })
+      .catch(() => showToast(`Failed to update trial status for "${tenant.name}".`, 'warning'));
+  };
+
+  const trialStatusLabel = (tenant: Tenant): string => {
+    if (tenant.trialConverted) return 'Paid';
+    if (!tenant.trialEndsAt) return 'Onboarding';
+    return new Date(tenant.trialEndsAt).getTime() < Date.now() ? 'Trial ended' : 'On trial';
   };
 
   const filteredTenants = tenants.filter(t => {
@@ -188,6 +208,7 @@ export default function AdminTenantsTab({ tenants, tenantsLoading, onSelectTenan
                 <th className="px-6 py-4">Active Plan Tier</th>
                 <th className="px-6 py-4">Bursa Category</th>
                 <th className="px-6 py-4">Billing Status</th>
+                <th className="px-6 py-4">Trial</th>
                 <th className="px-6 py-4">Monthly MRR</th>
                 <th className="px-6 py-4">Created Date</th>
                 <th className="px-6 py-4 text-right">Operator Actions</th>
@@ -247,6 +268,17 @@ export default function AdminTenantsTab({ tenants, tenantsLoading, onSelectTenan
                     </span>
                   </td>
 
+                  {/* Trial / billing status */}
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      t.trialConverted ? 'bg-emerald-50 text-emerald-700'
+                        : trialStatusLabel(t) === 'Trial ended' ? 'bg-red-50 text-red-700'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {trialStatusLabel(t)}
+                    </span>
+                  </td>
+
                   {/* Monthly rate */}
                   <td className="px-6 py-4 font-mono font-bold text-gray-700">
                     ${PLAN_PRICING[t.plan]}
@@ -280,6 +312,14 @@ export default function AdminTenantsTab({ tenants, tenantsLoading, onSelectTenan
                         title="Toggle Suspension"
                       >
                         <Archive className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleTrialConverted(t)}
+                        className={`p-1 cursor-pointer rounded hover:bg-gray-100 ${t.trialConverted ? 'text-emerald-600' : 'text-gray-400 hover:text-emerald-600'}`}
+                        title={t.trialConverted ? 'Revert to trial status' : 'Mark as converted to paid'}
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>
