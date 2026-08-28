@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { referenceApi } from '../api/referenceApi';
+import { tokenStore } from '../api/tokenStore';
 import { planFromBackend } from '../api/mappers';
 
 export type PlanType = 'starter' | 'growth' | 'issuer-ready';
@@ -16,6 +17,8 @@ interface PlanContextProps {
   /** False until the server's flags replace the seeded defaults, so callers can re-run once. */
   flagsLoaded: boolean;
   isFeatureVisible: (featureKey: string) => boolean;
+  /** Re-fetches the gating rules. Called once a session exists — the route is authenticated. */
+  reloadFeatureFlags: () => void;
   getFeatureDetails: (featureKey: string) => { name: string; requiredPlan: PlanType; description: string };
 }
 
@@ -74,7 +77,7 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [featureFlags, setFeatureFlags] = useState<Record<string, FeatureFlagState>>(defaultFlags);
   const [flagsLoaded, setFlagsLoaded] = useState(false);
 
-  useEffect(() => {
+  const reloadFeatureFlags = useCallback(() => {
     referenceApi.featureFlags()
       .then((flags) => {
         setFeatureFlags((prev) => {
@@ -86,11 +89,26 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       })
       .catch(() => {
-        // Not logged in yet, offline, etc. — keep the fallback defaults.
+        // Offline, or a token that has stopped working — keep the fallback defaults.
       })
       // Settled either way: a caller waiting to re-run should not wait forever on a failed fetch.
       .finally(() => setFlagsLoaded(true));
   }, []);
+
+  /*
+   * This provider sits outside AuthProvider, so it cannot watch the session itself; AuthProvider
+   * calls reloadFeatureFlags once one exists. Skipping the fetch while signed out is not only to
+   * spare the marketing pages a 403 in the console: the effect used to run once at app mount and
+   * never again, so a session begun from the login screen spent its whole life on the seeded
+   * defaults, and a rule an admin had changed took effect only after a full page reload.
+   */
+  useEffect(() => {
+    if (!tokenStore.get()) {
+      setFlagsLoaded(true);
+      return;
+    }
+    reloadFeatureFlags();
+  }, [reloadFeatureFlags]);
 
   const setPlan = (newPlan: PlanType) => {
     setPlanState(newPlan);
@@ -127,7 +145,7 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <PlanContext.Provider value={{ plan, setPlan, hasFeature, flagsLoaded, isFeatureVisible, getFeatureDetails }}>
+    <PlanContext.Provider value={{ plan, setPlan, hasFeature, flagsLoaded, isFeatureVisible, reloadFeatureFlags, getFeatureDetails }}>
       {children}
     </PlanContext.Provider>
   );

@@ -103,9 +103,15 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode; currentPlan: PlanType; setWorkspacePlan: (p: PlanType) => void }> = ({
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+  currentPlan: PlanType;
+  setWorkspacePlan: (p: PlanType) => void;
+  onAuthenticated: () => void;
+}> = ({
   children,
   setWorkspacePlan,
+  onAuthenticated,
 }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -122,6 +128,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; currentPlan: Pl
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /*
+   * One place rather than at each of the four points a token is stored (rehydrate, login, MFA,
+   * invite): the flags only need re-fetching when the session flips to authenticated, and keying
+   * on that covers every route into it.
+   */
+  useEffect(() => {
+    if (isAuthenticated) onAuthenticated();
+  }, [isAuthenticated, onAuthenticated]);
 
   useEffect(() => {
     const token = tokenStore.get();

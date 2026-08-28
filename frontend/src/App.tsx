@@ -922,9 +922,9 @@ function AppContent() {
  * 3. Core App Entrance wrapping Provider and Router
  */
 function AppWithAuth() {
-  const { plan, setPlan } = usePlan();
+  const { plan, setPlan, reloadFeatureFlags } = usePlan();
   return (
-    <AuthProvider currentPlan={plan} setWorkspacePlan={setPlan}>
+    <AuthProvider currentPlan={plan} setWorkspacePlan={setPlan} onAuthenticated={reloadFeatureFlags}>
       <HashRouter>
         <ScrollToTop />
         {/* Wraps the routed screens so each can register how to reload itself, and the top bar's
