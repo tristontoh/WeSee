@@ -131,7 +131,7 @@ class StripeWebhookServiceTest {
                     "amount_paid":9900,
                     "due_date":1787761898,
                     "created":1787761800,
-                    "lines":{"data":[{"description":"1 \\u00d7 STARTER Plan \\u2014 EsgEasy (at RM99.00 / month)"}]}
+                    "lines":{"data":[{"description":"1 \\u00d7 STARTER Plan \\u2014 WeSee (at RM99.00 / month)"}]}
                 }}}
                 """;
         service.handleEvent(payload, "any-header");

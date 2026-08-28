@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Trees, Lock, LogOut, CreditCard } from 'lucide-react';
+import { Lock, LogOut, CreditCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { billingApi } from '../api/billingApi';
@@ -92,10 +92,10 @@ export default function TrialExpiredPage() {
     <div className="min-h-screen w-screen flex items-center justify-center bg-[#F8F9FA] p-6">
       <div className="max-w-md w-full bg-white border border-gray-200 rounded-3xl shadow-xl p-8 text-center space-y-6">
         <div className="flex items-center justify-center space-x-2">
-          <div className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl">
-            <Trees className="w-5 h-5" />
+          <div className="p-2 bg-white border border-gray-200 rounded-xl">
+            <img src="assets/wesee-logo.png" alt="WeSee" className="w-5 h-5 object-contain" />
           </div>
-          <span className="text-sm font-bold tracking-tight text-gray-900">EsgEasy</span>
+          <span className="text-sm font-bold tracking-tight text-gray-900">WeSee</span>
         </div>
 
         <div className="w-14 h-14 mx-auto rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400">
@@ -129,7 +129,7 @@ export default function TrialExpiredPage() {
             </Button>
 
             <p className="text-xs text-gray-400 leading-relaxed">
-              Or contact your account administrator, or <span className="font-semibold text-gray-500">support@esgeasy.my</span>.
+              Or contact your account administrator, or <span className="font-semibold text-gray-500">support@wesee.my</span>.
             </p>
 
             <Button variant="secondary" size="md" className="w-full" onClick={logout} icon={<LogOut className="w-4 h-4" />}>

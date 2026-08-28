@@ -111,7 +111,7 @@ public class CompanyBillingService {
         params.add("line_items[0][price_data][currency]", "myr");
         params.add("line_items[0][price_data][unit_amount]", toCents(pricing.getMonthlyPrice()));
         params.add("line_items[0][price_data][recurring][interval]", "month");
-        params.add("line_items[0][price_data][product_data][name]", targetPlan.name() + " Plan — EsgEasy");
+        params.add("line_items[0][price_data][product_data][name]", BillingProductName.of(targetPlan));
 
         Map<String, Object> session = stripeClient.createCheckoutSession(secretKey, params);
         Object url = session.get("url");
@@ -280,7 +280,7 @@ public class CompanyBillingService {
         if (pricing.getStripeProductId() != null) {
             return pricing.getStripeProductId();
         }
-        String productId = stripeClient.createProduct(secretKey, plan.name() + " Plan — EsgEasy");
+        String productId = stripeClient.createProduct(secretKey, BillingProductName.of(plan));
         pricing.setStripeProductId(productId);
         planPricingRepository.save(pricing);
         return productId;

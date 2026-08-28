@@ -151,7 +151,7 @@ public class StripeWebhookService {
     private String firstLineDescription(JsonNode invoiceObject, Company company) {
         JsonNode firstLine = invoiceObject.path("lines").path("data").path(0);
         String description = firstLine.path("description").asText(null);
-        return description != null ? description : company.getSubscriptionPlan() + " Plan — EsgEasy";
+        return description != null ? description : BillingProductName.of(company.getSubscriptionPlan());
     }
 
     private String firstNonBlank(String preferred, String fallback) {
