@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Check,
   Minus,
@@ -22,6 +22,7 @@ import Button from './ui/Button';
 import Reveal from './ui/Reveal';
 import { useScrolled } from '../hooks/useScrolled';
 import Card from './ui/Card';
+import { publicApi, PublicPlanPricing } from '../api/publicApi';
 
 interface PricingPageProps {
   onNavigateToDashboard: () => void;
@@ -30,29 +31,79 @@ interface PricingPageProps {
   onNavigateToAbout: () => void;
 }
 
+/**
+ * Issuer-Ready is quoted, not listed, so its call to action has to reach a person. There is no
+ * sales inbox or contact form in the product yet, so it goes to support — previously this button
+ * ran the same handler as "Start free trial" and dropped an enterprise enquiry on the signup form.
+ */
+const SALES_MAILTO = `mailto:support@wesee.my?subject=${encodeURIComponent('Issuer-Ready plan enquiry')}`;
+
+/**
+ * Last resort, shown only if the pricing call fails — the marketing page must not render a card
+ * with a blank price. These mirror the seeded figures (migrations V15/V49/V76), so they go stale
+ * the moment an admin changes a price; that is the accepted cost of never showing an empty card.
+ */
+const FALLBACK_PRICING: PublicPlanPricing[] = [
+  { plan: 'STARTER', monthlyPrice: 99, annualMonthlyPrice: 83 },
+  { plan: 'GROWTH', monthlyPrice: 699, annualMonthlyPrice: 583 },
+];
+
+/** `99` -> `RM 99`, `99.5` -> `RM 99.50`. Prices are NUMERIC(10,2), so cents are possible. */
+function ringgit(amount: number): string {
+  return `RM ${amount.toLocaleString('en-MY', {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * The largest saving any plan actually offers, as a whole percent, or 0 if none does.
+ *
+ * Derived rather than written down: the badge here read "Save over 30%" while the seeded annual
+ * price equalled the monthly one, so the page was advertising a discount that did not exist and
+ * would have gone on doing so through every future price change.
+ */
+function maxSavingPercent(rows: PublicPlanPricing[] | null): number {
+  const source = rows && rows.length > 0 ? rows : FALLBACK_PRICING;
+  const best = Math.max(
+    0,
+    ...source
+      .filter((r) => r.monthlyPrice > 0)
+      .map((r) => 1 - r.annualMonthlyPrice / r.monthlyPrice),
+  );
+  return Math.round(best * 100);
+}
+
+function buildPrices(rows: PublicPlanPricing[] | null) {
+  const source = rows && rows.length > 0 ? rows : FALLBACK_PRICING;
+  const forPlan = (plan: PublicPlanPricing['plan']) => {
+    const row = source.find((r) => r.plan === plan)
+      ?? FALLBACK_PRICING.find((r) => r.plan === plan)!;
+    return {
+      monthly: ringgit(row.monthlyPrice),
+      annual: ringgit(row.annualMonthlyPrice),
+      // The headline is per month either way; this is what the year actually costs.
+      annualBilled: ringgit(row.annualMonthlyPrice * 12),
+    };
+  };
+  return { starter: forPlan('STARTER'), growth: forPlan('GROWTH') };
+}
+
 export default function PricingPage({ onNavigateToDashboard, onNavigateToFeatures, onNavigateToLanding, onNavigateToAbout }: PricingPageProps) {
   const scrolled = useScrolled();
   // Billing cycle state: false = Monthly, true = Annual
   const [isAnnual, setIsAnnual] = useState(true);
 
-  // Pricing plans prices
-  const prices = {
-    starter: {
-      monthly: 'RM 149',
-      annual: 'RM 99',
-      annualBilled: 'RM 1,188'
-    },
-    growth: {
-      monthly: 'RM 399',
-      annual: 'RM 299',
-      annualBilled: 'RM 3,588'
-    },
-    issuer: {
-      monthly: 'Contact Sales',
-      annual: 'Contact Sales',
-      annualBilled: 'Custom Enterprise Agreement'
-    }
-  };
+  // What an admin has set in Platform Admin -> Plan Management. Until this arrives the fallback
+  // below is shown; the Issuer-Ready tier is quoted, not listed, so it takes no figure from here.
+  const [pricing, setPricing] = useState<PublicPlanPricing[] | null>(null);
+
+  useEffect(() => {
+    publicApi.planPricing().then(setPricing).catch(() => setPricing(null));
+  }, []);
+
+  const prices = useMemo(() => buildPrices(pricing), [pricing]);
+  const savingPercent = useMemo(() => maxSavingPercent(pricing), [pricing]);
 
   // FAQ state: open questions indexes
   const [openFaqs, setOpenFaqs] = useState<Record<number, boolean>>({
@@ -226,10 +277,12 @@ export default function PricingPage({ onNavigateToDashboard, onNavigateToFeature
 
             <span className={`text-xs font-semibold transition-colors ${isAnnual ? 'text-white font-bold' : 'text-white/60'}`}>Billed Annually</span>
             
-            <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-emerald-100 border border-emerald-200 rounded-full text-[10px] font-bold text-emerald-800 animate-pulse">
-              <Sparkles className="w-3 h-3" />
-              <span>Save over 30%</span>
-            </span>
+            {savingPercent > 0 && (
+              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-emerald-100 border border-emerald-200 rounded-full text-[10px] font-bold text-emerald-800 animate-pulse">
+                <Sparkles className="w-3 h-3" />
+                <span>Save up to {savingPercent}%</span>
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -425,7 +478,12 @@ export default function PricingPage({ onNavigateToDashboard, onNavigateToFeature
                 </div>
   
                 <div className="mt-8">
-                  <Button variant="secondary" size="md" className="w-full text-center hover:bg-navy-100" onClick={onNavigateToDashboard}>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    className="w-full text-center hover:bg-navy-100"
+                    onClick={() => { window.location.href = SALES_MAILTO; }}
+                  >
                     Contact Sales
                   </Button>
                 </div>
@@ -555,8 +613,8 @@ export default function PricingPage({ onNavigateToDashboard, onNavigateToFeature
                     {openMobilePlan === 'issuer' && "Issuer-Ready Package Details"}
                   </span>
                   <span className="text-xs font-bold px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full">
-                    {openMobilePlan === 'starter' && (isAnnual ? "RM 99/mo" : "RM 149/mo")}
-                    {openMobilePlan === 'growth' && (isAnnual ? "RM 299/mo" : "RM 399/mo")}
+                    {openMobilePlan === 'starter' && `${isAnnual ? prices.starter.annual : prices.starter.monthly}/mo`}
+                    {openMobilePlan === 'growth' && `${isAnnual ? prices.growth.annual : prices.growth.monthly}/mo`}
                     {openMobilePlan === 'issuer' && "Custom SLA"}
                   </span>
                 </div>

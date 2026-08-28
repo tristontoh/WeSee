@@ -44,6 +44,7 @@ export interface FeatureFlagResponse {
 export interface PublicPlanPricingResponse {
   plan: BackendSubscriptionPlan;
   monthlyPrice: number;
+  annualMonthlyPrice: number;
 }
 
 export interface PermissionResponse {

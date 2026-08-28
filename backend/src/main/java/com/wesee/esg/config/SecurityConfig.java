@@ -12,6 +12,7 @@ import com.wesee.esg.tenant.CompanyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -80,6 +81,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/forgot-password", "/api/v1/auth/reset-password/**").permitAll()
                         .requestMatchers("/api/v1/auth/invites/**").permitAll()
                         .requestMatchers("/api/v1/webhooks/**").permitAll()
+                        // Read by the marketing site, which has no token. Anything mapped under
+                        // /api/v1/public is world-readable by this rule alone — put nothing there that
+                        // is not already printed on a public page.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
