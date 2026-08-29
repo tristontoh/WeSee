@@ -72,8 +72,13 @@ final class ExtractionPromptFactory {
                 - confidence runs from 0 to 1 and should reflect how clearly the figure was printed.
                 """);
 
-        prompt.append("- Use fiscal year ").append(context.defaultFiscalYear())
-                .append(" unless the document states a different one.\n");
+        // The period the document covers decides the year. Phrasing this as a default with the
+        // document as the exception put the current year ahead of a printed date: a utility bill
+        // never "states a fiscal year", it states a billing period, so a June 2025 bill was read
+        // as the current year on some runs and 2025 on others — the same document, two answers.
+        prompt.append("- fiscalYear is the year of the period the document covers, taken from the ")
+                .append("dates printed on it. Use ").append(context.defaultFiscalYear())
+                .append(" only when the document carries no date at all.\n");
 
         prompt.append("""
 
