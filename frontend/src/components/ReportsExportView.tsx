@@ -276,6 +276,12 @@ export default function ReportsExportView() {
   const isClimateUnlocked = hasFeature('climate-module') && hasFeature('ifrs-s1-s2');
   const scope1Value = emissions?.scope1.find((p) => p.fiscalYear === fiscalYear)?.value ?? null;
   const scope2Value = emissions?.scope2.find((p) => p.fiscalYear === fiscalYear)?.value ?? null;
+  /**
+   * Emissions read to one decimal. Scope 3 is a reduce() over per-category floats, so printing it
+   * raw put "432.79999999999995 tCO2e" in the report preview — a rounding artefact, not a figure.
+   */
+  const tonnes = (v: number | null) => (v === null ? 'N/A' : `${Number(v.toFixed(1))} tCO2e`);
+
   const scope3Total = emissions
     ? emissions.scope3.reduce((sum, cat) => sum + (cat.values.find((v) => v.fiscalYear === fiscalYear)?.value ?? 0), 0)
     : null;
@@ -334,9 +340,9 @@ export default function ReportsExportView() {
     ? [
         ...segments.flatMap((s) => s.items.map((item) => `IFRS S1 [${s.name}]: ${item.title} (${item.type}, ${item.horizon})`)),
         `IFRS S2 Oversight: ${ifrsS2?.oversightDescription ?? 'Not disclosed'}`,
-        `Scope 1 GHG (${period}): ${scope1Value ?? 'N/A'} tCO2e`,
-        `Scope 2 GHG (${period}): ${scope2Value ?? 'N/A'} tCO2e`,
-        `Scope 3 GHG (${period}): ${scope3Total ?? 'N/A'} tCO2e`
+        `Scope 1 GHG (${period}): ${tonnes(scope1Value)}`,
+        `Scope 2 GHG (${period}): ${tonnes(scope2Value)}`,
+        `Scope 3 GHG (${period}): ${tonnes(scope3Total)}`
       ]
     : ['IFRS S1/S2 and GHG emissions disclosures not included (requires Issuer-Ready plan).'];
 
@@ -512,9 +518,9 @@ ${governanceLines.join('\n')}
         const itemCount = segments.reduce((n, s) => n + s.items.length, 0);
         fileContent += `${itemCount} climate risk/opportunity item(s) across ${segments.length} business segment(s) (IFRS S1).\n`;
         fileContent += `IFRS S2 Oversight: ${ifrsS2?.oversightDescription ?? 'Not disclosed'}\n`;
-        fileContent += `- Scope 1 (Direct): ${scope1Value !== null ? `${scope1Value} tCO2e` : 'N/A'}\n`;
-        fileContent += `- Scope 2 (Indirect, Purchased Energy): ${scope2Value !== null ? `${scope2Value} tCO2e` : 'N/A'}\n`;
-        fileContent += `- Scope 3 (Value Chain, All Categories): ${scope3Total !== null ? `${scope3Total} tCO2e` : 'N/A'}\n`;
+        fileContent += `- Scope 1 (Direct): ${tonnes(scope1Value)}\n`;
+        fileContent += `- Scope 2 (Indirect, Purchased Energy): ${tonnes(scope2Value)}\n`;
+        fileContent += `- Scope 3 (Value Chain, All Categories): ${tonnes(scope3Total)}\n`;
       } else {
         fileContent += `- Requires the Issuer-Ready plan — not included in this disclosure cycle.\n`;
       }
@@ -810,13 +816,12 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
       </Card>
 
       {/* Primary Grid Layout */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-6">
         
-        {/* Left Column: Disclosure Summary (Preview and Generator).
-            Spans every column until there are three: this card holds a document preview, a format
-            toggle and two actions, and in one of two columns its heading wraps a word per line and
-            the actions overflow the card. */}
-        <div className="sm:col-span-2 lg:col-span-2 space-y-6">
+        {/* Disclosure Summary (preview and generator), full width.
+            It holds a document preview, a format toggle and two actions; in a two-thirds column
+            its heading wrapped a word per line and the actions overflowed the card. */}
+        <div className="space-y-6">
           <Card className="bg-white border-navy-100 p-6 space-y-6 h-full flex flex-col justify-between">
             {/* Grows with the card so the document preview takes the height rather than leaving it
                 blank: this card matches the taller column beside it, and a fixed-height preview
@@ -993,15 +998,15 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
                           <tbody className="divide-y divide-navy-50 text-navy-700">
                             <tr>
                               <td className="py-1 font-medium">Scope 1 — Direct</td>
-                              <td className="py-1 text-center font-bold font-mono text-navy-950">{scope1Value !== null ? `${scope1Value} tCO2e` : 'N/A'}</td>
+                              <td className="py-1 text-center font-bold font-mono text-navy-950">{tonnes(scope1Value)}</td>
                             </tr>
                             <tr>
                               <td className="py-1 font-medium">Scope 2 — Indirect (Purchased Energy)</td>
-                              <td className="py-1 text-center font-bold font-mono text-navy-950">{scope2Value !== null ? `${scope2Value} tCO2e` : 'N/A'}</td>
+                              <td className="py-1 text-center font-bold font-mono text-navy-950">{tonnes(scope2Value)}</td>
                             </tr>
                             <tr>
                               <td className="py-1 font-medium">Scope 3 — Value Chain (All Categories)</td>
-                              <td className="py-1 text-center font-bold font-mono text-navy-950">{scope3Total !== null ? `${scope3Total} tCO2e` : 'N/A'}</td>
+                              <td className="py-1 text-center font-bold font-mono text-navy-950">{tonnes(scope3Total)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1046,14 +1051,14 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
           </Card>
         </div>
 
-        {/* Right Column: Raw Data & CSI Export.
-            Spans both columns while there are only two, or it sits in one of them and leaves the
-            other empty — the report above it already takes the full row. Its own cards then go
-            side by side there, and stack again once they have a column of their own. */}
-        {/* items-start, not the default stretch: these two cards hold very different amounts, and
-            matching their heights leaves the shorter one mostly empty. content-start would not do
-            it — that aligns the grid as a whole, while each cell still stretches on its own. */}
-        <div className="sm:col-span-2 lg:col-span-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 items-start">
+        {/* Raw Data and CSI Export, side by side beneath the report.
+            They used to share a one-third column with the report beside them, which left each of
+            them about 370px: the copy stacked a word or two per line and the cards ran tall and
+            thin next to a very tall neighbour. Given the full width they are wide and short, and
+            they sit under the thing they export. */}
+        {/* items-start, not the default stretch: the two hold very different amounts, and matching
+            their heights leaves the shorter one mostly empty. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
           
           {/* Card 1: Raw Data Export */}
           <Card className="bg-white border-navy-100 p-6 flex flex-col justify-between h-auto space-y-4">
@@ -1081,24 +1086,26 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
 
           {/* Card 2: CSI-Compatible Export (Issuer-Ready only, wrapped in UpgradeGate) */}
           <UpgradeGate feature="csi-export" onUpgrade={() => navigate('/settings?tab=billing')}>
-            <Card className="bg-gradient-to-br from-purple-50/40 via-white to-indigo-50/40 border border-purple-200/80 p-6 space-y-4 relative overflow-hidden shadow-sm">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
-              
+            <Card className="bg-gradient-to-br from-primary-50/50 via-white to-emerald-50/25 border border-primary-200/70 p-6 space-y-4 relative overflow-hidden shadow-sm">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full blur-2xl pointer-events-none" />
+
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center border border-purple-100">
-                  <Sparkles className="w-5 h-5" />
+                <div className="w-10 h-10 bg-primary-50 text-primary-700 rounded-xl flex items-center justify-center border border-primary-100">
+                  <Database className="w-5 h-5" />
                 </div>
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-navy-500 bg-navy-50 border border-navy-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Issuer-Ready
                 </span>
               </div>
-              
+
               <div className="space-y-2">
-                <h4 className="text-sm font-bold text-purple-950 flex items-center">
+                <h4 className="text-sm font-bold text-navy-900">
                   CSI-Compatible Export
                 </h4>
                 <p className="text-[11px] text-navy-600 leading-relaxed">
-                  Structured to match Bursa's CSI data requirements for manual transfer. <strong>This does not submit to CSI directly</strong> — Bursa's CSI platform remains the official mandatory submission channel.
+                  One row per Bursa matter, with metric code, value, unit and submission status.
+                  <strong className="text-navy-800"> It does not submit for you</strong> — Bursa's CSI
+                  platform stays the official channel.
                 </p>
               </div>
 
@@ -1111,7 +1118,7 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
               </div>
 
               <Button
-                variant="premium"
+                variant="primary"
                 size="sm"
                 onClick={handleExportCSI}
                 className="w-full text-xs font-bold py-2.5"
@@ -1193,9 +1200,9 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
             </div>
 
             <div className="text-[11px] text-navy-500 space-y-1">
-              <div>Scope 1 ({period}): <strong className="text-navy-900">{scope1Value !== null ? `${scope1Value} tCO2e` : 'N/A'}</strong></div>
-              <div>Scope 2 ({period}): <strong className="text-navy-900">{scope2Value !== null ? `${scope2Value} tCO2e` : 'N/A'}</strong></div>
-              <div>Scope 3 ({period}): <strong className="text-navy-900">{scope3Total !== null ? `${scope3Total} tCO2e` : 'N/A'}</strong></div>
+              <div>Scope 1 ({period}): <strong className="text-navy-900">{tonnes(scope1Value)}</strong></div>
+              <div>Scope 2 ({period}): <strong className="text-navy-900">{tonnes(scope2Value)}</strong></div>
+              <div>Scope 3 ({period}): <strong className="text-navy-900">{tonnes(scope3Total)}</strong></div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-navy-50">
