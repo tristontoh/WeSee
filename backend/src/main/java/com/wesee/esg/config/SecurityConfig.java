@@ -13,6 +13,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -35,6 +40,17 @@ public class SecurityConfig {
     public SecurityConfig(org.springframework.core.env.Environment env) {
         String raw = env.getProperty("wesee.cors.allowed-origins", "http://localhost:3000");
         this.allowedOrigins = raw.split(",");
+    }
+
+    /** Every GET that is not one of the server's own routes: the client and its assets. */
+    private static RequestMatcher appShell() {
+        return new AndRequestMatcher(
+                new AntPathRequestMatcher("/**", HttpMethod.GET.name()),
+                new NegatedRequestMatcher(new OrRequestMatcher(
+                        new AntPathRequestMatcher("/api/**"),
+                        new AntPathRequestMatcher("/actuator/**"),
+                        new AntPathRequestMatcher("/v3/api-docs/**"),
+                        new AntPathRequestMatcher("/swagger-ui/**"))));
     }
 
     @Bean
@@ -87,6 +103,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // The client itself. It is HTML and JavaScript with no figures in it —
+                        // everything it displays comes from an API call that authenticates on its
+                        // own — so the shell has to be readable before anyone has signed in, or the
+                        // login page cannot load. Routes like /dashboard have no file behind them
+                        // and are answered by SpaResourceConfig with that same shell.
+                        .requestMatchers(appShell()).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

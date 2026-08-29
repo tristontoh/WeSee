@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  HashRouter, 
+  BrowserRouter, 
   Routes, 
   Route, 
   Navigate, 
@@ -925,14 +925,14 @@ function AppWithAuth() {
   const { plan, setPlan, reloadFeatureFlags } = usePlan();
   return (
     <AuthProvider currentPlan={plan} setWorkspacePlan={setPlan} onAuthenticated={reloadFeatureFlags}>
-      <HashRouter>
+      <BrowserRouter>
         <ScrollToTop />
         {/* Wraps the routed screens so each can register how to reload itself, and the top bar's
             refresh control can call them. */}
         <RefreshProvider>
           <AppContent />
         </RefreshProvider>
-      </HashRouter>
+      </BrowserRouter>
     </AuthProvider>
   );
 }
