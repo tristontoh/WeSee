@@ -66,8 +66,8 @@ React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ─�
 
 The **Java Spring Boot backend** (`backend/`) is the whole backend — auth, reporting, and document
 extraction in one process on :8080. The **React** app (`frontend/`) is the whole UI on :4210,
-served by Vite and mounted under a HashRouter — every route lives behind `#`, so links into the
-app (verification and invite emails included) carry the fragment.
+served by Vite. Routes are real paths, and the API can serve the built client from the same
+origin — see `make bundle` and `make serve`.
 A two-part, pure Java + React stack; no gateway, broker, or Python service.
 
 Two things worth knowing before reading the code:

@@ -22,7 +22,7 @@ broker, or Python component (an earlier FastAPI gateway was removed — see comm
 
 ```
 backend/    Java 21 / Spring Boot 3.3.5 — the entire API (347 source files, 30 controllers)
-frontend/   React 19 + Vite SPA (HashRouter) — the entire UI
+frontend/   React 19 + Vite SPA — the entire UI
 infra/      docker-compose for local Postgres
 docs/       design specs and implementation plans, one pair per milestone
 data/       runtime upload storage (untracked)
@@ -66,7 +66,7 @@ React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ─�
 
 ### Frontend
 
-- React 19 on Vite 6, routed by a **HashRouter** ([App.tsx](frontend/src/App.tsx)) — every route
+- React 19 on Vite 6, routed by a **BrowserRouter** ([App.tsx](frontend/src/App.tsx)) — every route
   lives behind `#`. Styling is Tailwind 4 driven by a token layer in
   [index.css](frontend/src/index.css); icons come from `lucide-react`.
 - `api/` holds one typed client per backend domain over a shared `apiClient`

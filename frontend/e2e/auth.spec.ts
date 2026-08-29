@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { SEED_ADMIN, TOKEN_KEY, registerUser, route, uniqueEmail } from './fixtures';
 
 /**
- * The app runs under a HashRouter, so routes live behind `#` — see fixtures.route().
+ * Routes are plain paths — see fixtures.route().
  *
  * Failures surface as toasts rather than inline field text (ToastContext), so the assertions below
  * look for the message anywhere on the page rather than beside an input.
@@ -22,7 +22,7 @@ test('platform admin signs in and lands on the operator console', async ({ page 
   await page.getByRole('button', { name: 'Sign In' }).click();
 
   // postLoginPath sends platform roles to /admin, which redirects on to the overview.
-  await expect(page).toHaveURL(/#\/admin\/overview/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin\/overview/, { timeout: 15_000 });
 });
 
 test('a wrong password shows an error and stays on login', async ({ page }) => {
@@ -32,7 +32,7 @@ test('a wrong password shows an error and stays on login', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign In' }).click();
 
   await expect(page.getByRole('alert')).toContainText(/Invalid email or password/i);
-  await expect(page).toHaveURL(/#\/login/);
+  await expect(page).toHaveURL(/\/login/);
 });
 
 test('an unverified account is told to verify before signing in', async ({ page, request }) => {
@@ -101,19 +101,19 @@ test('a bad verification token reports failure', async ({ page }) => {
 
 test('a protected route redirects to login when logged out', async ({ page }) => {
   await page.goto(route('/dashboard'));
-  await expect(page).toHaveURL(/#\/login/);
+  await expect(page).toHaveURL(/\/login/);
 });
 
 test('a stale token is cleared and the user is returned to login', async ({ page }) => {
   await page.goto(route('/login'));
   await page.evaluate((key) => localStorage.setItem(key, 'expired.invalid.token'), TOKEN_KEY);
 
-  // Reloaded, not navigated: under a HashRouter, moving between #/login and #/dashboard only
+  // Reloaded, not navigated: moving between /login and /dashboard in the client only
   // changes the fragment, so the app is never remounted and never re-reads the token. Booting with
   // the stale token in place is the situation being tested.
   await page.goto(route('/dashboard'));
   await page.reload();
 
-  await expect(page).toHaveURL(/#\/login/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
   expect(await page.evaluate((key) => localStorage.getItem(key), TOKEN_KEY)).toBeNull();
 });

@@ -14,11 +14,11 @@ export const SEED_ADMIN = { email: 'platform.admin@wesee.my', password: 'Platfor
 export const TOKEN_KEY = 'wesee_jwt_token';
 
 /**
- * The app is mounted under a HashRouter, so every route lives behind `#`. Tests go through this
- * rather than writing the fragment by hand, so a router change is one edit.
+ * Routes are plain paths. Kept as a helper anyway: it was one edit when the router dropped the
+ * "#", which is the whole reason tests do not write URLs by hand.
  */
 export function route(path: string): string {
-  return `/#${path}`;
+  return path;
 }
 
 /** Unique per run so repeated runs never collide on the unique email constraint. */
@@ -191,5 +191,5 @@ export async function loginThroughUi(
   await page.getByRole('button', { name: 'Sign In' }).click();
   // See permissions.postLoginPath: platform roles go to the operator console, a company that has
   // not finished setup to onboarding, everyone else to the dashboard.
-  await page.waitForURL(/#\/(dashboard|onboarding|admin)/, { timeout: 15_000 });
+  await page.waitForURL(/\/(dashboard|onboarding|admin)/, { timeout: 15_000 });
 }

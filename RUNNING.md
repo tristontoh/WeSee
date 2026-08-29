@@ -78,8 +78,10 @@ so development credentials live outside it.
 
 ## Things that will confuse you otherwise
 
-**Routes live behind a `#`.** The client uses a HashRouter, so it is `/#/documents`, not
-`/documents`. A link without the hash lands on the index and looks like a routing bug.
+**The API can serve the client too.** `make bundle` builds it into
+`backend/src/main/resources/static`, and `make serve` does that and then runs the API over it, so
+`http://localhost:8080/documents` works as one origin. The bundle is a build artefact and is not
+in git; without it the API is unaffected and :8080 simply answers 404.
 
 **403 is normal.** Features are gated by subscription plan, and the backend answers a
 plan-gated route with 403 rather than hiding it. On a Starter workspace the climate module, IFRS

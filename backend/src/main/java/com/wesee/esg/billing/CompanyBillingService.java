@@ -92,7 +92,7 @@ public class CompanyBillingService {
 
         String baseUrl = platformSettingsService.getEffectiveAppBaseUrl();
         String returnPath = returnTo == CreateCheckoutSessionRequest.ReturnDestination.TRIAL_EXPIRED
-                ? "/#/trial-expired" : "/#/settings?tab=billing";
+                ? "/trial-expired" : "/settings?tab=billing";
         String joiner = returnPath.contains("?") ? "&" : "?";
         String successUrl = baseUrl + returnPath + joiner + "checkout=success&session_id={CHECKOUT_SESSION_ID}";
         String cancelUrl = baseUrl + returnPath + joiner + "checkout=cancelled";

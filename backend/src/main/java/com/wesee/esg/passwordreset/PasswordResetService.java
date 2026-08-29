@@ -71,7 +71,7 @@ public class PasswordResetService {
         tokenEntity.setExpiresAt(Instant.now().plus(TOKEN_VALIDITY_MINUTES, ChronoUnit.MINUTES));
         tokenRepository.save(tokenEntity);
 
-        String resetUrl = platformSettingsService.getEffectiveAppBaseUrl() + "/#/reset-password?token=" + tokenEntity.getToken();
+        String resetUrl = platformSettingsService.getEffectiveAppBaseUrl() + "/reset-password?token=" + tokenEntity.getToken();
         UUID companyId = user.getCompany() != null ? user.getCompany().getId() : null;
         emailService.sendPasswordResetEmail(companyId, user.getEmail(), user.getName(), resetUrl);
     }

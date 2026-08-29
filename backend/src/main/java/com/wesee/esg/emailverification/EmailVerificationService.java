@@ -44,9 +44,9 @@ public class EmailVerificationService {
         tokenEntity.setExpiresAt(Instant.now().plus(TOKEN_VALIDITY_HOURS, ChronoUnit.HOURS));
         tokenRepository.save(tokenEntity);
 
-        // Hash routing, not path: the app mounts a HashRouter, so a "/verify-email?token=…" link
-        // asks the static host for a file that is not there. The fragment is what the router reads.
-        String verifyUrl = platformSettingsService.getEffectiveAppBaseUrl() + "/#/verify-email?token=" + tokenEntity.getToken();
+        // A plain path: whatever serves the client answers an unknown one with the app shell, and
+        // the router reads the token from the query. See SpaResourceConfig.
+        String verifyUrl = platformSettingsService.getEffectiveAppBaseUrl() + "/verify-email?token=" + tokenEntity.getToken();
         UUID companyId = user.getCompany() != null ? user.getCompany().getId() : null;
         emailService.sendVerificationEmail(companyId, user.getEmail(), user.getName(), verifyUrl);
     }

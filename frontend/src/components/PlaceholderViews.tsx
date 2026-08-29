@@ -271,7 +271,7 @@ export function SettingsView() {
     isReachable(requestedTab) ? requestedTab : 'profile');
 
   // Re-read on every change to the parameter, not only on mount. The company switcher links to
-  // /settings?tab=company (see AuthTopBar), and under a HashRouter that navigation changes the
+  // /settings?tab=company (see AuthTopBar), and that navigation changes the
   // query without remounting — so a reader already on Settings would sit on the wrong tab.
   useEffect(() => {
     if (isReachable(requestedTab)) setActiveTab(requestedTab);
