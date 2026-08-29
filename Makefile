@@ -1,4 +1,4 @@
-.PHONY: infra backend frontend dev
+.PHONY: infra backend frontend dev bundle serve clean-bundle
 
 infra:        ## start Postgres (Docker) on :5432 with db wesee_esg — or use your local Postgres
 	docker compose -f infra/docker-compose.yml up -d
@@ -6,8 +6,21 @@ infra:        ## start Postgres (Docker) on :5432 with db wesee_esg — or use y
 backend:       ## main API — Java Spring Boot on :8080, routes under /api/v1 (auth, indicators, targets, assurance, governance)
 	cd backend && mvn spring-boot:run
 
-frontend:      ## React app (Vite) on :4210 — routes live behind a HashRouter, so /#/path
+frontend:      ## React app (Vite) on :4210 — talks to the API on :8080
 	cd frontend && npm run dev -- --port 4210
 
 dev:          ## reminder of the two processes to run
 	@echo "Run in separate terminals: make backend  (:8080, Java) / make frontend  (:4210)"
+
+bundle:       ## build the client into the API's static folder, so :8080 serves the whole app
+	cd frontend && npm run build
+	rm -rf backend/src/main/resources/static
+	mkdir -p backend/src/main/resources/static
+	cp -R frontend/dist/. backend/src/main/resources/static/
+	@echo "bundled $$(ls backend/src/main/resources/static/assets | wc -l | tr -d ' ') asset(s) into backend/src/main/resources/static"
+
+serve: bundle ## bundle the client, then run the API serving it on :8080 as one origin
+	cd backend && mvn spring-boot:run
+
+clean-bundle: ## drop the bundled client; the API keeps working, :8080 just stops serving the app
+	rm -rf backend/src/main/resources/static
