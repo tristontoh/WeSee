@@ -60,7 +60,7 @@ has to be up or every screen loads empty.
 **Database credentials** default to `postgres` / `root` against `localhost:5432/wesee_esg`.
 Override with `DB_USERNAME` / `DB_PASSWORD` if your local Postgres differs.
 
-**Nothing to set up in the database.** Flyway runs all 67 migrations on boot and seeds the
+**Nothing to set up in the database.** Flyway runs all 75 migrations on boot and seeds the
 reference data — sectors, Bursa matters, indicator definitions, emission factors. Hibernate runs
 with `ddl-auto: validate` and never creates or alters a table: the schema belongs to the
 migrations, and an entity that disagrees with its table fails startup rather than silently altering
@@ -103,6 +103,16 @@ protected**. If compilation suddenly fails on a duplicate class, clear the copie
 find . -name "* [0-9]*" -not -path "./.git/*" -delete
 ```
 
+**`mvn clean` breaks the build until you recreate one directory.** `backend/target` is a symlink
+to `target.nosync`, and clean follows it: it deletes the real directory and leaves the symlink
+pointing at nothing, so the next build stops with `Cannot create resource output directory`. The
+same applies to `frontend/dist`.
+
+```bash
+mkdir -p backend/target.nosync    # after any mvn clean
+mkdir -p frontend/dist.nosync     # after npm run clean
+```
+
 The real fix is switching off **System Settings → Apple ID → iCloud → iCloud Drive → Desktop &
 Documents Folders**, or keeping the project somewhere else.
 
@@ -111,7 +121,7 @@ Documents Folders**, or keeping the project somewhere else.
 ## Checking a change
 
 ```bash
-cd backend  && mvn test                 # 96 unit tests
+cd backend  && mvn test                 # 113 unit tests
 cd frontend && npm run lint             # tsc --noEmit
 cd frontend && npx playwright test      # e2e against a running backend
 ```
