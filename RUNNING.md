@@ -117,8 +117,15 @@ directories, which iCloud skips — that keeps build output safe, but **source f
 protected**. If compilation suddenly fails on a duplicate class, clear the copies:
 
 ```bash
-find . -name "* [0-9]*" -not -path "./.git/*" -delete
+make tidy
 ```
+
+`tidy` removes a duplicate only when the file it copied still exists, so it cannot take a file
+legitimately named `Scope 3.md` or `Phase 2.sql`. There is deliberately no `.gitignore` pattern for
+these: a pattern broad enough to catch `LICENSE 2` also catches `Scope 3.md`, and a source file
+silently missing from git is a worse problem than a duplicate you can see. Four of these did reach
+a commit once — one of them a second copy of a Flyway migration, which Flyway would have refused to
+run against.
 
 **`mvn clean` breaks the build until you recreate one directory.** `backend/target` is a symlink
 to `target.nosync`, and clean follows it: it deletes the real directory and leaves the symlink
