@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Trash2,
@@ -42,6 +43,7 @@ import { targetsApi, PerformanceTargetResponse } from '../api/targetsApi';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import DraftWithAiButton from './ai/DraftWithAiButton';
+import FindEvidenceButton from './evidence/FindEvidenceButton';
 import { fiscalYearKeys } from '../utils/fiscalYears';
 
 const CURRENT_FISCAL_YEAR = 2026;
@@ -352,6 +354,7 @@ function fromScope3Category(c: Scope3CategoryResponse): Scope3CategoryUI {
 // 1. IFRS S1 COMPONENT
 // ========================================================
 export function IfrsS1Form() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -514,11 +517,22 @@ export function IfrsS1Form() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <label className="text-[10px] text-navy-400 uppercase tracking-wider block">Board-level Oversight of Sustainability Matters</label>
-                <DraftWithAiButton
-                  draftType="ifrs-s1-oversight"
-                  context={{ sector: user?.sector ?? '', fiscalYear: String(CURRENT_FISCAL_YEAR) }}
-                  onDraft={(text) => updateDisclosureField('governance', 'oversightDescription', text)}
-                />
+                <div className="flex items-center gap-2">
+                  {/* Drafting and evidencing side by side: a sentence a model wrote about board
+                      oversight is exactly the kind of claim that should be easy to go looking
+                      behind, and hard to leave unchecked. */}
+                  <FindEvidenceButton
+                    claim={disclosure.governance.oversightDescription}
+                    onOpenDocument={(id, page) =>
+                      navigate(`/documents/${id}${page ? `?page=${page}` : ''}`)
+                    }
+                  />
+                  <DraftWithAiButton
+                    draftType="ifrs-s1-oversight"
+                    context={{ sector: user?.sector ?? '', fiscalYear: String(CURRENT_FISCAL_YEAR) }}
+                    onDraft={(text) => updateDisclosureField('governance', 'oversightDescription', text)}
+                  />
+                </div>
               </div>
               <textarea
                 rows={3}

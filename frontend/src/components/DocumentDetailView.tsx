@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams , useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, Maximize2 } from 'lucide-react';
 import Card from './ui/Card';
 import StatusPill from './ui/StatusPill';
@@ -55,6 +55,16 @@ export default function DocumentDetailView() {
   const [preview, setPreview] = useState<PreviewKind>('none');
   const [error, setError] = useState<string | null>(null);
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
+  // Which page the preview is parked on. Chrome's PDF viewer takes it in the fragment, so a
+  // reviewer clicking a citation lands on the figure instead of page one.
+  const [searchParams] = useSearchParams();
+  // A link from the evidence panel names the page it found the passage on. Honouring it here means
+  // the suggestion opens where it came from rather than at page one, which is the whole point of
+  // carrying the page around.
+  const [page, setPage] = useState<number | null>(() => {
+    const p = Number(searchParams.get('page'));
+    return Number.isInteger(p) && p > 0 ? p : null;
+  });
 
   const load = () => extractionApi.get(id)
     .then((d) => {
@@ -172,6 +182,7 @@ export default function DocumentDetailView() {
               columns rather than inside the transcription — that card shows what the page says,
               and mixing the actions into it was what made it redundant. */}
           <ExtractionReviewStrip
+                  onShowPage={(n) => { setPreviewCollapsed(false); setPage(n); }}
             doc={doc}
             onReviewed={load}
             onError={(message) => showToast(message, 'warning')}
@@ -255,7 +266,7 @@ export default function DocumentDetailView() {
                       alone — it is how a reader zooms in further. */}
                   {preview === 'pdf' && src && (
                     <iframe
-                      src={`${src}#view=FitH`}
+                      src={`${src}#view=FitH${page ? `&page=${page}` : ''}`}
                       title={doc.originalFileName}
                       className="block w-full h-[70vh] lg:h-full border-0 bg-white"
                     />
