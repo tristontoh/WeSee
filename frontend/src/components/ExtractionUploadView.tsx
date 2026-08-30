@@ -135,7 +135,7 @@ export default function ExtractionUploadView() {
   const running = stage === 'UPLOADING' || stage === 'PENDING' || stage === 'EXTRACTING';
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 w-full">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Document Extraction</h2>
         <p className="text-sm text-gray-500 mt-1">

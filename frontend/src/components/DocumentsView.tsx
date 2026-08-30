@@ -258,7 +258,7 @@ export default function DocumentsView() {
   }, []);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 w-full">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-gray-900">Documents</h2>
         <p className="text-sm text-gray-500 mt-1">

@@ -94,7 +94,7 @@ export default function EmissionActivityView() {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4 w-full">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-gray-900">Emission activity</h2>
