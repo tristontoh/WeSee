@@ -1,5 +1,6 @@
 package com.wesee.esg.extraction;
 
+import com.wesee.esg.evidence.EvidenceIndexer;
 import com.wesee.esg.climate.EmissionFactorRepository;
 import com.wesee.esg.reference.IndicatorDefinitionRepository;
 import org.slf4j.Logger;
@@ -29,6 +30,7 @@ public class ExtractionWorker {
     private static final Logger log = LoggerFactory.getLogger(ExtractionWorker.class);
 
     private final ExtractedDocumentRepository documentRepository;
+    private final EvidenceIndexer evidenceIndexer;
     private final ExtractedRecordRepository recordRepository;
     private final ExtractionStorageService storageService;
     private final DocumentExtractor extractor;
@@ -42,8 +44,10 @@ public class ExtractionWorker {
                             DocumentExtractor extractor,
                             ExtractionContextProvider contextProvider,
                             EmissionFactorRepository factorRepository,
-                            IndicatorDefinitionRepository indicatorDefinitionRepository) {
+                            IndicatorDefinitionRepository indicatorDefinitionRepository,
+                             EvidenceIndexer evidenceIndexer) {
         this.documentRepository = documentRepository;
+        this.evidenceIndexer = evidenceIndexer;
         this.recordRepository = recordRepository;
         this.storageService = storageService;
         this.extractor = extractor;
@@ -100,6 +104,17 @@ public class ExtractionWorker {
             document.setFailureReason(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
         documentRepository.save(document);
+
+        // Index after the save, and never at its expense: a document that was read is worth having
+        // whether or not it can also be searched. An embedding outage must not turn a successful
+        // extraction into a failed one.
+        if (document.getStatus() == ExtractionStatus.READY) {
+            try {
+                evidenceIndexer.index(document);
+            } catch (Exception e) {
+                log.warn("Could not index document {} for evidence search: {}", documentId, e.getMessage());
+            }
+        }
     }
 
     private ExtractedRecord toEntity(ProposalValidator.ValidatedProposal proposal,
@@ -115,6 +130,7 @@ public class ExtractionWorker {
         entity.setUnitAsRead(source.unitAsRead());
         entity.setConfidence(source.confidence());
         entity.setSourceSnippet(source.sourceSnippet());
+        entity.setSourcePage(source.sourcePage());
         entity.setStatus(RecordStatus.PROPOSED);
 
         if (source.targetType() == ExtractionTargetType.EMISSION_ACTIVITY) {
