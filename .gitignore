@@ -38,3 +38,9 @@ data/
 # it was tracked once and went three weeks stale behind the code it was built from, which is
 # harder to notice than it simply being absent. `make bundle` regenerates it.
 backend/src/main/resources/static/
+
+# iCloud duplicates. Syncing ~/Desktop makes "Xxx 2.java" copies of files it thinks
+# conflict, and four of them reached a commit before this rule existed — including a
+# second copy of a Flyway migration, which Flyway would have refused to run against.
+* [0-9]
+* [0-9].*
