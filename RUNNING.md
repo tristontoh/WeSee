@@ -60,7 +60,7 @@ has to be up or every screen loads empty.
 **Database credentials** default to `postgres` / `root` against `localhost:5432/wesee_esg`.
 Override with `DB_USERNAME` / `DB_PASSWORD` if your local Postgres differs.
 
-**Nothing to set up in the database.** Flyway runs all 75 migrations on boot and seeds the
+**Nothing to set up in the database.** Flyway runs all 78 migrations on boot and seeds the
 reference data — sectors, Bursa matters, indicator definitions, emission factors. Hibernate runs
 with `ddl-auto: validate` and never creates or alters a table: the schema belongs to the
 migrations, and an entity that disagrees with its table fails startup rather than silently altering

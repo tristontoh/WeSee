@@ -1,6 +1,7 @@
 # WeSee — Project Summary
 
-*Generated 2026-08-25 from the state of `main` at `c83427a`.*
+*Last checked against the tree on 2026-08-30. Counts below are from that state; re-check them
+before submitting if the tree has moved.*
 
 ## What it is
 
@@ -35,9 +36,9 @@ Makefile    make infra | backend | frontend
 ## Architecture
 
 ```
-React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──►  PostgreSQL (Flyway V1–V68)
+React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ──►  PostgreSQL (Flyway V1–V79)
                                        │
-                                       ├── DocumentExtractor (swappable; stub today)
+                                       ├── DocumentExtractor (Gemini; swappable at the interface)
                                        └── local filesystem uploads (./data/uploads)
 ```
 
@@ -47,7 +48,7 @@ React 19 + Vite (:4210)  ──JWT──►  Spring Boot (:8080, /api/v1)  ─�
   `reference`, `indicators`, `climate`, `materiality`, `governance`, `targets`, `assurance`,
   `export`, `extraction`, `apiaccess`, `support`, `billing`, `platform`, `privacy`, `email`,
   `pdf`, plus `common`/`security`/`config`.
-- **Schema is migration-owned.** 52 Flyway migrations in
+- **Schema is migration-owned.** 78 Flyway migrations in
   [backend/src/main/resources/db/migration/](backend/src/main/resources/db/migration/), with
   `ddl-auto: validate` — Hibernate never creates or alters tables. Reference data (sectors,
   Bursa matters, indicator definitions, emission factors) is seeded by migration too.
@@ -142,17 +143,22 @@ after typing a value, the document comes first and the values follow from it.
 
 ## Testing
 
-- **Backend:** 58 JUnit tests, targeting the logic that is easiest to get subtly wrong —
+- **Backend:** 113 JUnit tests across 17 classes, targeting the logic that is easiest to get
+  subtly wrong —
   `UnitConverter`, `ProposalValidator`, `SignOffGuard`, `JwtService`, annual-value computation, and
   for the Gemini path the media-type sniff, exact decimal parsing, the closed-set enum in the
   response schema, and construction-time refusal of a missing key. No test can reach a model: the
   test profile pins the fixed extractor and the Gemini bean carries no `matchIfMissing`.
-- **Frontend:** 11 Playwright e2e specs (~84 tests) in [frontend/e2e/](frontend/e2e/) covering
-  auth, onboarding, company/team/group, indicators, emissions, IFRS, ESG screens, assurance,
-  account, admin, and extraction — plus 7 Karma/Jasmine unit specs.
+- **Frontend:** one Playwright e2e spec — [frontend/e2e/auth.spec.ts](frontend/e2e/auth.spec.ts),
+  9 tests covering registration, login, and the onboarding gate. Nine further specs (indicators,
+  emissions, IFRS, assurance, company/team, account, admin, extraction, ESG screens) were written
+  against the Angular client and went with it when the client was replaced; they have not been
+  rewritten. `npm run lint` is `tsc --noEmit`, and there is no frontend unit-test runner.
 
-The balance is deliberate: behaviour is verified end-to-end through the real API, with unit tests
-reserved for pure calculation.
+So the balance is currently uneven, and worth saying plainly: the calculation and security
+boundaries are well covered by backend unit tests, while the React client is verified end-to-end
+only as far as signing in. Restoring the deleted specs against the new client is the largest
+outstanding gap in this repo.
 
 ## Running it
 
@@ -167,7 +173,7 @@ logins live in `ACCOUNTS-local.md`, which is gitignored because the repo is publ
 Config: `backend/src/main/resources/application.yml` (+ `application-dev.yml` for the datasource,
 which defaults to `postgres`/`root` on `localhost:5432/wesee_esg`).
 
-On boot, Flyway runs `V1`–`V52` and seeds the reference data. Because `ddl-auto` is `validate`,
+On boot, Flyway runs `V1`–`V79` and seeds the reference data. Because `ddl-auto` is `validate`,
 an entity that disagrees with its table fails startup instead of altering the database — and since
 there is no `@SpringBootTest` in the repo, **a successful boot is the only check on Spring Data
 derived query method names**, which `mvn compile` does not validate.

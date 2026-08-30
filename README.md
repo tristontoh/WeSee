@@ -111,7 +111,7 @@ wesee.extraction.gemini.api-key=…
 One caveat with that file: Maven copies it into `target/classes`, so an artifact built from
 `mvn package` would embed the key. Use the environment variable for anything deployed.
 
-Flyway runs migrations `V1`–`V52` on boot and seeds the reference data (sectors, Bursa matters,
+Flyway runs migrations `V1`–`V79` on boot and seeds the reference data (sectors, Bursa matters,
 indicator definitions, emission factors). Hibernate runs with `ddl-auto: validate` and never
 creates or alters a table — **the schema belongs to the migrations**, and an entity that disagrees
 with its table fails startup rather than silently altering the database.
@@ -135,7 +135,7 @@ variables. API docs at http://localhost:8080/swagger-ui/index.html.
 ## Testing
 
 ```bash
-cd backend  && mvn test            # 70 unit tests
+cd backend  && mvn test            # 113 unit tests
 cd frontend && npx playwright test # e2e against a running backend on :8080
 ```
 
@@ -150,9 +150,14 @@ validation against the closed set, the sign-off guard, JWT, and for extraction: 
 sniff, exact decimal parsing, the closed-set enum in the response schema, and that a missing key
 fails at construction rather than on first upload.
 
-The balance is deliberate: behaviour is verified end-to-end through the real API, with unit tests
-reserved for pure calculation. Note the backend has no `@SpringBootTest` — **a successful boot is
-the only check on Spring Data derived query method names**, which `mvn compile` does not validate.
+The e2e side is thin, and worth stating rather than implying: [frontend/e2e/](frontend/e2e/) holds
+one spec — registration, login, and the onboarding gate. Nine further specs covering indicators,
+emissions, IFRS, assurance and the rest were written against the Angular client and went with it
+when the client was replaced. Rewriting them against the React client is the largest outstanding
+gap here.
+
+Note also that the backend has no `@SpringBootTest` — **a successful boot is the only check on
+Spring Data derived query method names**, which `mvn compile` does not validate.
 
 ## Repository layout
 
