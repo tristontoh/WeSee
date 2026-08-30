@@ -24,6 +24,8 @@ public record ExtractedRecordResponse(
         Integer month,
         BigDecimal confidence,
         String sourceSnippet,
+        /** 1-based page of the source document, so a reviewer opens it where the figure is. */
+        Integer sourcePage,
         /**
          * The sustainability matter this reading belongs to — "Water Management", "Energy
          * Consumption & GHG Footprint". It is what makes a water bill distinguishable from an
@@ -53,6 +55,7 @@ public record ExtractedRecordResponse(
                 record.getMonth(),
                 record.getConfidence(),
                 record.getSourceSnippet(),
+                record.getSourcePage(),
                 emission ? null : record.getIndicatorDefinition().getMatter().getId(),
                 emission ? null : record.getIndicatorDefinition().getMatter().getName(),
                 record.getStatus());

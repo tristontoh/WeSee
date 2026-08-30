@@ -17,7 +17,7 @@ class ProposalValidatorTest {
 
     private static ProposedRecord proposal(ExtractionTargetType type, String targetId, String value, String unit) {
         return new ProposedRecord(type, targetId, new BigDecimal(value), unit, 2026, null,
-                new BigDecimal("0.900"), "snippet");
+                new BigDecimal("0.900"), "snippet", null);
     }
 
     @Test
@@ -73,7 +73,7 @@ class ProposalValidatorTest {
     @Test
     void dropsAProposalWithANullOrNegativeValue() {
         var negative = new ProposedRecord(ExtractionTargetType.EMISSION_ACTIVITY, "GRID_ELECTRICITY_MY",
-                new BigDecimal("-5"), "kWh", 2026, null, new BigDecimal("0.9"), "snippet");
+                new BigDecimal("-5"), "kWh", 2026, null, new BigDecimal("0.9"), "snippet", null);
 
         assertTrue(ProposalValidator.validate(List.of(negative), CONTEXT).isEmpty());
     }

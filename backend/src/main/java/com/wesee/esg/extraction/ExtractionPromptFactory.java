@@ -80,6 +80,10 @@ final class ExtractionPromptFactory {
                 .append("dates printed on it. Use ").append(context.defaultFiscalYear())
                 .append(" only when the document carries no date at all.\n");
 
+        // A reviewer opening a forty-page statement to check one figure needs the page, not the file.
+        prompt.append("- sourcePage is the page the figure is printed on, counting from 1. Leave it ")
+                .append("out rather than guess.\n");
+
         prompt.append("""
 
                 Separately from those records, transcribe the document itself.
@@ -130,6 +134,8 @@ final class ExtractionPromptFactory {
         fields.put("month", field(Type.Known.INTEGER, "1-12, only when the document covers one month."));
         fields.put("confidence", field(Type.Known.NUMBER, "0 to 1."));
         fields.put("sourceSnippet", field(Type.Known.STRING, "The text this figure was read from, verbatim."));
+        fields.put("sourcePage", field(Type.Known.INTEGER,
+                "1-based page the figure appears on. Omit for a single-page document or an image."));
 
         // month is absent: a bill covering a year names none, and requiring it would force an
         // invention rather than an omission.

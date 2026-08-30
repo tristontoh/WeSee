@@ -25,6 +25,8 @@ interface ExtractionReviewStripProps {
   /** Re-fetches the document so accepted rows leave the strip. */
   onReviewed: () => void;
   onError: (message: string) => void;
+  /** Ask the parent to show the document at this page — the preview lives there, not here. */
+  onShowPage?: (page: number) => void;
 }
 
 /**
@@ -35,7 +37,7 @@ interface ExtractionReviewStripProps {
  * transcription cannot: where each figure is headed, the period it will be filed under, and the
  * decision. Nothing below the strip writes anything.
  */
-export default function ExtractionReviewStrip({ doc, onReviewed, onError }: ExtractionReviewStripProps) {
+export default function ExtractionReviewStrip({ doc, onReviewed, onError, onShowPage }: ExtractionReviewStripProps) {
   const pending = (doc.records ?? []).filter((r) => r.status === 'PROPOSED');
 
   // Edits are keyed by record id so correcting one row's period leaves the others alone.
@@ -117,6 +119,18 @@ export default function ExtractionReviewStrip({ doc, onReviewed, onError }: Extr
                   <p className="mt-1.5 text-[11px] text-gray-500 leading-relaxed flex items-start gap-1.5">
                     <Quote className="w-3 h-3 mt-0.5 shrink-0 text-gray-300" />
                     <span className="italic break-words">{r.sourceSnippet}</span>
+                    {/* A quote with no page still asks a reviewer to hunt for it. The citation is
+                        only worth anything if it takes them there. */}
+                    {r.sourcePage != null && (
+                      <button
+                        type="button"
+                        onClick={() => onShowPage?.(r.sourcePage!)}
+                        className="shrink-0 not-italic font-mono text-[10px] px-1.5 py-0.5 rounded border border-navy-200 text-navy-500 hover:text-primary-700 hover:border-primary-300 transition-colors cursor-pointer"
+                        title={`Open the document at page ${r.sourcePage}`}
+                      >
+                        p.{r.sourcePage}
+                      </button>
+                    )}
                   </p>
                 )}
               </div>

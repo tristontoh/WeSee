@@ -67,6 +67,10 @@ public class ExtractedRecord extends TenantOwnedEntity {
     @Column(name = "source_snippet", columnDefinition = "TEXT")
     private String sourceSnippet;
 
+    /** 1-based page of the source document, or null when unknown or not paginated. */
+    @Column(name = "source_page")
+    private Integer sourcePage;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RecordStatus status = RecordStatus.PROPOSED;

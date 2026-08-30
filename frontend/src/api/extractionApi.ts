@@ -23,6 +23,8 @@ export interface ExtractedRecordResponse {
   month: number | null;
   confidence: number | null;
   sourceSnippet: string | null;
+  /** 1-based page the figure was read from; null when unknown or the document has no pages. */
+  sourcePage: number | null;
   /**
    * The sustainability matter behind this reading — what makes a water bill tell itself apart from
    * an electricity bill. Null on emission-factor readings, which carry a scope rather than a matter;

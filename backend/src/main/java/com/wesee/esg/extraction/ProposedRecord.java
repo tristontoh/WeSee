@@ -15,6 +15,8 @@ public record ProposedRecord(
         Integer fiscalYear,
         Integer month,
         BigDecimal confidence,
-        String sourceSnippet
+        String sourceSnippet,
+        /** 1-based page the figure was read from; null when the document has no pages or the model could not tell. */
+        Integer sourcePage
 ) {
 }
