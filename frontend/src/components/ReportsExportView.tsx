@@ -282,6 +282,21 @@ export default function ReportsExportView() {
    */
   const tonnes = (v: number | null) => (v === null ? 'N/A' : `${Number(v.toFixed(1))} tCO2e`);
 
+  /**
+   * Where a figure came from, for the report rather than the editing screen.
+   *
+   * The audit entry records it at the moment a person accepted the reading, so this is the
+   * confirmed source and not a guess made later. Only entries for the year being reported count —
+   * citing last year's bill beside this year's figure would be worse than citing nothing.
+   */
+  const citationFor = (ind: IndicatorResponse): string | null => {
+    const entry = ind.history
+      ?.filter((h) => h.fiscalYear === fiscalYear && h.sourceDocName)
+      .sort((a, b) => (a.enteredAt < b.enteredAt ? 1 : -1))[0];
+    if (!entry) return null;
+    return entry.sourceDocName + (entry.sourcePage ? `, p.${entry.sourcePage}` : '');
+  };
+
   const scope3Total = emissions
     ? emissions.scope3.reduce((sum, cat) => sum + (cat.values.find((v) => v.fiscalYear === fiscalYear)?.value ?? 0), 0)
     : null;
@@ -503,6 +518,10 @@ ${governanceLines.join('\n')}
           const val = getValueForYear(ind, fiscalYear);
           const displayVal = val !== null ? val : 'N/A';
           fileContent += `- ${ind.name}: ${displayVal} ${ind.unit || ''} (Target: ${ind.effectiveTarget ?? 'N/A'})\n`;
+          const cite = citationFor(ind);
+          if (cite) {
+            fileContent += `    Source: ${cite}\n`;
+          }
         });
       } else {
         fileContent += `- No indicators logged yet.\n`;
@@ -949,7 +968,16 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
                             const val = getValueForYear(ind, fiscalYear);
                             return (
                               <tr key={ind.id}>
-                                <td className="py-1 font-medium">{ind.name}</td>
+                                <td className="py-1 font-medium">
+                                  {ind.name}
+                                  {/* The citation belongs in the document that leaves the building.
+                                      An auditor holds this PDF and nothing else. */}
+                                  {citationFor(ind) && (
+                                    <span className="block font-mono text-[9px] text-navy-400 font-normal mt-0.5">
+                                      ↳ {citationFor(ind)}
+                                    </span>
+                                  )}
+                                </td>
                                 <td className="py-1 text-center font-bold font-mono text-navy-950">
                                   {val !== null ? `${val} ${ind.unit || ''}` : 'N/A'}
                                 </td>

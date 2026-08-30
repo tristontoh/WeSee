@@ -49,6 +49,14 @@ public class IndicatorAuditEntry extends TenantOwnedEntity {
     @Column(name = "source_doc_path", length = 500)
     private String sourceDocPath;
 
+    /** 1-based page of the source document; null when unknown or the document has no pages. */
+    @Column(name = "source_page")
+    private Integer sourcePage;
+
+    /** The sentence the figure was read from, verbatim. */
+    @Column(name = "source_quote", columnDefinition = "text")
+    private String sourceQuote;
+
     @Column(columnDefinition = "TEXT")
     private String comment;
 }

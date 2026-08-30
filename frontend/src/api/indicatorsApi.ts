@@ -29,6 +29,10 @@ export interface IndicatorAuditEntryDto {
   enteredAt: string;
   sourceDocName: string | null;
   sourceDocPath: string | null;
+  /** 1-based page of the source document, when the figure was read from one. */
+  sourcePage: number | null;
+  /** The sentence the figure was read from, verbatim. */
+  sourceQuote: string | null;
   comment: string | null;
 }
 

@@ -14,9 +14,13 @@ public record AuditEntryDto(
         Instant enteredAt,
         String sourceDocName,
         String sourceDocPath,
+        /** 1-based page of the source document, so a report can cite where and not only which. */
+        Integer sourcePage,
+        /** The sentence the figure was read from, verbatim. */
+        String sourceQuote,
         String comment
 ) {
     public static AuditEntryDto from(IndicatorAuditEntry e) {
-        return new AuditEntryDto(e.getId(), e.getFiscalYear(), e.getMonth(), e.getValue(), e.getEnteredBy(), e.getCreatedAt(), e.getSourceDocName(), e.getSourceDocPath(), e.getComment());
+        return new AuditEntryDto(e.getId(), e.getFiscalYear(), e.getMonth(), e.getValue(), e.getEnteredBy(), e.getCreatedAt(), e.getSourceDocName(), e.getSourceDocPath(), e.getSourcePage(), e.getSourceQuote(), e.getComment());
     }
 }

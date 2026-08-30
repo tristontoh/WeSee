@@ -161,6 +161,10 @@ public class ExtractionReviewService {
         audit.setValue(value);
         audit.setEnteredBy(displayName());
         audit.setSourceDocName(record.getDocument().getOriginalFileName());
+        // Where in the document, not just which one — copied now so the citation survives a
+        // re-extraction of the source.
+        audit.setSourcePage(record.getSourcePage());
+        audit.setSourceQuote(record.getSourceSnippet());
         audit.setSourceDocPath(record.getDocument().getStoredPath());
         audit.setComment("Extracted from " + record.getDocument().getOriginalFileName());
         auditEntryRepository.save(audit);
