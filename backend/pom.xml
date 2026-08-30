@@ -17,6 +17,23 @@
     <packaging>war</packaging>
     <name>esg-backend</name>
     <description>WeSee ESG reporting platform backend</description>
+    <inceptionYear>2026</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>All rights reserved</name>
+            <url>https://github.com/tristontoh/WeSee/blob/main/LICENSE</url>
+            <distribution>manual</distribution>
+            <comments>Proprietary. Published for competition evaluation only; no licence to use is
+                granted. Third-party dependencies keep their own licences.</comments>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Triston Toh</name>
+        </developer>
+    </developers>
 
     <properties>
         <java.version>21</java.version>

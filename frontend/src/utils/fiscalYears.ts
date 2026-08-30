@@ -1,6 +1,6 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2026 Triston Toh. All rights reserved.
+ * See LICENSE at the repository root — visibility is not a licence to use.
  */
 
 /** How many years back from the current one always appear, even with nothing entered against them. */

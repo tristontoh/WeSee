@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2026 Triston Toh. All rights reserved.
+ * See LICENSE at the repository root — visibility is not a licence to use.
+ */
 package com.wesee.esg.extraction;
 
 /** The document could not be read at all — distinct from reading it and finding nothing. */

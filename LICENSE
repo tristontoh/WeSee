@@ -1,0 +1,59 @@
+Copyright (c) 2026 Triston Toh. All rights reserved.
+
+WeSee — ESG reporting platform
+https://github.com/tristontoh/WeSee
+
+
+TERMS
+
+This repository is made publicly visible for one purpose: to allow the
+organisers, judges, and reviewers of the MAIC Nexus Challenge to read,
+evaluate, and verify the work submitted to that competition.
+
+That visibility is not a licence. No right to use this software is granted
+to anyone by its being published here.
+
+Specifically, except with the prior written permission of the copyright
+holder, you may NOT:
+
+  * copy, reproduce, or store this software or any part of it, other than
+    the transient copying inherent in reading it through a web browser or
+    a git clone made solely to evaluate this submission;
+  * modify it, or create derivative works from it;
+  * distribute, publish, sublicense, sell, rent, or lease it;
+  * run it in production, offer it as a service, or use it or any part of
+    it in any product, whether commercial or not;
+  * use it to train, fine-tune, or evaluate a machine learning model.
+
+All rights not expressly granted above are reserved.
+
+Publication of this repository does not transfer ownership of any
+copyright, patent, trade mark, database right, or other intellectual
+property right in it. Where the competition's Rules & Regulations require
+entrants to grant the organisers a licence for marketing or administration
+of the competition, that licence is limited to what those Rules require and
+is granted to the organisers alone.
+
+
+NO WARRANTY
+
+This software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, and non-infringement. In no event shall
+the copyright holder be liable for any claim, damages, or other liability,
+whether in an action of contract, tort, or otherwise, arising from, out of,
+or in connection with this software or its use.
+
+
+THIRD-PARTY COMPONENTS
+
+This software depends on third-party open-source libraries, declared in
+frontend/package.json and backend/pom.xml. Those libraries remain governed
+by their own licences, which are not affected by these terms. Nothing here
+restricts any right you hold in them.
+
+
+CONTACT
+
+For permission to use this software for any purpose, contact the copyright
+holder through the repository above.

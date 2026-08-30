@@ -171,3 +171,15 @@ data/       runtime uploads (gitignored — real bills never get committed)
 
 Each milestone gets a design spec, then an implementation plan, then commits — and the specs
 record the alternatives that were rejected and why, not just the decision.
+
+## Licence
+
+**Copyright © 2026 Triston Toh. All rights reserved.** See [LICENSE](LICENSE).
+
+This repository is public so that the MAIC Nexus Challenge organisers and judges can read and
+verify the submission. **That visibility is not a licence.** No right to copy, modify, run, or
+build on this code is granted to anyone else — publishing source does not put it in the public
+domain, and copyright in it is retained.
+
+Third-party dependencies (declared in `frontend/package.json` and `backend/pom.xml`) keep their
+own licences; nothing above affects them.
