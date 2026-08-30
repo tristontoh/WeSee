@@ -16,6 +16,7 @@ test('login screen has no social auth and offers signup', async ({ page }) => {
 });
 
 test('platform admin signs in and lands on the operator console', async ({ page }) => {
+  test.skip(!SEED_ADMIN.password, 'set SEED_ADMIN_PASSWORD — the seeded admin is disabled by V80');
   await page.goto(route('/login'));
   await page.locator('input[type=email]').fill(SEED_ADMIN.email);
   await page.locator('input[type=password]').fill(SEED_ADMIN.password);

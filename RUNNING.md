@@ -68,8 +68,25 @@ the database.
 
 ### Logins
 
-`platform.admin@wesee.my` is seeded by migration `V14` (password in the migration file — change or
-delete that seed before this schema is used outside a sandbox).
+`platform.admin@wesee.my` is seeded by migration `V14` and **switched off again by `V80`**. V14
+prints its own password in a comment, so leaving the account live would hand a working
+`PLATFORM_ADMIN` login to anyone reading this repository while it is public for judging.
+
+To use `/admin` locally, give it a password of your own and switch it back on:
+
+```bash
+# a bcrypt hash of whatever you want the password to be
+htpasswd -bnBC 10 "" 'your-password-here' | tr -d ':\n' | sed 's/\$2y/\$2a/'
+```
+
+```sql
+UPDATE app_user
+SET password_hash = '<the hash above>', active = TRUE, token_version = token_version + 1
+WHERE email = 'platform.admin@wesee.my';
+```
+
+Those two steps stay out of the migrations on purpose: no password that actually works should be
+committed again.
 
 Every other local login is in `ACCOUNTS-local.md`, which is gitignored: this repository is public,
 so development credentials live outside it.

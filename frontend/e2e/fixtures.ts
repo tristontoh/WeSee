@@ -8,7 +8,20 @@ import { Client } from 'pg';
  */
 export const API = `${process.env.E2E_API_BASE_URL ?? 'http://localhost:8080'}/api/v1`;
 
-export const SEED_ADMIN = { email: 'platform.admin@wesee.my', password: 'PlatformAdmin#2026' };
+/**
+ * The platform admin seeded by V14 and switched off again by V80. Its password is no longer in the
+ * repository — a working credential for an account with the operator console behind it does not
+ * belong in a tree that goes public for judging. Set the password you gave it locally:
+ *
+ *   SEED_ADMIN_PASSWORD='…' npx playwright test
+ *
+ * Specs that need to sign in as this account skip themselves when it is unset. RUNNING.md has the
+ * two statements that enable the account.
+ */
+export const SEED_ADMIN = {
+  email: 'platform.admin@wesee.my',
+  password: process.env.SEED_ADMIN_PASSWORD ?? '',
+};
 
 /** Where the app keeps its JWT — see src/api/tokenStore.ts. */
 export const TOKEN_KEY = 'wesee_jwt_token';
