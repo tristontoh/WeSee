@@ -10,6 +10,7 @@ import { referenceApi, SectorResponse } from '../../api/referenceApi';
 import { ApiError } from '../../api/client';
 import { useToast } from '../../contexts/ToastContext';
 import Select from '../ui/Select';
+import { useDismissable } from '../../hooks/useDismissable';
 
 interface AddCompanyModalProps {
   onClose: () => void;
@@ -68,13 +69,8 @@ export default function AddCompanyModal({ onClose, onCreated }: AddCompanyModalP
     referenceApi.sectors().then(setSectors).catch(() => setSectors([])).finally(() => setSectorsLoading(false));
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  // Mounted only while open, so the dialog is always the open one.
+  useDismissable(true, onClose);
 
   const canSubmit = name.trim().length > 0 && !submitting;
 

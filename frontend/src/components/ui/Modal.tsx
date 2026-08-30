@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { X } from 'lucide-react';
+import { useDismissable } from '../../hooks/useDismissable';
 
 interface ModalProps {
   open: boolean;
@@ -36,26 +37,7 @@ export default function Modal({
 }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
 
-  // Escape closes, and the page behind must not scroll while the dialog owns the screen.
-  useEffect(() => {
-    if (!open) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onClose) onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    // Moves the keyboard into the dialog, so Tab cycles its buttons rather than the page behind.
-    panel.current?.focus();
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, onClose]);
+  useDismissable(open, onClose, panel);
 
   if (!open) return null;
 

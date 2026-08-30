@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import {
@@ -41,6 +41,8 @@ import { climateApi, BusinessSegmentResponse, IfrsS2Response, EmissionsResponse 
 import { marketFromBackend } from '../api/mappers';
 import { fiscalYearKeys } from '../utils/fiscalYears';
 import Select from './ui/Select';
+import { saveBlob } from '../utils/download';
+import { useDismissable } from '../hooks/useDismissable';
 
 // Interface for export history
 interface ExportHistoryItem {
@@ -136,6 +138,7 @@ export default function ReportsExportView() {
   const [exportingRaw, setExportingRaw] = useState<boolean>(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
+  const previewPanel = useRef<HTMLDivElement>(null);
   const [activeReportTab, setActiveReportTab] = useState<'summary' | 'ifrs-s1' | 'ifrs-s2'>('summary');
   const [generatingIfrsS1, setGeneratingIfrsS1] = useState<boolean>(false);
   const [generatingIfrsS2, setGeneratingIfrsS2] = useState<boolean>(false);
@@ -379,6 +382,8 @@ export default function ReportsExportView() {
     setIsPreviewModalOpen(false);
   };
 
+  useDismissable(isPreviewModalOpen, handleClosePreview, previewPanel);
+
   const handlePreviewReport = async () => {
     if (format !== 'PDF') {
       triggerToast('Preview is only available for PDF format.', 'info');
@@ -424,14 +429,7 @@ export default function ReportsExportView() {
     const fetcher = kind === 's1' ? exportApi.ifrsS1ReportPdf : exportApi.ifrsS2ReportPdf;
     fetcher(fiscalYear)
       .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `WeSee_${label.replace(' ', '_')}_Report_${period}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        saveBlob(blob, `WeSee_${label.replace(' ', '_')}_Report_${period}.pdf`);
         refreshHistory();
         triggerToast(`Successfully downloaded ${label} report for ${period}!`, 'success');
       })
@@ -450,14 +448,7 @@ export default function ReportsExportView() {
     if (format === 'PDF') {
       exportApi.integratedReportPdf(fiscalYear)
         .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `WeSee_ESG_Integrated_Report_${period}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
+          saveBlob(blob, `WeSee_ESG_Integrated_Report_${period}.pdf`);
           refreshHistory();
           triggerToast(`Successfully downloaded PDF report for ${period}!`, 'success');
         })
@@ -630,16 +621,7 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
 
     triggerToast(`Rebuilding ${item.type} for ${item.period}…`, 'info');
 
-    const savePdf = (blob: Blob, name: string) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    };
+    const savePdf = saveBlob;
 
     const done = () => triggerToast(`${item.type} for ${item.period} downloaded.`, 'success');
     const failed = (e: unknown) => {
@@ -1331,10 +1313,25 @@ Status: Draft - Ready for Corporate Sign-Off (see Export History for sign-off re
         </div>
       </Card>
 
-      {/* PDF Preview Modal */}
+      {/*
+        PDF Preview Modal. Its own chrome rather than `ui/Modal` — the viewer is full-bleed and the
+        header carries a file icon — but the dismissal behaviour comes from the same hook, so
+        Escape and a backdrop click work here exactly as they do in every other dialog.
+      */}
       {isPreviewModalOpen && previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/50 backdrop-blur-sm"
+          // Only the backdrop, never a drag that started inside the panel and ended outside it.
+          onClick={(e) => { if (e.target === e.currentTarget) handleClosePreview(); }}
+        >
+          <div
+            ref={previewPanel}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Document Preview"
+            tabIndex={-1}
+            className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden outline-none animate-in fade-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center justify-between p-4 border-b border-navy-100 bg-navy-50/50">
               <div className="flex items-center space-x-2">
                 <FileText className="w-5 h-5 text-primary-600" />
