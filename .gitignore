@@ -38,3 +38,11 @@ data/
 # it was tracked once and went three weeks stale behind the code it was built from, which is
 # harder to notice than it simply being absent. `make bundle` regenerates it.
 backend/src/main/resources/static/
+
+# Design exports and decks. The pitch deck is authored in Canva; the PPTX and PDF here are
+# builds of it, not source, and they carry the design tool's own metadata. Keeping them out
+# means a stale export can never be mistaken for the current one — and neither can ride along
+# on `git add -A`. Both are large enough to matter to clone size.
+*.pdf
+*.pptx
+*.key
