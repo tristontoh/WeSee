@@ -120,7 +120,8 @@ protected**. If compilation suddenly fails on a duplicate class, clear the copie
 make tidy
 ```
 
-`tidy` removes a duplicate only when the file it copied still exists, so it cannot take a file
+`tidy` removes a duplicate only when the file it copied still exists — it names anything it
+leaves alone — so it cannot take a file
 legitimately named `Scope 3.md` or `Phase 2.sql`. There is deliberately no `.gitignore` pattern for
 these: a pattern broad enough to catch `LICENSE 2` also catches `Scope 3.md`, and a source file
 silently missing from git is a worse problem than a duplicate you can see. Four of these did reach
@@ -135,6 +136,16 @@ same applies to `frontend/dist`.
 ```bash
 mkdir -p backend/target.nosync    # after any mvn clean
 mkdir -p frontend/dist.nosync     # after npm run clean
+```
+
+**`npm install` can replace the `node_modules` symlink with a real directory**, which quietly puts
+several thousand files back inside the synced folder — the thing the `.nosync` scheme exists to
+prevent. Check with `ls -ld frontend/node_modules`; if it is not a symlink, move it back:
+
+```bash
+rm -rf frontend/node_modules.nosync
+mv frontend/node_modules frontend/node_modules.nosync
+ln -s node_modules.nosync frontend/node_modules
 ```
 
 The real fix is switching off **System Settings → Apple ID → iCloud → iCloud Drive → Desktop &
