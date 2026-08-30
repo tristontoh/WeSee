@@ -34,6 +34,7 @@ import Card from './ui/Card';
 import { useApplicableMatters, SustainabilityMatter } from '../hooks/useApplicableMatters';
 import { materialityApi, StakeholderOptionResponse, AssessmentSummaryResponse, AssessmentDetailResponse } from '../api/materialityApi';
 import DraftWithAiButton from './ai/DraftWithAiButton';
+import { saveBlob } from '../utils/download';
 
 export type { SustainabilityMatter };
 
@@ -144,14 +145,7 @@ export default function MaterialityAssessmentView() {
     setIsDownloadingReport(true);
     materialityApi.downloadReport(id)
       .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `WeSee_Materiality_Report_${name.replace(/\s+/g, '_')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        saveBlob(blob, `WeSee_Materiality_Report_${name.replace(/\s+/g, '_')}.pdf`);
       })
       .catch(() => showToast('Failed to generate the materiality report PDF. Please try again.', 'error'))
       .finally(() => setIsDownloadingReport(false));

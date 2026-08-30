@@ -36,6 +36,7 @@ import { compliancePolicyApi, CompliancePolicyResponse } from '../api/compliance
 import { COMPLIANCE_STATUS_STYLES } from '../utils/complianceStatus';
 import DraftWithAiButton from './ai/DraftWithAiButton';
 import Select from './ui/Select';
+import { saveBlob } from '../utils/download';
 
 // Types for Governance structure
 interface GovernanceCardData {
@@ -155,14 +156,7 @@ export default function GovernanceView() {
     setIsDownloadingReport(true);
     governanceApi.downloadReport()
       .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'WeSee_Governance_Report.pdf';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        saveBlob(blob, 'WeSee_Governance_Report.pdf');
       })
       .catch(() => showToast('Failed to generate the governance report PDF. Please try again.', 'error'))
       .finally(() => setIsDownloadingReport(false));

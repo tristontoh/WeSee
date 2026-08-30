@@ -32,6 +32,7 @@ import { assuranceApi, SignOffResponse, AssuranceLevel } from '../api/assuranceA
 import { exportApi } from '../api/exportApi';
 import { ApiError } from '../api/client';
 import { fiscalYearKeys } from '../utils/fiscalYears';
+import { saveBlob } from '../utils/download';
 
 interface AuditTrailEntry {
   id: string;
@@ -256,14 +257,7 @@ export default function AssuranceWorkspaceView() {
 
   const handleDownloadDocument = (doc: LibraryDoc) => {
     indicatorsApi.downloadEvidence(doc.auditEntryId).then((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = doc.docName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      saveBlob(blob, doc.docName);
     });
   };
 
@@ -324,14 +318,7 @@ export default function AssuranceWorkspaceView() {
       setExportProgressText('Compressing archive...');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
 
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `WeSee_Assurance_Package_${focusYear}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      saveBlob(zipBlob, `WeSee_Assurance_Package_${focusYear}.zip`);
 
       setExportStep('success');
       showToast('Assurance package ZIP saved successfully.', 'success');
