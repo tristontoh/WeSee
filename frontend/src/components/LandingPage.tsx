@@ -34,6 +34,7 @@ import StatusPill from './ui/StatusPill';
 import ProgressBar from './ui/ProgressBar';
 import AvatarStack from './ui/AvatarStack';
 import { AvatarUser, Status } from '../types';
+import { COPYRIGHT_LINE } from '../brand';
 
 interface LandingPageProps {
   onNavigateToDashboard: () => void;
@@ -785,7 +786,7 @@ export default function LandingPage({
 
         {/* Bottom copyright segment */}
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-navy-900 flex flex-col md:flex-row items-center justify-between text-xs text-navy-500">
-          <span>© 2026 WeSee Corporation Sdn Bhd. All rights reserved.</span>
+          <span>{COPYRIGHT_LINE}</span>
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
             <span className="hover:text-white cursor-pointer">FB</span>
             <span>•</span>

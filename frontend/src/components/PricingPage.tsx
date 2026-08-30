@@ -23,6 +23,7 @@ import Reveal from './ui/Reveal';
 import { useScrolled } from '../hooks/useScrolled';
 import Card from './ui/Card';
 import { publicApi, PublicPlanPricing } from '../api/publicApi';
+import { COPYRIGHT_LINE } from '../brand';
 
 interface PricingPageProps {
   onNavigateToDashboard: () => void;
@@ -785,7 +786,7 @@ export default function PricingPage({ onNavigateToDashboard, onNavigateToFeature
 
         {/* Bottom copyright segment */}
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-navy-900 flex flex-col md:flex-row items-center justify-between text-xs text-navy-500">
-          <span>© 2026 WeSee Corporation Sdn Bhd. All rights reserved.</span>
+          <span>{COPYRIGHT_LINE}</span>
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
             <span className="hover:text-white cursor-pointer">FB</span>
             <span>•</span>
