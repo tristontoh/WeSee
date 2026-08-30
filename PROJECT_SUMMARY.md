@@ -6,7 +6,10 @@
 
 WeSee is a **multi-tenant ESG / sustainability reporting platform for Malaysian companies**,
 built around Bursa Malaysia's Common Sustainability Matters and the IFRS S1/S2 disclosure
-standards, in anticipation of Malaysia's 2027 National Sustainability Reporting Framework (NSRF).
+standards, ahead of Malaysia's National Sustainability Reporting Framework (NSRF) — phased in from
+FY2025 for the largest Main Market issuers, and reaching every listed issuer and the largest
+private companies by FY2027. Mandatory external assurance over Scope 1/2 runs on its own, later
+schedule, which the assurance workspace tracks per company.
 
 A company signs up, declares its sector and market classification, and then works through a
 reporting cycle: pick material matters → record indicator values and emission activity →

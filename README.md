@@ -1,10 +1,12 @@
 # WeSee — AI-Powered ESG Intelligence for Sustainable Supply Chains
 
-> "We See Your Sustainability." · MAIC Nexus Track T6 · Built for Malaysia 2027
+> "We See Your Sustainability." · MAIC Nexus Track T6 · Built for Malaysia's NSRF
 
 WeSee is a B2B sustainability data exchange addressing the Scope 3 capital-friction standoff
-created by Malaysia's 2027 National Sustainability Reporting Framework (NSRF). It is an
-**ingestion-and-assurance layer** — it does *not* reinvent the carbon calculator.
+created by Malaysia's National Sustainability Reporting Framework (NSRF) — phased in from FY2025
+for the largest Main Market issuers, and reaching every listed issuer and the largest private
+companies by FY2027. It is an **ingestion-and-assurance layer** — it does *not* reinvent the
+carbon calculator.
 
 What runs today is a **multi-tenant ESG reporting platform** built around Bursa Malaysia's Common
 Sustainability Matters and the IFRS S1/S2 disclosure standards. A company declares its sector and
