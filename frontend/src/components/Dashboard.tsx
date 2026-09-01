@@ -22,6 +22,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import Card from './ui/Card';
+import GettingStartedCard, { GettingStartedStep } from './GettingStartedCard';
 import { useApplicableMatters } from '../hooks/useApplicableMatters';
 import { indicatorsApi, IndicatorResponse } from '../api/indicatorsApi';
 import { exportApi, downloadCsv, ExportHistoryResponse } from '../api/exportApi';
@@ -301,6 +302,54 @@ export default function Dashboard() {
   const materialityReadiness = !latestAssessment ? 'Not started' : latestAssessment.status === 'VALIDATED' ? 'Validated' : 'Draft';
   const lastExport = exportHistory[0];
 
+  /*
+   * A workspace nobody has entered a figure into yet. The four tiles above all read zero for it,
+   * and "Nothing needs attention right now" is the worst possible first screen — it says there is
+   * nothing to do to someone who has everything to do. Swap them for the checklist until a figure
+   * exists, then hand the tiles back.
+   *
+   * Ticks come off state this component already loads; a step whose feature is above the
+   * workspace's plan is left out rather than shown as permanently undone.
+   */
+  const isNewWorkspace = !loading && completedIndicatorCount === 0 && exportHistory.length === 0;
+
+  const gettingStartedSteps: GettingStartedStep[] = [
+    {
+      label: 'Complete your materiality assessment',
+      hint: 'Decides which indicators you are held to',
+      done: materialityReadiness === 'Validated',
+      path: '/materiality',
+    },
+    {
+      label: 'Log your first figure',
+      hint: 'Upload a bill and accept what it reads, or key it in',
+      done: completedIndicatorCount > 0,
+      path: '/extraction',
+    },
+    ...(hasFeature('targets')
+      ? [{
+          label: 'Set a reduction target',
+          hint: 'Progress then calculates itself from your indicators',
+          done: targets.length > 0,
+          path: '/targets',
+        }]
+      : []),
+    ...(hasFeature('assurance-workspace')
+      ? [{
+          label: 'Sign off the cycle',
+          hint: 'Locks every signed value behind a hash',
+          done: signOff !== null,
+          path: '/assurance-workspace',
+        }]
+      : []),
+    {
+      label: 'Export your disclosure',
+      hint: 'Report, raw CSV, or the Bursa CSI file',
+      done: exportHistory.length > 0,
+      path: '/reports',
+    },
+  ];
+
   const sortedCompliancePolicies = compliancePolicies.slice().sort((a, b) => {
     if (!a.nextReviewDueAt && !b.nextReviewDueAt) return 0;
     if (!a.nextReviewDueAt) return -1;
@@ -373,7 +422,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 2. SUMMARY STAT ROW */}
+      {/* 2. SUMMARY STAT ROW — or, on a workspace with no figures yet, what to do first */}
+      {isNewWorkspace ? <GettingStartedCard steps={gettingStartedSteps} /> : (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
         <div className="bg-white rounded-[20px] p-5 border border-gray-100 shadow-sm">
@@ -430,6 +480,7 @@ export default function Dashboard() {
         </div>
 
       </div>
+      )}
 
       {/* 3. NEEDS ATTENTION + RECENT ACTIVITY + TARGETS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

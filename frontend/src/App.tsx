@@ -26,6 +26,7 @@ import {
   CreditCard,
   Settings,
   HelpCircle,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -83,6 +84,7 @@ import ReportsExportView from './components/ReportsExportView';
 import AdminPanel from './components/AdminPanel';
 import TargetsView from './components/TargetsView';
 import SupportTicketsView from './components/SupportTicketsView';
+import GuideView from './components/GuideView';
 import ProfileView from './components/ProfileView';
 import TeamView from './components/TeamView';
 import AuditLogView from './components/AuditLogView';
@@ -179,6 +181,7 @@ function AuthenticatedLayout({ children, allowedRoles, requiredPermissions }: { 
       'documents': 'Documents',
       'targets': 'Targets & Decarbonization',
       'reports': 'Reports & Export',
+      'guide': 'User Guide',
       'support': 'Feedback & Support',
       'ifrs-s1-s2': 'IFRS S1/S2 Module',
       'assurance-workspace': 'Assurance Workspace',
@@ -407,6 +410,25 @@ function AuthenticatedLayout({ children, allowedRoles, requiredPermissions }: { 
 
         {/* Bottom Actions */}
         <div className="p-4 border-t border-gray-100 shrink-0">
+          {/* The guide is documentation, not a workflow screen, so it sits with support rather than
+              in Main menu, where it would read as a tenth thing to do. */}
+          {!isPlatformAdmin && (
+            <button
+              onClick={() => { navigate('/guide'); setMobileNavOpen(false); }}
+              className={`w-full flex items-center px-3 py-2.5 mb-3 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${
+                location.pathname === '/guide'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              } ${sidebarCollapsed ? 'justify-center' : ''}`}
+              title={sidebarCollapsed ? 'User guide' : undefined}
+            >
+              <div className={`${location.pathname === '/guide' ? 'text-emerald-500' : 'text-gray-400'} shrink-0`}>
+                <BookOpen className="w-4 h-4" />
+              </div>
+              {!sidebarCollapsed && <span className="ml-3 truncate">User guide</span>}
+            </button>
+          )}
+
           {!sidebarCollapsed && !isPlatformAdmin && (
             <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-100 relative group">
                <button
@@ -502,6 +524,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/documents': 'Documents',
   '/targets': 'Targets & Decarbonization',
   '/reports': 'Reports & Export',
+  '/guide': 'User Guide',
   '/support': 'Feedback & Support',
   '/ifrs-s1-s2': 'IFRS S1/S2 Module',
   '/assurance-workspace': 'Assurance Workspace',
@@ -726,6 +749,14 @@ function AppContent() {
         element={
           <AuthenticatedLayout allowedRoles={TENANT_ROLES}>
             <Dashboard />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/guide"
+        element={
+          <AuthenticatedLayout allowedRoles={TENANT_ROLES}>
+            <GuideView />
           </AuthenticatedLayout>
         }
       />
