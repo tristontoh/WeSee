@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Plus, ShieldCheck, Fingerprint, Lock } from 'lucide-react';
+import { usePlan, PlanType } from '../contexts/PlanContext';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import Modal from './ui/Modal';
@@ -43,7 +44,19 @@ interface Step {
    * signing locks the cycle behind a hash. Marked so they do not read as ordinary navigation.
    */
   binding?: string;
+  /**
+   * The feature registry key, for the three steps that are above STARTER. Opening one of those on
+   * a plan that does not include it lands on the upgrade wall — fine in itself, but being sent
+   * there by a guide with no warning reads as the guide being wrong about the product.
+   */
+  feature?: string;
 }
+
+const PLAN_LABELS: Record<PlanType, string> = {
+  'starter': 'Starter',
+  'growth': 'Growth',
+  'issuer-ready': 'Issuer-Ready',
+};
 
 const SHOT = (name: string) => `/assets/guide/${name}.jpg`;
 
@@ -128,6 +141,7 @@ const STEPS: Step[] = [
   },
   {
     key: 'ifrs',
+    feature: 'ifrs-s1-s2',
     title: 'Answer S1 and S2',
     summary: 'The written parts — governance and climate risk — with evidence attached.',
     screen: 'IFRS S1/S2',
@@ -143,6 +157,7 @@ const STEPS: Step[] = [
   },
   {
     key: 'targets',
+    feature: 'targets',
     title: 'Set a target',
     summary: 'Link it to an indicator and a baseline. Progress calculates itself.',
     screen: 'Targets',
@@ -158,6 +173,7 @@ const STEPS: Step[] = [
   },
   {
     key: 'signoff',
+    feature: 'assurance-workspace',
     title: 'Sign and lock',
     summary: 'A SHA-256 hash covers every value. Change one and it stops matching.',
     screen: 'Assurance Workspace',
@@ -213,6 +229,13 @@ const TRUTHS = [
 
 export default function GuideView() {
   const navigate = useNavigate();
+  const { hasFeature, getFeatureDetails } = usePlan();
+
+  /** The plan a step needs, or null when this workspace already has it. */
+  const planNeededFor = (step: Step): string | null => {
+    if (!step.feature || hasFeature(step.feature)) return null;
+    return PLAN_LABELS[getFeatureDetails(step.feature).requiredPlan];
+  };
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   const open = STEPS.find((s) => s.key === openKey) ?? null;
@@ -269,17 +292,25 @@ export default function GuideView() {
                   <h3 className="text-base font-bold tracking-tight text-gray-900">{step.title}</h3>
                 </div>
                 <p className="text-[13px] text-gray-500 leading-relaxed mt-1.5">{step.summary}</p>
+                {planNeededFor(step) && (
+                  <p className="mt-2.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2.5 py-1 w-fit">
+                    Needs {planNeededFor(step)}
+                  </p>
+                )}
               </div>
             </button>
 
             <div className="mt-auto flex items-center justify-between gap-2 px-5 pb-4 pt-1">
-              {step.binding ? (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">
-                  {step.binding}
-                </span>
-              ) : (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{step.screen}</span>
-              )}
+              <div className="flex items-center gap-1.5 min-w-0">
+                {step.binding && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1 shrink-0">
+                    {step.binding}
+                  </span>
+                )}
+                {!step.binding && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 truncate">{step.screen}</span>
+                )}
+              </div>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -353,6 +384,12 @@ export default function GuideView() {
       >
         {open && (
           <div className="space-y-4 pb-2">
+            {planNeededFor(open) && (
+              <p className="text-[13px] text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-2.5">
+                This step needs the <strong className="font-semibold">{planNeededFor(open)}</strong> plan. You can
+                read it here; opening the screen will offer you the upgrade rather than the feature.
+              </p>
+            )}
             <ul className="space-y-2.5">
               {open.detail.map((line) => (
                 <li key={line} className="flex gap-2.5 text-[13px] text-gray-600 leading-relaxed">
