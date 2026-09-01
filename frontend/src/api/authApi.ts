@@ -30,6 +30,11 @@ export interface MeResponse {
   mfaSetupRequired: boolean;
   /** Absent on backends without a per-company RBAC layer — see permissions.hasPermission. */
   permissions?: string[];
+  /**
+   * The workspace is suspended or closed and every other endpoint is refusing it. This call is
+   * exempt from that refusal so the flag can get out at all — see CompanyAccessFilter.
+   */
+  workspaceSuspended?: boolean;
 }
 
 export interface AuthResponse {

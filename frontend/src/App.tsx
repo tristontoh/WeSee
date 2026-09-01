@@ -49,6 +49,7 @@ import {
 import { PlanProvider, usePlan, PlanType } from './contexts/PlanContext';
 import { AuthProvider, useAuth, isTrialExpired } from './contexts/AuthContext';
 import TrialExpiredPage from './components/TrialExpiredPage';
+import WorkspaceSuspendedPage from './components/WorkspaceSuspendedPage';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { RefreshProvider } from './contexts/RefreshContext';
 import { Role, canAccess, hasPermission, MANAGEMENT_ROLES, PLATFORM_ROLES, TENANT_ROLES } from './permissions';
@@ -145,6 +146,14 @@ function AuthenticatedLayout({ children, allowedRoles, requiredPermissions }: { 
 
   // Platform-wide "require 2FA for all users" toggle (Platform Settings → Security) — every role
   // can reach /profile, which is where 2FA enrollment lives, so redirect there until they enroll.
+  // Suspended by a platform admin, or closed by its own admin. Checked before the trial gate for
+  // the same reason CompanyAccessFilter checks it first: a suspended workspace must not be sent to
+  // a checkout page. Platform-level roles belong to no company.
+  const workspaceSuspended = Boolean(user?.workspaceSuspended) && !canAccess(user?.role, PLATFORM_ROLES);
+  if (workspaceSuspended && location.pathname !== '/workspace-suspended') {
+    return <Navigate to="/workspace-suspended" replace />;
+  }
+
   // The free trial has run out and nobody has marked the company as paid (Platform Admin >
   // Tenants). Platform-level roles belong to no company, so no trial applies to them.
   const trialExpired = isTrialExpired(user) && !canAccess(user?.role, PLATFORM_ROLES);
@@ -643,6 +652,10 @@ function AppContent() {
       />
       {/* Outside AuthenticatedLayout: the gate above sends people here, so wrapping it in the
           layout that does the sending would loop. */}
+      <Route
+        path="/workspace-suspended"
+        element={<WorkspaceSuspendedPage />}
+      />
       <Route
         path="/trial-expired"
         element={<TrialExpiredPage />}

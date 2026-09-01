@@ -140,7 +140,7 @@ public class Company extends BaseEntity {
     @Column(name = "trial_ends_at")
     private Instant trialEndsAt;
 
-    /** Flipped by a PLATFORM_ADMIN once the company has actually paid — see TrialAccessFilter. */
+    /** Flipped by a PLATFORM_ADMIN once the company has actually paid — see CompanyAccessFilter. */
     @Column(name = "trial_converted", nullable = false)
     private Boolean trialConverted = false;
 

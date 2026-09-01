@@ -39,6 +39,8 @@ export interface UserProfile {
    * thing from a user who was granted nothing; hasPermission() treats the two differently.
    */
   permissions: Set<string> | undefined;
+  /** Suspended by a platform admin, or closed by its own admin. No self-service way back. */
+  workspaceSuspended: boolean;
 }
 
 /** One place decides whether a trial is over, so the route gate and the billing page cannot disagree. */
@@ -68,6 +70,7 @@ export function toUserProfile(me: MeResponse): UserProfile {
     permissions: me.permissions ? new Set(me.permissions) : undefined,
     trialEndsAt: me.trialEndsAt ?? null,
     trialConverted: me.trialConverted ?? false,
+    workspaceSuspended: me.workspaceSuspended ?? false,
   };
 }
 

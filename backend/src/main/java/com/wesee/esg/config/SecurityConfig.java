@@ -11,9 +11,12 @@ import com.wesee.esg.security.JwtService;
 import com.wesee.esg.session.UserSessionRepository;
 import com.wesee.esg.user.AppUserRepository;
 import jakarta.persistence.EntityManager;
-import com.wesee.esg.security.TrialAccessFilter;
+import com.wesee.esg.security.AuthThrottleFilter;
+import com.wesee.esg.security.AuthThrottleProperties;
+import com.wesee.esg.security.CompanyAccessFilter;
 import com.wesee.esg.tenant.CompanyRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -37,6 +40,9 @@ import java.util.List;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
+// Declared here rather than left to @ConfigurationPropertiesScan: a @WebMvcTest slice imports this
+// config without the scan, and the throttle filter would have nothing to configure it with.
+@EnableConfigurationProperties(AuthThrottleProperties.class)
 public class SecurityConfig {
 
     private final String[] allowedOrigins;
@@ -89,7 +95,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter,
                                             ApiTokenAuthenticationFilter apiTokenAuthenticationFilter,
-                                            TrialAccessFilter trialAccessFilter) throws Exception {
+                                            CompanyAccessFilter companyAccessFilter,
+                                            AuthThrottleFilter authThrottleFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -117,17 +124,25 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(apiTokenAuthenticationFilter, JwtAuthenticationFilter.class)
+                // Before authentication, because the endpoints it guards are the ones reached
+                // without a token — the point is to stop the attempt, not to price it.
+                .addFilterBefore(authThrottleFilter, ApiTokenAuthenticationFilter.class)
                 // After the JWT filter, because it needs the authenticated company to know whose
-                // trial to check.
-                .addFilterAfter(trialAccessFilter, JwtAuthenticationFilter.class);
+                // suspension and trial to check.
+                .addFilterAfter(companyAccessFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
 
     /** Stripe signs its callbacks itself, so the webhook route authenticates by signature, not JWT. */
     @Bean
-    public TrialAccessFilter trialAccessFilter(CompanyRepository companyRepository, ObjectMapper objectMapper) {
-        return new TrialAccessFilter(companyRepository, objectMapper);
+    public CompanyAccessFilter companyAccessFilter(CompanyRepository companyRepository, ObjectMapper objectMapper) {
+        return new CompanyAccessFilter(companyRepository, objectMapper);
+    }
+
+    @Bean
+    public AuthThrottleFilter authThrottleFilter(AuthThrottleProperties properties, ObjectMapper objectMapper) {
+        return new AuthThrottleFilter(properties, objectMapper);
     }
 
 }

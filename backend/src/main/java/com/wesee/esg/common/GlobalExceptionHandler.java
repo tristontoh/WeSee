@@ -6,6 +6,7 @@ package com.wesee.esg.common;
 
 import com.wesee.esg.billing.StripeException;
 import com.wesee.esg.common.exceptions.ConflictException;
+import com.wesee.esg.common.exceptions.AccountLockedException;
 import com.wesee.esg.common.exceptions.ForbiddenException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,6 +66,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleStripeError(StripeException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ApiError.of(502, "Bad Gateway", ex.getMessage(), request.getRequestURI()));
+    }
+
+    /**
+     * A locked account is not a credential problem, and answering 401 would make the client offer
+     * "wrong password, try again" to someone whose next nine tries cannot succeed either.
+     * Retry-After carries the wait, so the client never has to parse the sentence to find it.
+     */
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ApiError> handleAccountLocked(AccountLockedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ApiError.of(429, "Too Many Requests", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)

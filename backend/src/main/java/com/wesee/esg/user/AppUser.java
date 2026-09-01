@@ -84,6 +84,17 @@ public class AppUser extends BaseEntity {
     @Column(name = "avatar_original_name", length = 255)
     private String avatarOriginalName;
 
+    /**
+     * Consecutive failed sign-ins, and when the account starts accepting them again. Cleared by a
+     * successful sign-in. See LoginAttemptService — throttling by IP alone does not stop a slow
+     * password spray spread across addresses, and this does.
+     */
+    @Column(name = "failed_login_attempts", nullable = false)
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
     @Column(name = "email_verified", nullable = false)
     private Boolean emailVerified = true;
 

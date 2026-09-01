@@ -45,6 +45,15 @@ wesee:
     expiration-minutes: 1440
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4210}
+  auth:
+    throttle:
+      # Per address, per window, on the endpoints that need no token. Counted in one process's
+      # memory, so behind more than one instance the effective limit multiplies — the per-account
+      # lock in LoginAttemptService is what does not care how many instances there are.
+      enabled: ${AUTH_THROTTLE_ENABLED:true}
+      login-per-window: ${AUTH_THROTTLE_LOGIN:10}
+      signup-per-window: ${AUTH_THROTTLE_SIGNUP:5}
+      window-minutes: ${AUTH_THROTTLE_WINDOW_MINUTES:5}
   uploads:
     dir: ${UPLOADS_DIR:./data/uploads}
   extraction:

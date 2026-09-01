@@ -36,6 +36,12 @@ public record MeResponse(
         List<String> permissions,
         /** When the free trial runs out, and whether the company has since actually paid. */
         Instant trialEndsAt,
-        boolean trialConverted
+        boolean trialConverted,
+        /**
+         * The workspace is suspended or closed and every other endpoint is refusing it. GET
+         * /auth/me is exempt from that refusal precisely so this flag can get out — without it the
+         * client renders its usual shell and fills it with failed requests.
+         */
+        boolean workspaceSuspended
 ) {
 }

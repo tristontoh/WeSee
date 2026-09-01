@@ -18,7 +18,9 @@ import com.wesee.esg.auth.dto.RegisterResponse;
 import com.wesee.esg.auth.dto.SessionMetadata;
 import com.wesee.esg.auth.dto.UpdateProfileRequest;
 import com.wesee.esg.auth.dto.VerifyMfaRequest;
+import com.wesee.esg.common.exceptions.AccountLockedException;
 import com.wesee.esg.common.exceptions.ConflictException;
+import com.wesee.esg.common.exceptions.ForbiddenException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.emailverification.EmailVerificationService;
 import com.wesee.esg.mfa.MfaService;
@@ -49,6 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -68,6 +71,7 @@ public class AuthService {
     private final PlatformSettingsService platformSettingsService;
     private final PasswordResetService passwordResetService;
     private final PlatformActivityLogService activityLogService;
+    private final LoginAttemptService loginAttemptService;
 
     /**
      * The permissions V57 gave every pre-existing company's "Member" role — every key whose
@@ -105,6 +109,7 @@ public class AuthService {
                         PlatformSettingsService platformSettingsService,
                         PasswordResetService passwordResetService,
                         PlatformActivityLogService activityLogService,
+                        LoginAttemptService loginAttemptService,
                         JwtProperties jwtProperties) {
         this.appUserRepository = appUserRepository;
         this.companyRepository = companyRepository;
@@ -120,6 +125,7 @@ public class AuthService {
         this.platformSettingsService = platformSettingsService;
         this.passwordResetService = passwordResetService;
         this.activityLogService = activityLogService;
+        this.loginAttemptService = loginAttemptService;
         this.jwtExpirationMinutes = jwtProperties.getExpirationMinutes();
     }
 
@@ -185,8 +191,39 @@ public class AuthService {
         AppUser user = appUserRepository.findByEmailIgnoreCase(request.email())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
-        if (!Boolean.TRUE.equals(user.getActive()) || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        /*
+         * Checked before the password, not after: a locked account that still answers a correct
+         * guess differently from a wrong one is not locked, it is just slower to be right.
+         */
+        Optional<Long> lockedFor = loginAttemptService.lockedSecondsRemaining(user);
+        if (lockedFor.isPresent()) {
+            throw new AccountLockedException(
+                    "Too many failed sign-in attempts. Try again in "
+                            + Math.max(1, (lockedFor.get() + 59) / 60) + " minutes, or reset your password.",
+                    lockedFor.get());
+        }
+
+        // A deactivated user can never sign in, so a wrong password on one is not worth counting.
+        if (!Boolean.TRUE.equals(user.getActive())) {
             throw new BadCredentialsException("Invalid email or password");
+        }
+
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginAttemptService.recordFailure(user.getId());
+            throw new BadCredentialsException("Invalid email or password");
+        }
+        loginAttemptService.recordSuccess(user.getId());
+
+        /*
+         * The company, not just the user. A PLATFORM_ADMIN suspending a tenant used to write
+         * company.active and change nothing — every one of its users kept signing in. Refused here
+         * so it takes effect at the door, and again in CompanyAccessFilter so tokens already issued
+         * stop working now rather than whenever they happen to expire.
+         */
+        Company company = user.getCompany();
+        if (company != null && (!Boolean.TRUE.equals(company.getActive()) || company.getClosedAt() != null)) {
+            throw new ForbiddenException(
+                    "This workspace has been suspended. Contact support if you believe this is a mistake.");
         }
 
         if (!Boolean.TRUE.equals(user.getEmailVerified())) {
@@ -373,7 +410,8 @@ public class AuthService {
                 // implicitly — see PermissionGateService.
                 user.getCustomRole() != null ? user.getCustomRole().getPermissionKeys() : java.util.List.of(),
                 company != null ? company.getTrialEndsAt() : null,
-                company != null && Boolean.TRUE.equals(company.getTrialConverted())
+                company != null && Boolean.TRUE.equals(company.getTrialConverted()),
+                company != null && (!Boolean.TRUE.equals(company.getActive()) || company.getClosedAt() != null)
         );
     }
 }
