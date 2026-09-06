@@ -79,6 +79,17 @@ export type LoginOutcome =
   | { status: 'mfa_required'; mfaToken: string }
   | { status: 'email_verification_required'; email: string };
 
+/** Everything the signup wizard collects. One object, so a new field is one edit rather than four. */
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+  companyName: string;
+  registrationNumber: string;
+  sizeBand?: 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE';
+  countryOfIncorporation?: string;
+}
+
 interface AuthContextProps {
   user: UserProfile | null;
   isAuthenticated: boolean;
@@ -86,7 +97,7 @@ interface AuthContextProps {
   isLoading: boolean;
   login: (email: string, password: string, rememberMe: boolean) => Promise<LoginOutcome>;
   completeMfaLogin: (mfaToken: string, code: string) => Promise<UserProfile>;
-  register: (name: string, email: string, company: string, password: string) => Promise<string>;
+  register: (payload: RegisterPayload) => Promise<string>;
   resendVerification: (email: string) => Promise<void>;
   acceptInvite: (token: string, name: string, password: string) => Promise<UserProfile>;
   updateProfile: (data: { name: string; email: string; phone: string; dateOfBirth: string; address: string; bio: string }) => Promise<UserProfile>;
@@ -195,8 +206,8 @@ export const AuthProvider: React.FC<{
     return profile;
   };
 
-  const register = async (name: string, email: string, company: string, password: string): Promise<string> => {
-    const result = await authApi.register(name, email, password, company);
+  const register = async (payload: RegisterPayload): Promise<string> => {
+    const result = await authApi.register(payload);
     return result.email;
   };
 

@@ -70,8 +70,16 @@ export interface InvitePreviewResponse {
 }
 
 export const authApi = {
-  register: (name: string, email: string, password: string, companyName: string) =>
-    apiClient.post<RegisterResponse>('/api/v1/auth/register', { name, email, password, companyName }),
+  register: (payload: {
+    name: string;
+    email: string;
+    password: string;
+    companyName: string;
+    /** Canonical 12-digit SSM number; the backend re-checks and re-normalises it. */
+    registrationNumber: string;
+    sizeBand?: 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE';
+    countryOfIncorporation?: string;
+  }) => apiClient.post<RegisterResponse>('/api/v1/auth/register', payload),
 
   login: (email: string, password: string, rememberMe: boolean) =>
     apiClient.post<LoginResponse>('/api/v1/auth/login', { email, password, rememberMe }),

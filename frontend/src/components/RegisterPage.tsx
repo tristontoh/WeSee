@@ -9,6 +9,7 @@ import { motion } from 'motion/react';
 import {
   User,
   Building,
+  Hash,
   Mail,
   Lock,
   Eye,
@@ -27,6 +28,35 @@ import { useToast } from '../contexts/ToastContext';
 import Button from './ui/Button';
 import Select from './ui/Select';
 
+/**
+ * The twelve-digit number, or null. Mirrors SsmRegistrationNumber on the server — deliberately a
+ * duplicate rather than a shared contract, because the server must never trust this one, and the
+ * only thing this copy buys is telling someone about a typo before they have filled in a password.
+ *
+ * Accepts what an SSM print-out shows, "202101012345 (1234567-X)", and keeps the new number.
+ */
+function canonicalSsm(input: string): string | null {
+  const cleaned = input.trim().replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+  const combined = cleaned.match(/^(\d{12})\s*\(\s*\d{6,7}\s*-?\s*[A-Z]\s*\)$/);
+  const twelve = cleaned.replace(/ /g, '').match(/^(\d{12})$/);
+  const digits = combined?.[1] ?? twelve?.[1];
+  if (!digits) return null;
+  const year = Number(digits.slice(0, 4));
+  if (year < 1900 || year > new Date().getFullYear()) return null;
+  return digits;
+}
+
+const SIZE_BANDS: Record<string, 'MICRO' | 'SMALL' | 'MEDIUM' | 'LARGE'> = {
+  // The enum has four bands and this form has four buckets, but they are not the same four:
+  // MICRO is not reachable from here, and both 201-1000 and 1000+ are LARGE. Settings can set it
+  // precisely afterwards; sending an approximate band beats sending nothing, which is what this
+  // form did until now.
+  '1-50': 'SMALL',
+  '51-200': 'MEDIUM',
+  '201-1000': 'LARGE',
+  '1000+': 'LARGE',
+};
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register, resendVerification } = useAuth();
@@ -39,6 +69,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
   const [employeeSize, setEmployeeSize] = useState('1-50');
   const [country, setCountry] = useState('Malaysia');
   const [password, setPassword] = useState('');
@@ -65,9 +96,27 @@ export default function RegisterPage() {
     return true;
   };
 
+  /*
+   * Checked here as well as on the server, and the message names the actual problem rather than
+   * "invalid format" — someone is holding their SSM print-out while they read it, so the useful
+   * thing to say is which of the two numbers on it we want.
+   */
   const validateStep2 = () => {
     if (!company.trim()) {
       showToast('Please state your registered corporate entity name.', 'error');
+      return false;
+    }
+    const ssm = registrationNumber.trim().toUpperCase();
+    if (!ssm) {
+      showToast("Please enter your company's SSM registration number.", 'error');
+      return false;
+    }
+    if (/^\d{6,7}\s*-?\s*[A-Z]$/.test(ssm)) {
+      showToast('That is the old SSM number. Please enter the 12-digit one, e.g. 202101012345.', 'error');
+      return false;
+    }
+    if (!canonicalSsm(ssm)) {
+      showToast('Enter the 12-digit SSM number from your print-out, e.g. 202101012345.', 'error');
       return false;
     }
     return true;
@@ -92,8 +141,15 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const registeredWith = await register(name, email, company, password);
+      const registeredWith = await register({
+        name,
+        email,
+        password,
+        companyName: company,
+        registrationNumber: canonicalSsm(registrationNumber) ?? registrationNumber.trim(),
+        sizeBand: SIZE_BANDS[employeeSize],
+        countryOfIncorporation: country,
+      });
       setRegisteredEmail(registeredWith);
     } catch (err: any) {
       showToast(err?.message || 'Database connection handshake timed out. Please try again.', 'error');
@@ -393,6 +449,25 @@ export default function RegisterPage() {
                       className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900 placeholder-gray-400 transition-all shadow-sm"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700">SSM Registration Number</label>
+                  <div className="relative">
+                    <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="e.g. 202101012345"
+                      value={registrationNumber}
+                      onChange={(e) => setRegistrationNumber(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900 placeholder-gray-400 transition-all shadow-sm"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    The 12-digit number on your SSM print-out. If yours shows two numbers, use the
+                    longer one &mdash; you can paste the whole line and we will take it from there.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

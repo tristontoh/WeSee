@@ -39,6 +39,21 @@ export function uniqueEmail(prefix = 'e2e'): string {
   return `${prefix}+${Date.now()}${Math.floor(Math.random() * 1000)}@wesee.my`;
 }
 
+/**
+ * A 12-digit SSM number that no other run has used. Registration enforces uniqueness across the
+ * platform, so a fixed number would pass once and then fail every test after it — including on a
+ * second run against the same database.
+ *
+ * Shaped like a real one: four-digit year, two-digit entity type, six-digit serial. The year has to
+ * be plausible (SsmRegistrationNumber checks it), so the current one is used and the entropy goes
+ * in the serial.
+ */
+export function uniqueSsmNumber(): string {
+  const year = new Date().getFullYear();
+  const serial = String(Date.now() % 1_000_000).padStart(6, '0');
+  return `${year}01${serial}`;
+}
+
 export async function registerUser(
   request: APIRequestContext,
   email: string,
@@ -48,7 +63,13 @@ export async function registerUser(
   // getByText(email) assertion ambiguous across the company name and the member row.
   const suffix = email.split('@')[0].split('+')[1] ?? email.length;
   const res = await request.post(`${API}/auth/register`, {
-    data: { name: 'E2E User', email, password, companyName: `E2E Co ${suffix}` },
+    data: {
+      name: 'E2E User',
+      email,
+      password,
+      companyName: `E2E Co ${suffix}`,
+      registrationNumber: uniqueSsmNumber(),
+    },
   });
   if (!res.ok()) throw new Error(`register failed: ${res.status()} ${await res.text()}`);
 }

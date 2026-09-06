@@ -29,6 +29,9 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
 
     Optional<Company> findByStripeCustomerId(String stripeCustomerId);
 
+    /** Numbers are stored canonicalised, so an exact match is the whole check. */
+    Optional<Company> findByRegistrationNumber(String registrationNumber);
+
     /**
      * Row-locking read for the checkout-confirmation critical section. Two tabs confirming the same
      * session must serialise rather than race: the loser's stale in-memory copy would otherwise

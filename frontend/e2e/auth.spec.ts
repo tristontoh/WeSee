@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { SEED_ADMIN, TOKEN_KEY, registerUser, route, uniqueEmail } from './fixtures';
+import { API, SEED_ADMIN, TOKEN_KEY, registerUser, route, uniqueEmail, uniqueSsmNumber } from './fixtures';
 
 /**
  * Routes are plain paths — see fixtures.route().
@@ -66,12 +66,64 @@ async function fillRegistrationWizard(
   await page.getByRole('button', { name: /Continue/i }).click();
 
   await page.locator('input[placeholder="e.g. WeSee Green Tech Sdn Bhd"]').fill(`E2E Co ${Date.now()}`);
+  await page.locator('input[placeholder="e.g. 202101012345"]').fill(uniqueSsmNumber());
   await page.getByRole('button', { name: /Continue/i }).click();
 
   const passwords = page.locator('input[placeholder="••••••••••••"]');
   await passwords.nth(0).fill(password);
   await passwords.nth(1).fill(password);
 }
+
+/**
+ * The SSM number is the one field on step 2 that can be wrong rather than merely missing, and the
+ * wizard checks it before letting anyone spend time on a password.
+ */
+test('the wizard will not advance past an SSM number it cannot use', async ({ page }) => {
+  await page.goto(route('/register'));
+  await page.locator('input[placeholder="e.g. Siti Nurhaliza"]').fill('E2E User');
+  await page.locator('input[type=email]').fill(uniqueEmail('ssm'));
+  await page.getByRole('button', { name: /Continue/i }).click();
+
+  await page.locator('input[placeholder="e.g. WeSee Green Tech Sdn Bhd"]').fill('E2E Co');
+
+  // The old pre-2019 number: recognised, and refused with a message that says where to find the new one.
+  await page.locator('input[placeholder="e.g. 202101012345"]').fill('1234567-X');
+  await page.getByRole('button', { name: /Continue/i }).click();
+  await expect(page.getByRole('alert')).toContainText(/12-digit/i);
+
+  // Still on step 2 — no password field has appeared.
+  await expect(page.locator('input[placeholder="••••••••••••"]')).toHaveCount(0);
+
+  await page.locator('input[placeholder="e.g. 202101012345"]').fill(uniqueSsmNumber());
+  await page.getByRole('button', { name: /Continue/i }).click();
+  await expect(page.locator('input[placeholder="••••••••••••"]').first()).toBeVisible();
+});
+
+/**
+ * SSM numbers are public, so a collision is the case that decides whether uniqueness helps or
+ * hurts. The refusal must not send the caller to the existing workspace's admin — if the number was
+ * taken by someone impersonating them, that is telling the real owner to ask the impersonator.
+ */
+test('a second workspace cannot claim an SSM number that is already registered', async ({ page, request }) => {
+  const ssm = uniqueSsmNumber();
+  const first = await request.post(`${API}/auth/register`, {
+    data: {
+      name: 'First Owner', email: uniqueEmail('ssm-first'), password: 'E2ePassw0rd!',
+      companyName: 'First Co', registrationNumber: ssm,
+    },
+  });
+  expect(first.ok()).toBeTruthy();
+
+  const second = await request.post(`${API}/auth/register`, {
+    data: {
+      name: 'Second Claimant', email: uniqueEmail('ssm-second'), password: 'E2ePassw0rd!',
+      companyName: 'Second Co', registrationNumber: ssm,
+    },
+  });
+  expect(second.status()).toBe(409);
+  const body = await second.text();
+  expect(body).toContain('support@wesee.my');
+});
 
 test('registering shows the check-your-email state', async ({ page }) => {
   const email = uniqueEmail('signup');

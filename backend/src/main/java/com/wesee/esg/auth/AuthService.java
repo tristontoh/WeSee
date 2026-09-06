@@ -36,6 +36,7 @@ import com.wesee.esg.tenant.Company;
 import com.wesee.esg.tenant.CompanyRepository;
 import com.wesee.esg.tenant.MarketClassification;
 import com.wesee.esg.tenant.Sector;
+import com.wesee.esg.tenant.SsmRegistrationNumber;
 import com.wesee.esg.tenant.SectorRepository;
 import com.wesee.esg.tenant.SubscriptionPlan;
 import com.wesee.esg.tenant.TeamInvite;
@@ -154,8 +155,40 @@ public class AuthService {
             throw new ConflictException("An account with this email already exists");
         }
 
+        // Throws with a message written for the person typing — see SsmRegistrationNumber.
+        String registrationNumber = SsmRegistrationNumber.canonicalise(request.registrationNumber());
+
+        /*
+         * One SSM number, one workspace. The number is public, so a collision is not proof of
+         * anything: it is equally the company's second employee registering instead of accepting an
+         * invite, and someone claiming a company that is not theirs. Neither is resolvable here.
+         *
+         * So the refusal points at support rather than at the existing workspace's admin. Telling
+         * the caller to go and ask that admin for an invite is right in the first case and, in the
+         * second, tells the real owner to ask the impersonator for access to their own company.
+         *
+         * The attempt is logged against the company that holds the number, which is the only place
+         * it can go — the caller has no account and no company — and is what a platform admin
+         * handling the dispute has to go on.
+         */
+        companyRepository.findByRegistrationNumber(registrationNumber).ifPresent(existing -> {
+            activityLogService.record(existing.getId(), existing.getName(),
+                    ActivityEventType.REGISTRATION_COLLISION,
+                    request.name() + " (" + request.email() + ") tried to register a new workspace "
+                            + "with this company's SSM number");
+            throw new ConflictException(
+                    "This SSM registration number is already registered on WeSee. If your company "
+                            + "already has a workspace, ask a colleague to invite you. If you believe "
+                            + "someone else has registered your company, contact support@wesee.my.");
+        });
+
         Company company = new Company();
         company.setName(request.companyName());
+        company.setRegistrationNumber(registrationNumber);
+        company.setSizeBand(request.sizeBand());
+        company.setCountryOfIncorporation(
+                request.countryOfIncorporation() != null && !request.countryOfIncorporation().isBlank()
+                        ? request.countryOfIncorporation().trim() : null);
         company.setMarketClassification(MarketClassification.SME);
         company.setSubscriptionPlan(SubscriptionPlan.STARTER);
         company.setOnboardingCompleted(false);

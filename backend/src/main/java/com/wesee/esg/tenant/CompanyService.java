@@ -231,6 +231,31 @@ public class CompanyService {
      * UUID exists is not something one tenant should be able to learn about another.
      */
     @Transactional
+    /**
+     * The same rule registration applies, applied here too — otherwise this form is a way round it.
+     * A subsidiary added to a group gets its own SSM number, so the uniqueness check has to allow
+     * the company keeping the number it already has while refusing one that belongs to another
+     * workspace.
+     *
+     * Blank stays allowed: every company created before V82 has no number, and forcing one in the
+     * middle of an unrelated edit to the registered office would be a strange place to demand it.
+     */
+    private String canonicalRegistrationNumber(String raw, Company target) {
+        String blanked = blankToNull(raw);
+        if (blanked == null) {
+            return null;
+        }
+        String canonical = SsmRegistrationNumber.canonicalise(blanked);
+        companyRepository.findByRegistrationNumber(canonical).ifPresent(holder -> {
+            if (!holder.getId().equals(target.getId())) {
+                throw new ConflictException(
+                        "That SSM registration number belongs to another workspace on WeSee. If you "
+                                + "believe this is your company's number, contact support@wesee.my.");
+            }
+        });
+        return canonical;
+    }
+
     public CompanyGroupMemberResponse updateIdentity(UUID targetCompanyId, UpdateCompanyIdentityRequest request) {
         Company target = companyRepository.findById(targetCompanyId)
                 .orElseThrow(() -> new NotFoundException("Company not found"));
@@ -240,7 +265,7 @@ public class CompanyService {
         }
 
         target.setName(request.name().trim());
-        target.setRegistrationNumber(blankToNull(request.registrationNumber()));
+        target.setRegistrationNumber(canonicalRegistrationNumber(request.registrationNumber(), target));
         target.setTickerCode(blankToNull(request.tickerCode()));
         target.setDateOfIncorporation(request.dateOfIncorporation());
         target.setCountryOfIncorporation(blankToNull(request.countryOfIncorporation()));
