@@ -16,7 +16,9 @@ package com.wesee.esg.extraction;
  * accepted as evidence), so a document extraction can legitimately fail here on a file the
  * platform was right to store.
  */
-final class ExtractionMediaType {
+// Public rather than package-private since identity verification reads uploaded documents
+// too, and both callers need the same answer from the same leading bytes.
+public final class ExtractionMediaType {
 
     private static final byte[] PDF = {'%', 'P', 'D', 'F'};
     private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
@@ -25,7 +27,7 @@ final class ExtractionMediaType {
     private ExtractionMediaType() {
     }
 
-    static String sniff(byte[] content) {
+    public static String sniff(byte[] content) {
         if (startsWith(content, PDF)) {
             return "application/pdf";
         }

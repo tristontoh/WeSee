@@ -29,7 +29,7 @@ public class GeminiProperties {
      * design: a stand-in that invented figures would put numbers that were never on a document
      * inside the assurance hash, and a reviewer could not tell which was which.
      */
-    String requireApiKey() {
+    public String requireApiKey() {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
                     "Document extraction needs a Gemini API key. Set GEMINI_API_KEY, or put "
@@ -54,7 +54,7 @@ public class GeminiProperties {
         this.model = model;
     }
 
-    boolean hasBaseUrl() {
+    public boolean hasBaseUrl() {
         return baseUrl != null && !baseUrl.isBlank();
     }
 
