@@ -46,3 +46,12 @@ backend/src/main/resources/static/
 *.pdf
 *.pptx
 *.key
+
+# Submission deliverables. The recording, its subtitles and the logo kit are build outputs of
+# the product, not source — 26MB of video would sit in every clone forever, and git stores a
+# fresh copy of a binary on each change. They live alongside the repo, not inside it.
+*.mp4
+*.mov
+*.webm
+/wesee-demo-takes/
+/WeSee-Logo/
