@@ -17,6 +17,8 @@ import {
   Compass,
   ShieldCheck,
   Sliders,
+  Calculator,
+  Link2,
   Target,
   FileText,
   Globe,
@@ -72,6 +74,9 @@ import AboutPage from './components/AboutPage';
 import MaterialityAssessmentView from './components/MaterialityAssessmentView';
 import GovernanceView from './components/GovernanceView';
 import IndicatorsView from './components/IndicatorsView';
+import DenominatorsView from './components/DenominatorsView';
+import SupplyChainView from './components/SupplyChainView';
+import AcceptSupplyInvitePage from './components/AcceptSupplyInvitePage';
 import EmissionActivityView from './components/EmissionActivityView';
 import ExtractionUploadView from './components/ExtractionUploadView';
 import DocumentsView from './components/DocumentsView';
@@ -174,6 +179,8 @@ function AuthenticatedLayout({ children, allowedRoles, requiredPermissions }: { 
       'materiality': 'Materiality Assessment',
       'governance': 'Compliance',
       'indicators': 'ESG Indicators',
+      'denominators': 'Denominators',
+      'supply-chain': 'Supply Chain',
       'activity': 'Emission Activity',
       'extraction': 'Document Extraction',
       'documents': 'Documents',
@@ -213,6 +220,12 @@ function AuthenticatedLayout({ children, allowedRoles, requiredPermissions }: { 
     { key: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, path: '/dashboard' },
     { key: 'materiality', label: 'Materiality', icon: <Compass className="w-4 h-4" />, path: '/materiality' },
     { key: 'indicators', label: 'Indicators', icon: <Sliders className="w-4 h-4" />, path: '/indicators' },
+    // Immediately after Indicators: these are the figures the ratio indicators divide by, and a
+    // reporting team fills them in because it can see which indicators they switch on.
+    { key: 'denominators', label: 'Denominators', icon: <Calculator className="w-4 h-4" />, path: '/denominators' },
+    // After Emission Activity rather than here would hide the point: a supplier's signed figure
+    // lands in Scope 3, so it belongs beside the other emissions inputs.
+    { key: 'supply-chain', label: 'Supply Chain', icon: <Link2 className="w-4 h-4" />, path: '/supply-chain' },
     // Activity, then the two extraction screens: a bill uploaded there proposes an activity entry
     // and an indicator value, so it belongs beside the screens those land in. Not plan-gated —
     // reading a document is available at every tier, same as manual entry.
@@ -489,6 +502,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/login': 'Log In',
   '/register': 'Create Account',
   '/accept-invite': 'Accept Invite',
+  '/accept-supply-invite': 'Supply Chain Invitation',
   '/verify-email': 'Verify Email',
   '/forgot-password': 'Forgot Password',
   '/reset-password': 'Reset Password',
@@ -497,6 +511,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/materiality': 'Materiality Assessment',
   '/governance': 'Compliance',
   '/indicators': 'ESG Indicators',
+  '/denominators': 'Denominators',
+  '/supply-chain': 'Supply Chain',
   '/activity': 'Emission Activity',
   '/extraction': 'Document Extraction',
   '/documents': 'Documents',
@@ -623,6 +639,10 @@ function AppContent() {
       <Route
         path="/accept-invite"
         element={<AcceptInvitePage />}
+      />
+      <Route
+        path="/accept-supply-invite"
+        element={<AcceptSupplyInvitePage />}
       />
       <Route
         path="/verify-email"
@@ -755,6 +775,24 @@ function AppContent() {
         element={
           <AuthenticatedLayout allowedRoles={TENANT_ROLES}>
             <IndicatorsView />
+          </AuthenticatedLayout>
+        }
+      />
+
+      <Route
+        path="/denominators"
+        element={
+          <AuthenticatedLayout allowedRoles={TENANT_ROLES}>
+            <DenominatorsView />
+          </AuthenticatedLayout>
+        }
+      />
+
+      <Route
+        path="/supply-chain"
+        element={
+          <AuthenticatedLayout allowedRoles={TENANT_ROLES}>
+            <SupplyChainView />
           </AuthenticatedLayout>
         }
       />

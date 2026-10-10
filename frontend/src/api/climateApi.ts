@@ -158,8 +158,14 @@ export const climateApi = {
   listEmissionFactors: () => apiClient.get<EmissionFactorResponse[]>('/api/v1/climate/activity/factors'),
   listActivityEntries: (fiscalYear: number) =>
     apiClient.get<EmissionActivityEntryResponse[]>('/api/v1/climate/activity/entries', { fiscalYear }),
-  addActivityEntry: (fiscalYear: number, factorId: string, quantity: number) =>
-    apiClient.post<EmissionActivityEntryResponse>('/api/v1/climate/activity/entries', { fiscalYear, factorId, quantity }),
+  /** scope3CategoryId is required when the factor is Scope 3 — without it nothing can report it. */
+  addActivityEntry: (fiscalYear: number, factorId: string, quantity: number, scope3CategoryId?: string) =>
+    apiClient.post<EmissionActivityEntryResponse>('/api/v1/climate/activity/entries', {
+      fiscalYear,
+      factorId,
+      quantity,
+      scope3CategoryId,
+    }),
   deleteActivityEntry: (id: string) => apiClient.delete<void>(`/api/v1/climate/activity/entries/${id}`),
   applyActivityToScope: (fiscalYear: number, scope: EmissionScopeType) =>
     apiClient.post<EmissionsResponse>('/api/v1/climate/activity/entries/apply', undefined, { fiscalYear, scope }),

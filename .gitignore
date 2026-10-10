@@ -55,3 +55,6 @@ backend/src/main/resources/static/
 *.webm
 /wesee-demo-takes/
 /WeSee-Logo/
+
+# Plan-execution scratch (ledger, briefs, review packages) — git history is the real record
+.superpowers/

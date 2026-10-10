@@ -43,7 +43,8 @@ public class EmissionActivityController {
 
     @PostMapping("/entries")
     public EmissionActivityEntryResponse addEntry(@Valid @RequestBody AddActivityEntryRequest request) {
-        return emissionActivityService.addEntry(request.fiscalYear(), request.factorId(), request.quantity());
+        return emissionActivityService.addEntry(
+                request.fiscalYear(), request.factorId(), request.quantity(), request.scope3CategoryId());
     }
 
     @DeleteMapping("/entries/{id}")

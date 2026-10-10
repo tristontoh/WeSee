@@ -34,6 +34,10 @@ export default function EmissionActivityView() {
   const [entries, setEntries] = useState<EmissionActivityEntryResponse[]>([]);
   const [year, setYear] = useState(THIS_YEAR);
   const [factorId, setFactorId] = useState('');
+  // A Scope 3 activity has to say which of the fifteen categories it belongs to. Without it the
+  // entry used to be stored, listed here, and counted in no reported figure at all.
+  const [scope3CategoryId, setScope3CategoryId] = useState('');
+  const [scope3Categories, setScope3Categories] = useState<{ id: string; name: string }[]>([]);
   const [quantity, setQuantity] = useState('');
   const [scope, setScope] = useState<EmissionScopeType>('SCOPE_1');
   const [busy, setBusy] = useState(false);
@@ -46,6 +50,14 @@ export default function EmissionActivityView() {
         setFactorId((current) => current || f[0]?.id || '');
       })
       .catch((err: ApiError) => setError(err.message));
+
+    // The categories a Scope 3 activity can belong to. Fetched here rather than on demand so the
+    // picker is populated the moment a Scope 3 factor is chosen.
+    climateApi.getEmissions()
+      .then((e) => setScope3Categories(e.scope3.map((c) => ({ id: c.id, name: c.name }))))
+      .catch(() => {
+        /* The picker stays empty and the guard below explains why nothing can be saved. */
+      });
   }, []);
 
   const loadEntries = (fiscalYear: number) => {
@@ -60,15 +72,22 @@ export default function EmissionActivityView() {
     .reduce((sum, e) => sum + Number(e.calculatedTco2e || 0), 0)
     .toFixed(3);
 
+  const selectedFactor = factors.find((f) => f.id === factorId);
+  const needsCategory = selectedFactor?.scope === 'SCOPE_3';
+
   const add = () => {
     const parsed = Number(quantity);
     if (!factorId || quantity.trim() === '' || Number.isNaN(parsed) || parsed <= 0) {
       setError('Enter a quantity greater than zero.');
       return;
     }
+    if (needsCategory && !scope3CategoryId) {
+      setError('Choose which Scope 3 category this belongs to, or it cannot be reported.');
+      return;
+    }
     setBusy(true);
     setError('');
-    climateApi.addActivityEntry(year, factorId, parsed)
+    climateApi.addActivityEntry(year, factorId, parsed, needsCategory ? scope3CategoryId : undefined)
       .then(() => {
         setQuantity('');
         loadEntries(year);
@@ -135,6 +154,15 @@ export default function EmissionActivityView() {
               hint: `${f.factorValue} kg/${f.activityUnit}`,
             }))}
           />
+          {needsCategory && (
+            <Select
+              aria-label="Scope 3 category"
+              className="flex-[2] min-w-[240px]"
+              value={scope3CategoryId}
+              onChange={setScope3CategoryId}
+              options={scope3Categories.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          )}
           <input
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}

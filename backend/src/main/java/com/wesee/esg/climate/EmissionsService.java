@@ -100,12 +100,36 @@ public class EmissionsService {
 
         boolean isFinancialInstitution = company.getSector() != null && "FINANCIAL_SERVICES".equals(company.getSector().getCode());
 
+        // Scope 3 activity, summed per category and year. Until this existed an entry recorded
+        // against a Scope 3 factor — business travel, freight — was stored, listed on the Activity
+        // screen, and counted in no reported figure at all, because the entry could not say which
+        // of the fifteen categories it belonged to.
+        Map<UUID, Map<Integer, BigDecimal>> activityByCategory = new HashMap<>();
+        for (Object[] row : activityEntryRepository.sumScope3TcoByCategoryAndYear(companyId)) {
+            activityByCategory
+                    .computeIfAbsent((UUID) row[0], k -> new HashMap<>())
+                    .put((Integer) row[1], (BigDecimal) row[2]);
+        }
+
         List<Scope3CategoryResponse> scope3 = categories.stream()
                 .sorted(Comparator.comparing(
                         cat -> cat.getStandardCategoryNumber() != null ? cat.getStandardCategoryNumber() : Integer.MAX_VALUE))
                 .map(cat -> {
-                    List<Scope3ValuePointDto> values = scope3ValueRepository.findByCategoryIdOrderByFiscalYearAsc(cat.getId()).stream()
-                            .map(v -> new Scope3ValuePointDto(v.getFiscalYear(), v.getValue(), isInRelief(v.getFiscalYear(), firstReportingYear, reliefYears)))
+                    Map<Integer, BigDecimal> entered = new HashMap<>();
+                    scope3ValueRepository.findByCategoryIdOrderByFiscalYearAsc(cat.getId())
+                            .forEach(v -> entered.put(v.getFiscalYear(), v.getValue()));
+                    Map<Integer, BigDecimal> fromActivity =
+                            activityByCategory.getOrDefault(cat.getId(), Map.of());
+
+                    // Entered wins over computed, exactly as scopeSeries does for scopes 1 and 2.
+                    List<Scope3ValuePointDto> values = Stream
+                            .concat(entered.keySet().stream(), fromActivity.keySet().stream())
+                            .distinct()
+                            .sorted()
+                            .map(year -> new Scope3ValuePointDto(
+                                    year,
+                                    entered.containsKey(year) ? entered.get(year) : fromActivity.get(year),
+                                    isInRelief(year, firstReportingYear, reliefYears)))
                             .toList();
                     boolean mandatory = isMandatory(cat, isFinancialInstitution);
                     return new Scope3CategoryResponse(cat.getId(), cat.getName(), cat.getTooltip(), cat.getStandardCategoryNumber(), mandatory, values);
@@ -117,6 +141,28 @@ public class EmissionsService {
 
     private boolean isMandatory(Scope3Category category, boolean isFinancialInstitution) {
         return isFinancialInstitution && Integer.valueOf(15).equals(category.getStandardCategoryNumber());
+    }
+
+    /**
+     * The company's row for one standard GHG Protocol category, seeding the standard set first if
+     * this company has never had them.
+     *
+     * <p>Categories are created lazily — a company that has not opened the Emissions screen has
+     * none — so anything that writes a Scope 3 figure has to be able to bring them into existence
+     * rather than refusing. Supply-chain allocation is the other caller.
+     */
+    @Transactional
+    public Scope3Category requireStandardCategory(UUID companyId, int standardCategoryNumber) {
+        List<Scope3Category> existing = scope3CategoryRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId);
+        if (existing.isEmpty()) {
+            seedStandardScope3Categories(companyId);
+            existing = scope3CategoryRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId);
+        }
+        return existing.stream()
+                .filter(c -> Integer.valueOf(standardCategoryNumber).equals(c.getStandardCategoryNumber()))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException(
+                        "This company has no Scope 3 Category " + standardCategoryNumber));
     }
 
     private void seedStandardScope3Categories(UUID companyId) {

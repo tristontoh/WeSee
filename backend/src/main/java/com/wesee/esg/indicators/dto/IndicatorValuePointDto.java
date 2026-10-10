@@ -4,6 +4,7 @@
  */
 package com.wesee.esg.indicators.dto;
 
+import com.wesee.esg.indicators.DerivationState;
 import com.wesee.esg.indicators.IndicatorValueStatus;
 
 import java.math.BigDecimal;
@@ -16,6 +17,10 @@ public record IndicatorValuePointDto(
         String approvedByName,
         Instant approvedAt,
         boolean isComputed,
-        int monthsReported
+        int monthsReported,
+        /** Null for every indicator that is not DERIVED, which is most of the catalogue. */
+        DerivationState derivationState,
+        /** The arithmetic, or which inputs are missing. Null when not derived. */
+        String derivationNote
 ) {
 }

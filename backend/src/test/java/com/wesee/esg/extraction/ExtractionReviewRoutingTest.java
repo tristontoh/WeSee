@@ -32,6 +32,17 @@ class ExtractionReviewRoutingTest {
         assertFalse(ExtractionReviewService.routesThroughMonthly(AggregationRule.DIRECT_ANNUAL, 2));
     }
 
+    /**
+     * A derived indicator has no monthly ledger and refuses an annual write too, so routing an
+     * extracted reading to either door turns the reviewer's Accept button into a 500. It is not a
+     * valid extraction target at all — see ExtractionReviewService.accept.
+     */
+    @Test
+    void aDerivedIndicatorIsNotRoutedToTheMonthlyLedger() {
+        assertFalse(ExtractionReviewService.routesThroughMonthly(AggregationRule.DERIVED, 2));
+        assertFalse(ExtractionReviewService.routesThroughMonthly(AggregationRule.DERIVED, null));
+    }
+
     /** A document with no period on it has no month to file the reading under. */
     @Test
     void anUndatedReadingStillWritesTheYear() {

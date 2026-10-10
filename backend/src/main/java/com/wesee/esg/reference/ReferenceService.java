@@ -6,6 +6,7 @@ package com.wesee.esg.reference;
 
 import com.wesee.esg.permission.PermissionRepository;
 import com.wesee.esg.permission.dto.PermissionResponse;
+import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.reference.dto.FeatureFlagResponse;
 import com.wesee.esg.reference.dto.IndicatorDefinitionResponse;
@@ -135,6 +136,14 @@ public class ReferenceService {
         def.setDefaultTarget(request.defaultTarget());
         def.setDefaultTargetDirection(request.defaultTargetDirection());
         def.setAggregationRule(request.aggregationRule());
+        // derivation_key must be non-null exactly when the rule is DERIVED, enforced by a table
+        // check. Leaving a stale key behind made every derived definition uneditable with a 500.
+        if (request.aggregationRule() != AggregationRule.DERIVED) {
+            def.setDerivationKey(null);
+        } else if (def.getDerivationKey() == null) {
+            throw new ConflictException("A derived indicator needs a formula, and one cannot be"
+                    + " chosen here — derivations are set by migration, not by hand");
+        }
 
         if (request.sectorCode() != null && !request.sectorCode().isBlank()) {
             Sector sector = sectorRepository.findById(request.sectorCode())

@@ -5,6 +5,7 @@
 package com.wesee.esg.reference;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
@@ -22,4 +23,10 @@ public interface IndicatorDefinitionRepository extends JpaRepository<IndicatorDe
     List<IndicatorDefinition> findAllByOrderByCategoryAscNameAsc();
 
     List<IndicatorDefinition> findBySectorSpecificTrueAndSector_Code(String sectorCode);
+
+    /** Every formula the catalogue claims to compute, for the boot-time check against the registry. */
+    @Query("SELECT DISTINCT d.derivationKey FROM IndicatorDefinition d WHERE d.derivationKey IS NOT NULL")
+    List<String> findDistinctDerivationKeys();
+
+    List<IndicatorDefinition> findByAggregationRule(AggregationRule aggregationRule);
 }

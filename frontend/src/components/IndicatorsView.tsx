@@ -37,7 +37,7 @@ import Button from './ui/Button';
 import Card from './ui/Card';
 import Select from './ui/Select';
 import { useApplicableMatters } from '../hooks/useApplicableMatters';
-import { indicatorsApi, IndicatorResponse, IndicatorValueStatus, AggregationRule } from '../api/indicatorsApi';
+import { indicatorsApi, IndicatorResponse, IndicatorValueStatus, AggregationRule, DerivationState } from '../api/indicatorsApi';
 import { companyApi } from '../api/companyApi';
 import { TenantUserResponse } from '../api/tenantAdminApi';
 import { exportApi, downloadCsv } from '../api/exportApi';
@@ -57,12 +57,15 @@ export interface AuditTrailEntry {
 }
 
 export interface IndicatorValueCell {
-  value: number;
+  /** Null when the server holds a row but no number — a derived indicator awaiting its inputs. */
+  value: number | null;
   status: IndicatorValueStatus;
   approvedByName: string | null;
   approvedAt: string | null;
   isComputed: boolean;
   monthsReported: number;
+  derivationState: DerivationState | null;
+  derivationNote: string | null;
 }
 
 export interface Indicator {
@@ -74,6 +77,8 @@ export interface Indicator {
   isSectorSpecific?: boolean;
   sectorName?: string;
   aggregationRule: AggregationRule;
+  /** Human-readable formula. Null unless aggregationRule is DERIVED. */
+  formula: string | null;
   values: Record<string, IndicatorValueCell | null>; // year e.g. "FY2023" -> cell
   monthlyByYear: Record<string, (number | null)[]>; // year -> 12-length array, index 0 = Jan
   target: number | null; // effective target value (tenant override or reference default)
@@ -88,6 +93,20 @@ export interface Indicator {
  * guarded on the key existing, so a monthly value outside the window was silently discarded.
  */
 const years = fiscalYearKeys();
+
+/**
+ * A derived indicator is computed from its inputs and never typed in — not by year, not by month.
+ * Before DERIVED existed, "not DIRECT_ANNUAL" meant "monthly"; it no longer does, and conflating
+ * the two would offer a month-entry grid for a ratio that has no months.
+ */
+function isDerived(rule: AggregationRule): boolean {
+  return rule === 'DERIVED';
+}
+
+/** Entered month by month and totalled by the server: SUM, COUNT, AVERAGE or LATEST. */
+function isMonthly(rule: AggregationRule): boolean {
+  return rule !== 'DIRECT_ANNUAL' && rule !== 'DERIVED';
+}
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function toFrontendIndicator(r: IndicatorResponse): Indicator {
@@ -100,9 +119,15 @@ function toFrontendIndicator(r: IndicatorResponse): Indicator {
   const values: Record<string, IndicatorValueCell | null> = {};
   ownYears.forEach((y) => { values[y] = null; });
   r.values.forEach((v) => {
-    values[`FY${v.fiscalYear}`] = v.value !== null
-      ? { value: v.value, status: v.status, approvedByName: v.approvedByName, approvedAt: v.approvedAt, isComputed: v.isComputed, monthsReported: v.monthsReported }
-      : null;
+    // Build the cell whenever the server returned a point, and gate only the NUMBER on value.
+    // A derived indicator waiting on its inputs is exactly a point whose value is null, and
+    // dropping the whole cell there threw away the derivationState and the "waiting on…" note —
+    // the one thing the user needs in order to fix it.
+    values[`FY${v.fiscalYear}`] = {
+      value: v.value, status: v.status, approvedByName: v.approvedByName, approvedAt: v.approvedAt,
+      isComputed: v.isComputed, monthsReported: v.monthsReported,
+      derivationState: v.derivationState, derivationNote: v.derivationNote,
+    };
   });
 
   const monthlyByYear: Record<string, (number | null)[]> = {};
@@ -123,6 +148,7 @@ function toFrontendIndicator(r: IndicatorResponse): Indicator {
     isSectorSpecific: r.sectorSpecific,
     sectorName: r.sectorCode ?? undefined,
     aggregationRule: r.aggregationRule,
+    formula: r.formula,
     values,
     monthlyByYear,
     target: r.effectiveTarget,
@@ -302,7 +328,7 @@ export default function IndicatorsView() {
       if (type === 'year' && yearKey) {
         // Same reason as the render: an absent year reads as an empty cell, not a crash.
         const cell = indicator.values[yearKey] ?? null;
-        setEditValue(cell !== null ? String(cell.value) : '');
+        setEditValue(cell !== null && cell.value !== null ? String(cell.value) : '');
       } else {
         const targetVal = indicator.target;
         setEditValue(targetVal !== null ? String(targetVal) : '');
@@ -358,7 +384,7 @@ export default function IndicatorsView() {
       setFocusYear(year);
     }
     setSelectedIndicatorForHistory(indicator);
-    if (indicator.aggregationRule !== 'DIRECT_ANNUAL') {
+    if (isMonthly(indicator.aggregationRule)) {
       const monthly = indicator.monthlyByYear[effectiveYear] ?? [];
       const firstOpenMonth = monthly.findIndex((v) => v === null);
       setNewAuditMonth(firstOpenMonth >= 0 ? firstOpenMonth + 1 : 1);
@@ -373,14 +399,14 @@ export default function IndicatorsView() {
       return;
     }
 
-    const isMonthly = selectedIndicatorForHistory.aggregationRule !== 'DIRECT_ANNUAL';
+    const entersMonthly = isMonthly(selectedIndicatorForHistory.aggregationRule);
     const baseComment = newAuditComment.trim() || 'Manual adjustment override';
     const comment = `${baseComment} | Authorizing officer: ${newAuditUser}`;
     const indicatorId = selectedIndicatorForHistory.id;
     const fileToUpload = pendingFile;
 
     setIsSavingAudit(true);
-    const request = isMonthly
+    const request = entersMonthly
       ? indicatorsApi.setMonthlyValue(indicatorId, fiscalYearNumber(focusYear), newAuditMonth, num, undefined, comment)
       : indicatorsApi.setValue(indicatorId, fiscalYearNumber(focusYear), num, undefined, comment);
 
@@ -396,7 +422,7 @@ export default function IndicatorsView() {
         const converted = toFrontendIndicator(finalIndicator);
         setIndicators(prev => prev.map(ind => (ind.id === finalIndicator.id ? converted : ind)));
         setSelectedIndicatorForHistory(converted);
-        if (isMonthly) {
+        if (entersMonthly) {
           const monthly = converted.monthlyByYear[focusYear] ?? [];
           const nextOpenMonth = monthly.findIndex((v) => v === null);
           setNewAuditMonth(nextOpenMonth >= 0 ? nextOpenMonth + 1 : 1);
@@ -789,13 +815,40 @@ export default function IndicatorsView() {
                                       isFocus ? 'bg-primary-50/10' : ''
                                     }`}
                                   >
-                                    {indicator.aggregationRule !== 'DIRECT_ANNUAL' ? (
+                                    {isDerived(indicator.aggregationRule) ? (
+                                      /* Read-only: a derived value has no input box, because
+                                         typing one is exactly what this change removed. */
+                                      <button
+                                        onClick={() => openHistoryPanel(indicator, y)}
+                                        className="w-full py-2 text-center rounded-xl cursor-pointer transition-all hover:bg-navy-50"
+                                        title={cell?.derivationNote ?? indicator.formula ?? 'Computed from its inputs'}
+                                      >
+                                        {cell !== null && cell.value !== null ? (
+                                          <div className="flex flex-col items-center gap-1">
+                                            <span className="font-bold font-mono text-navy-900">{cell.value}</span>
+                                            {cell.derivationState === 'SUPERSEDED_MANUAL' ? (
+                                              <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">
+                                                Typed in
+                                              </span>
+                                            ) : (
+                                              <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 font-mono">
+                                                ƒ computed
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-[10px] text-navy-400 font-mono font-bold">
+                                            {cell?.derivationState === 'AWAITING_INPUTS' ? 'Needs inputs' : 'Not started'}
+                                          </span>
+                                        )}
+                                      </button>
+                                    ) : isMonthly(indicator.aggregationRule) ? (
                                       <button
                                         onClick={() => openHistoryPanel(indicator, y)}
                                         className="w-full py-2 text-center rounded-xl cursor-pointer transition-all hover:bg-navy-50"
                                         title="View monthly entries"
                                       >
-                                        {cell !== null ? (
+                                        {cell !== null && cell.value !== null ? (
                                           <div className="flex flex-col items-center gap-1">
                                             <span className="font-bold font-mono text-navy-900">{cell.value}</span>
                                             <span
@@ -845,7 +898,7 @@ export default function IndicatorsView() {
                                           </button>
                                         </div>
                                       </div>
-                                    ) : cell !== null ? (
+                                    ) : cell !== null && cell.value !== null ? (
                                       <div className="flex flex-col items-center gap-1">
                                         <button
                                           onClick={() => startEditing(indicator.id, 'year', y)}
@@ -1018,7 +1071,41 @@ export default function IndicatorsView() {
                   </div>
                 </div>
 
-                {selectedIndicatorForHistory.aggregationRule !== 'DIRECT_ANNUAL' && (
+                {isDerived(selectedIndicatorForHistory.aggregationRule) && (() => {
+                  const cell = selectedIndicatorForHistory.values[focusYear];
+                  return (
+                    <div className="space-y-2 p-4 rounded-xl bg-primary-50/40 border border-primary-100">
+                      <h4 className="text-[10px] font-bold text-navy-400 uppercase tracking-widest block font-mono">
+                        How this is computed
+                      </h4>
+                      <p className="text-xs font-mono text-navy-800">{selectedIndicatorForHistory.formula}</p>
+                      {/* The arithmetic with the real numbers in it. An assurer reading the audit
+                          trail sees the division that happened, not the word "computed". */}
+                      {cell?.derivationNote && (
+                        <p className="text-xs font-mono text-navy-600">{cell.derivationNote}</p>
+                      )}
+                      {cell?.derivationState === 'AWAITING_INPUTS' && (
+                        <a href="#/denominators" className="text-xs font-semibold text-primary-600 hover:underline">
+                          Enter the missing figures →
+                        </a>
+                      )}
+                      {cell?.derivationState === 'SUPERSEDED_MANUAL' && (
+                        <p className="text-[11px] text-amber-700">
+                          This number was typed in before this indicator became computed. It is kept
+                          as entered — including on any year already signed off — and will be
+                          replaced once its inputs exist.
+                        </p>
+                      )}
+                      {!cell && (
+                        <p className="text-[11px] text-navy-500">
+                          Nothing recorded for {focusYear} yet.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {isMonthly(selectedIndicatorForHistory.aggregationRule) && (
                   <div className="space-y-3">
                     <h4 className="text-[10px] font-bold text-navy-400 uppercase tracking-widest block font-mono">
                       Monthly Breakdown ({focusYear})
@@ -1101,15 +1188,17 @@ export default function IndicatorsView() {
                   </div>
                 </div>
 
-                {/* ADD ADJUSTMENT LOG FORM */}
+                {/* ADD ADJUSTMENT LOG FORM — not for a derived indicator, whose value comes from
+                    its inputs. Offering the box would only lead to a 409 from the server. */}
+                {!isDerived(selectedIndicatorForHistory.aggregationRule) && (
                 <div className="border-t border-navy-100 pt-6 space-y-4">
                   <h4 className="text-xs font-bold text-navy-950 uppercase tracking-wider flex items-center space-x-1">
                     <Sparkles className="w-4 h-4 text-primary-500" />
-                    <span>{selectedIndicatorForHistory.aggregationRule !== 'DIRECT_ANNUAL' ? 'Log Monthly Entry' : 'Post Audited Adjustment'}</span>
+                    <span>{isMonthly(selectedIndicatorForHistory.aggregationRule) ? 'Log Monthly Entry' : 'Post Audited Adjustment'}</span>
                   </h4>
 
-                  <div className={`grid gap-4 ${selectedIndicatorForHistory.aggregationRule !== 'DIRECT_ANNUAL' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                    {selectedIndicatorForHistory.aggregationRule !== 'DIRECT_ANNUAL' && (
+                  <div className={`grid gap-4 ${isMonthly(selectedIndicatorForHistory.aggregationRule) ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {isMonthly(selectedIndicatorForHistory.aggregationRule) && (
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-navy-400 uppercase tracking-wider">Month</label>
                         <Select
@@ -1128,7 +1217,7 @@ export default function IndicatorsView() {
 
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-navy-400 uppercase tracking-wider">
-                        {selectedIndicatorForHistory.aggregationRule !== 'DIRECT_ANNUAL' ? `Value (${selectedIndicatorForHistory.unit})` : `Corrected Value (${selectedIndicatorForHistory.unit})`}
+                        {isMonthly(selectedIndicatorForHistory.aggregationRule) ? `Value (${selectedIndicatorForHistory.unit})` : `Corrected Value (${selectedIndicatorForHistory.unit})`}
                       </label>
                       <input
                         type="text"
@@ -1190,6 +1279,7 @@ export default function IndicatorsView() {
                     </div>
                   </div>
                 </div>
+                )}
 
               </div>
 

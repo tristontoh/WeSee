@@ -12,6 +12,8 @@ import com.wesee.esg.indicators.dto.IndicatorResponse;
 import com.wesee.esg.indicators.dto.IndicatorValuePointDto;
 import com.wesee.esg.indicators.dto.SetIndicatorTargetRequest;
 import com.wesee.esg.indicators.dto.SetIndicatorValueRequest;
+import com.wesee.esg.indicators.derivation.DerivationRegistry;
+import com.wesee.esg.indicators.derivation.DerivationService;
 import com.wesee.esg.reference.AggregationRule;
 import com.wesee.esg.reference.IndicatorDefinition;
 import com.wesee.esg.reference.IndicatorDefinitionRepository;
@@ -47,6 +49,12 @@ public class IndicatorService {
     private final CurrentUserProvider currentUserProvider;
     private final CompanyRepository companyRepository;
     private final AppUserRepository appUserRepository;
+    private final DerivationService derivationService;
+
+    /** Said at every door a person could try to write a derived indicator through. */
+    static final String DERIVED_REFUSAL =
+            "This indicator is computed from its inputs — enter the figures it divides by"
+                    + " on the denominators screen, and the value follows";
 
     public IndicatorService(IndicatorDefinitionRepository indicatorDefinitionRepository,
                              TenantIndicatorRepository tenantIndicatorRepository,
@@ -56,7 +64,8 @@ public class IndicatorService {
                              MatterSetResolverService matterSetResolverService,
                              CurrentUserProvider currentUserProvider,
                              CompanyRepository companyRepository,
-                             AppUserRepository appUserRepository) {
+                             AppUserRepository appUserRepository,
+                             DerivationService derivationService) {
         this.indicatorDefinitionRepository = indicatorDefinitionRepository;
         this.tenantIndicatorRepository = tenantIndicatorRepository;
         this.indicatorValueRepository = indicatorValueRepository;
@@ -66,6 +75,7 @@ public class IndicatorService {
         this.currentUserProvider = currentUserProvider;
         this.companyRepository = companyRepository;
         this.appUserRepository = appUserRepository;
+        this.derivationService = derivationService;
     }
 
     @Transactional(readOnly = true)
@@ -122,6 +132,11 @@ public class IndicatorService {
     public IndicatorResponse setValue(String indicatorDefinitionId, int fiscalYear, SetIndicatorValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
+        // A derived indicator needs its own sentence: "use the monthly entry endpoint" is wrong
+        // advice for a ratio, which has no monthly entries to make.
+        if (!def.getAggregationRule().isHandEntered()) {
+            throw new ConflictException(DERIVED_REFUSAL);
+        }
         if (def.getAggregationRule() != AggregationRule.DIRECT_ANNUAL) {
             throw new ConflictException("This indicator's annual value is computed from monthly entries — use the monthly entry endpoint instead");
         }
@@ -155,6 +170,11 @@ public class IndicatorService {
         entry.setComment(request.comment());
         auditEntryRepository.save(entry);
 
+        // Several indicators are inputs to the derived ratios (electricity to energy intensity,
+        // waste generated to the diversion rate). Recompute in the same transaction so the two
+        // never disagree on screen.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
+
         return getIndicator(indicatorDefinitionId);
     }
 
@@ -169,6 +189,9 @@ public class IndicatorService {
     public IndicatorResponse setMonthlyValue(String indicatorDefinitionId, int fiscalYear, int month, SetIndicatorValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
+        if (!def.getAggregationRule().isHandEntered()) {
+            throw new ConflictException(DERIVED_REFUSAL);
+        }
         if (def.getAggregationRule() == AggregationRule.DIRECT_ANNUAL) {
             throw new ConflictException("This indicator is entered as a direct annual figure, not monthly");
         }
@@ -229,6 +252,9 @@ public class IndicatorService {
         value.setApprovedByName(null);
         value.setApprovedAt(null);
         indicatorValueRepository.save(value);
+
+        // A monthly correction changes the annual figure, which may itself be a ratio's input.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
     }
 
     /** SUM and COUNT are the same arithmetic (sum of entered months) — COUNT is a presentational label for event-count indicators. */
@@ -250,6 +276,10 @@ public class IndicatorService {
                     .map(IndicatorMonthlyValue::getValue)
                     .orElse(null);
             case DIRECT_ANNUAL -> throw new IllegalStateException("DIRECT_ANNUAL indicators don't aggregate from monthly values");
+            // A derived indicator is computed from other indicators and from the denominator
+            // figures, never from its own monthly entries — it has none. Same shape of mistake as
+            // DIRECT_ANNUAL reaching here, so it fails the same loud way.
+            case DERIVED -> throw new IllegalStateException("DERIVED indicators are computed from their inputs, not from monthly values");
         };
     }
 
@@ -280,6 +310,17 @@ public class IndicatorService {
         IndicatorValue value = indicatorValueRepository
                 .findByCompanyIdAndIndicatorDefinitionIdAndFiscalYear(companyId, indicatorDefinitionId, fiscalYear)
                 .orElseThrow(() -> new NotFoundException("No value recorded for this indicator and fiscal year"));
+
+        // A derived indicator's value is only approvable once it is actually computed. Approving a
+        // SUPERSEDED_MANUAL row would put a Company Admin's name on a number typed in before the
+        // indicator became computed — the 103% this whole change exists to stop endorsing.
+        if (value.getDerivationState() == DerivationState.SUPERSEDED_MANUAL) {
+            throw new ConflictException("This figure was typed in before the indicator became"
+                    + " computed — enter the inputs it divides by, then approve what it computes");
+        }
+        if (value.getValue() == null) {
+            throw new ConflictException("There is no figure here to approve");
+        }
         if (value.getStatus() == IndicatorValueStatus.APPROVED) {
             throw new ConflictException("This value has already been approved");
         }
@@ -330,10 +371,15 @@ public class IndicatorService {
                 effectiveDirection,
                 enabled,
                 def.getAggregationRule(),
+                def.getDerivationKey(),
+                def.getDerivationKey() == null
+                        ? null
+                        : DerivationRegistry.get(def.getDerivationKey()).formula(),
                 values.stream().map(v -> new IndicatorValuePointDto(
                         v.getFiscalYear(), v.getValue(), v.getStatus(), v.getApprovedByName(), v.getApprovedAt(),
                         Boolean.TRUE.equals(v.getComputed()),
-                        monthsReportedByYear.getOrDefault(v.getFiscalYear(), 0L).intValue()
+                        monthsReportedByYear.getOrDefault(v.getFiscalYear(), 0L).intValue(),
+                        v.getDerivationState(), v.getDerivationNote()
                 )).toList(),
                 monthlyValues.stream()
                         .sorted(Comparator.comparingInt(IndicatorMonthlyValue::getFiscalYear).thenComparingInt(IndicatorMonthlyValue::getMonth))
