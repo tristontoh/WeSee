@@ -4,8 +4,10 @@
  */
 package com.wesee.esg.supplychain;
 
-import com.wesee.esg.climate.EmissionActivityEntryRepository;
-import com.wesee.esg.climate.EmissionActivityService;
+import com.wesee.esg.climate.EmissionsService;
+import com.wesee.esg.climate.Scope3Category;
+import com.wesee.esg.climate.Scope3Value;
+import com.wesee.esg.climate.Scope3ValueRepository;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.security.CurrentUserProvider;
@@ -31,29 +33,31 @@ import java.util.UUID;
 @Service
 public class Scope3AllocationService {
 
-    /** Seeded in V91. A unit conversion, so the arithmetic below stays an identity. */
-    static final String ALLOCATION_FACTOR_ID = "SUPPLIER_ALLOCATED_S3C1";
+    /** Purchased goods and services. The only category this feature writes today. */
+    static final int PURCHASED_GOODS_CATEGORY = 1;
+
+    private static final int TCO2E_SCALE = 4;
 
     private final Scope3AllocationRepository allocationRepository;
     private final SharedDisclosureRepository disclosureRepository;
     private final SupplyLinkRepository supplyLinkRepository;
-    private final EmissionActivityService emissionActivityService;
-    private final EmissionActivityEntryRepository activityRepository;
+    private final EmissionsService emissionsService;
+    private final Scope3ValueRepository scope3ValueRepository;
     private final CompanyRepository companyRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public Scope3AllocationService(Scope3AllocationRepository allocationRepository,
                                    SharedDisclosureRepository disclosureRepository,
                                    SupplyLinkRepository supplyLinkRepository,
-                                   EmissionActivityService emissionActivityService,
-                                   EmissionActivityEntryRepository activityRepository,
+                                   EmissionsService emissionsService,
+                                   Scope3ValueRepository scope3ValueRepository,
                                    CompanyRepository companyRepository,
                                    CurrentUserProvider currentUserProvider) {
         this.allocationRepository = allocationRepository;
         this.disclosureRepository = disclosureRepository;
         this.supplyLinkRepository = supplyLinkRepository;
-        this.emissionActivityService = emissionActivityService;
-        this.activityRepository = activityRepository;
+        this.emissionsService = emissionsService;
+        this.scope3ValueRepository = scope3ValueRepository;
         this.companyRepository = companyRepository;
         this.currentUserProvider = currentUserProvider;
     }
@@ -82,51 +86,92 @@ public class Scope3AllocationService {
         BigDecimal allocated = Allocation.allocate(
                 disclosure.getScope1Tco2e(), disclosure.getScope2Tco2e(), share);
 
+        // Keyed on the RELATIONSHIP, not the snapshot. A republish creates a new disclosure id, and
+        // keying on that let the buyer allocate the same purchase twice — once against each
+        // snapshot — with nothing warning and the UI inviting it.
         Scope3Allocation allocation = allocationRepository
-                .findByCompanyIdAndSharedDisclosureId(buyerCompanyId, disclosureId)
+                .findForLinkAndYear(buyerCompanyId, disclosure.getSupplyLinkId(), disclosure.getFiscalYear())
                 .orElseGet(() -> {
                     Scope3Allocation a = new Scope3Allocation();
                     a.setCompanyId(buyerCompanyId);
-                    a.setSharedDisclosureId(disclosureId);
                     return a;
                 });
-
-        // Re-entering a quantity corrects the figure rather than adding a second one, so the
-        // buyer's Scope 3 never carries two versions of the same purchase.
-        if (allocation.getEmissionActivityEntryId() != null) {
-            activityRepository.findByIdAndCompanyId(allocation.getEmissionActivityEntryId(), buyerCompanyId)
-                    .ifPresent(e -> emissionActivityService.deleteEntry(e.getId()));
-        }
+        // Re-point it at the snapshot actually being drawn from, which may be a newer one.
+        allocation.setSharedDisclosureId(disclosureId);
 
         allocation.setFiscalYear(disclosure.getFiscalYear());
         allocation.setPurchasedQuantity(request.purchasedQuantity());
         allocation.setPurchasedUnit(disclosure.getBasisUnit());
         allocation.setShareFraction(share);
         allocation.setAllocatedTco2e(allocated);
-        allocation.setGhgCategory(1);
+        allocation.setGhgCategory(PURCHASED_GOODS_CATEGORY);
+        allocationRepository.save(allocation);
 
-        var entry = emissionActivityService.addEntry(
-                disclosure.getFiscalYear(), ALLOCATION_FACTOR_ID, allocated);
-        allocation.setEmissionActivityEntryId(entry.id());
-
-        return toDto(allocationRepository.save(allocation));
+        publishCategoryTotal(buyerCompanyId, disclosure.getFiscalYear());
+        return toDto(allocation);
     }
 
-    /** Removes the allocation and the emissions it put into the buyer's ledger. */
+    /** Removes the allocation and takes the emissions it contributed back out of Scope 3. */
     @Transactional
     public void remove(UUID allocationId) {
         UUID companyId = currentUserProvider.requireCompanyId();
         Scope3Allocation allocation = allocationRepository.findByIdAndCompanyId(allocationId, companyId)
                 .orElseThrow(() -> new NotFoundException("No such allocation"));
-        if (allocation.getEmissionActivityEntryId() != null) {
-            activityRepository.findByIdAndCompanyId(allocation.getEmissionActivityEntryId(), companyId)
-                    .ifPresent(e -> emissionActivityService.deleteEntry(e.getId()));
-        }
+        int fiscalYear = allocation.getFiscalYear();
         allocationRepository.delete(allocation);
+        allocationRepository.flush();
+        publishCategoryTotal(companyId, fiscalYear);
+    }
+
+    /**
+     * Writes the year's allocations into the buyer's reported Scope 3 Category 1.
+     *
+     * <p>This is the step the first implementation got wrong: it wrote an
+     * {@code emission_activity_entry} instead, and nothing reads those into a reported Scope 3
+     * figure — {@code EmissionsService} calls {@code scopeSeries} for scopes 1 and 2 only, and
+     * takes Scope 3 entirely from {@code scope3_value}. The figure is a sum rather than a delta so
+     * that removing an allocation is the same code path as adding one.
+     */
+    private void publishCategoryTotal(UUID companyId, int fiscalYear) {
+        // Categories are created lazily, so a buyer that has never opened the Emissions screen has
+        // none. Bring them into existence rather than refusing the allocation over it.
+        Scope3Category category = emissionsService.requireStandardCategory(companyId, PURCHASED_GOODS_CATEGORY);
+
+        BigDecimal total = categoryTotal(
+                allocationRepository.findByCompanyIdOrderByFiscalYearDesc(companyId),
+                fiscalYear, PURCHASED_GOODS_CATEGORY);
+
+        Scope3Value value = scope3ValueRepository
+                .findByCategoryIdAndFiscalYear(category.getId(), fiscalYear)
+                .orElseGet(() -> {
+                    Scope3Value v = new Scope3Value();
+                    v.setCompanyId(companyId);
+                    v.setCategory(category);
+                    v.setFiscalYear(fiscalYear);
+                    return v;
+                });
+        value.setValue(total);
+        scope3ValueRepository.save(value);
+    }
+
+    /** Pure, so the summing is testable without a database. */
+    static BigDecimal categoryTotal(List<Scope3Allocation> allocations, int fiscalYear, int ghgCategory) {
+        return allocations.stream()
+                .filter(a -> a.getFiscalYear() != null && a.getFiscalYear() == fiscalYear)
+                .filter(a -> a.getGhgCategory() != null && a.getGhgCategory() == ghgCategory)
+                .map(Scope3Allocation::getAllocatedTco2e)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(TCO2E_SCALE, java.math.RoundingMode.HALF_UP);
     }
 
     private Scope3AllocationDto toDto(Scope3Allocation a) {
-        SharedDisclosure d = disclosureRepository.findById(a.getSharedDisclosureId()).orElse(null);
+        // Bound, not findById. An unbound read kept serving the supplier's basis, total and name
+        // on every page load after the link was revoked — revocation is supposed to end that.
+        // What the allocation itself stores (quantity, share, allocated tonnes) is enough for the
+        // audit trail once the source is gone.
+        SharedDisclosure d = disclosureRepository
+                .findByIdForBuyer(a.getSharedDisclosureId(), a.getCompanyId())
+                .orElse(null);
         String supplierName = d == null ? null : supplyLinkRepository.findById(d.getSupplyLinkId())
                 .map(SupplyLink::getSupplierCompanyId)
                 .flatMap(companyRepository::findById)
@@ -138,6 +183,6 @@ public class Scope3AllocationService {
                 // The allocation keeps citing the snapshot it used; the UI only says a newer one
                 // exists. Nothing re-allocates by itself.
                 d != null && disclosureRepository.existsNewerThan(d.getId()),
-                d != null && d.getRevokedAt() != null);
+                d == null || d.getRevokedAt() != null);
     }
 }

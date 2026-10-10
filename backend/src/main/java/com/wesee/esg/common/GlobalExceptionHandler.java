@@ -88,6 +88,21 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(400, "Bad Request", ex.getMessage(), request.getRequestURI()));
     }
 
+    /**
+     * A uniqueness race — two publishes for the same link and year, two accepts of the same
+     * invitation, two allocations of the same purchase. The loser is in conflict with the winner,
+     * not looking at a broken server.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Data integrity violation on {}: {}", request.getRequestURI(), ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of(409, "Conflict",
+                        "Somebody else changed this at the same moment — reload and try again",
+                        request.getRequestURI()));
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         List<String> details = ex.getConstraintViolations().stream()

@@ -27,7 +27,12 @@ import java.util.UUID;
 @NoArgsConstructor
 public class Scope3Allocation extends TenantOwnedEntity {
 
-    @Column(name = "shared_disclosure_id", nullable = false, updatable = false)
+    /**
+     * The snapshot this allocation was drawn from. Updatable: when the supplier republishes and
+     * the buyer re-enters its quantity, the same allocation moves to the newer snapshot rather
+     * than a second one being created beside it.
+     */
+    @Column(name = "shared_disclosure_id", nullable = false)
     private UUID sharedDisclosureId;
 
     @Column(name = "fiscal_year", nullable = false)
@@ -45,9 +50,6 @@ public class Scope3Allocation extends TenantOwnedEntity {
 
     @Column(name = "allocated_tco2e", nullable = false, precision = 18, scale = 4)
     private BigDecimal allocatedTco2e;
-
-    @Column(name = "emission_activity_entry_id")
-    private UUID emissionActivityEntryId;
 
     @Column(name = "ghg_category", nullable = false)
     private Integer ghgCategory = 1;

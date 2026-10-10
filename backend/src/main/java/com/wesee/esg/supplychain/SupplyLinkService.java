@@ -142,9 +142,13 @@ public class SupplyLinkService {
             throw new ConflictException("You already have a live link with that buyer");
         }
 
+        AppUser accepter = appUserRepository.findById(currentUserProvider.getPrincipal().userId())
+                .orElseThrow(() -> new NotFoundException("User not found"));
         link.setSupplierCompanyId(acceptingCompanyId);
         link.setStatus(SupplyLinkStatus.ACTIVE);
         link.setRespondedAt(Instant.now());
+        link.setAcceptedByUserId(accepter.getId());
+        link.setAcceptedByEmail(accepter.getEmail());
         return SupplyLinkDto.asSupplier(supplyLinkRepository.save(link),
                 companyName(link.getBuyerCompanyId()));
     }
@@ -168,6 +172,18 @@ public class SupplyLinkService {
         link.setStatus(SupplyLinkStatus.REVOKED);
         link.setRespondedAt(Instant.now());
         supplyLinkRepository.save(link);
+
+        // Withdraw any invitation to the same address that is still outstanding. A buyer that
+        // invited twice (the usual reason being a bounced first mail) and then revoked would
+        // otherwise find the supplier able to re-establish the link alone, with the second token.
+        supplyLinkRepository.findByBuyerCompanyIdOrderByInvitedAtDesc(link.getBuyerCompanyId()).stream()
+                .filter(other -> other.getStatus() == SupplyLinkStatus.PENDING)
+                .filter(other -> other.getSupplierEmail().equalsIgnoreCase(link.getSupplierEmail()))
+                .forEach(other -> {
+                    other.setStatus(SupplyLinkStatus.REVOKED);
+                    other.setRespondedAt(Instant.now());
+                    supplyLinkRepository.save(other);
+                });
     }
 
     private SupplyLink requireLinkByToken(String rawToken) {

@@ -119,6 +119,28 @@ public class EmissionsService {
         return isFinancialInstitution && Integer.valueOf(15).equals(category.getStandardCategoryNumber());
     }
 
+    /**
+     * The company's row for one standard GHG Protocol category, seeding the standard set first if
+     * this company has never had them.
+     *
+     * <p>Categories are created lazily — a company that has not opened the Emissions screen has
+     * none — so anything that writes a Scope 3 figure has to be able to bring them into existence
+     * rather than refusing. Supply-chain allocation is the other caller.
+     */
+    @Transactional
+    public Scope3Category requireStandardCategory(UUID companyId, int standardCategoryNumber) {
+        List<Scope3Category> existing = scope3CategoryRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId);
+        if (existing.isEmpty()) {
+            seedStandardScope3Categories(companyId);
+            existing = scope3CategoryRepository.findByCompanyIdOrderByCreatedAtAscIdAsc(companyId);
+        }
+        return existing.stream()
+                .filter(c -> Integer.valueOf(standardCategoryNumber).equals(c.getStandardCategoryNumber()))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException(
+                        "This company has no Scope 3 Category " + standardCategoryNumber));
+    }
+
     private void seedStandardScope3Categories(UUID companyId) {
         for (StandardCategory std : STANDARD_SCOPE3_CATEGORIES) {
             Scope3Category category = new Scope3Category();

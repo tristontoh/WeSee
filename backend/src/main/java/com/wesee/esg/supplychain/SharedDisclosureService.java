@@ -127,6 +127,11 @@ public class SharedDisclosureService {
             previous.setRevokedAt(Instant.now());
             previous.setRevocationReason("Superseded by a newer publication");
             disclosureRepository.save(previous);
+            // Flush before inserting the replacement. The partial unique index on
+            // (supply_link_id, fiscal_year) WHERE revoked_at IS NULL sees the old row as still
+            // live until this update reaches the database, and JPA would otherwise defer it to
+            // commit — the insert below then collides with the row it just superseded.
+            disclosureRepository.flush();
         });
 
         SharedDisclosure disclosure = new SharedDisclosure();

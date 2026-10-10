@@ -130,6 +130,9 @@ export const denominatorApi = {
   addBoardMeeting: (fiscalYear: number, heldOn: string, kind?: string) =>
     apiClient.post<BoardMeetingDto>(`${base}/board/meetings/${fiscalYear}`, { heldOn, kind }),
 
+  updateBoardMeeting: (fiscalYear: number, meetingId: string, heldOn: string, kind?: string) =>
+    apiClient.put<BoardMeetingDto>(`${base}/board/meetings/${fiscalYear}/${meetingId}`, { heldOn, kind }),
+
   deleteBoardMeeting: (meetingId: string) =>
     apiClient.delete<void>(`${base}/board/meetings/${meetingId}`),
 
@@ -156,6 +159,15 @@ export const denominatorApi = {
 
   addHolding: (fiscalYear: number, holderName: string, sharesHeld: number) =>
     apiClient.post<ShareholdingDto>(`${base}/shares/holdings/${fiscalYear}`, { holderName, sharesHeld }),
+
+  updateHolding: (fiscalYear: number, holdingId: string, holderName: string, sharesHeld: number) =>
+    apiClient.put<ShareholdingDto>(`${base}/shares/holdings/${fiscalYear}/${holdingId}`, {
+      holderName,
+      sharesHeld,
+    }),
+
+  topHoldings: (fiscalYear: number, limit: number) =>
+    apiClient.get<ShareholdingDto[]>(`${base}/shares/holdings/${fiscalYear}/top/${limit}`),
 
   deleteHolding: (holdingId: string) =>
     apiClient.delete<void>(`${base}/shares/holdings/${holdingId}`),

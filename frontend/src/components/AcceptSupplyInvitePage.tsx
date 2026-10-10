@@ -69,13 +69,16 @@ const AcceptSupplyInvitePage: React.FC = () => {
               documents &mdash; only the figures you choose to share, and the sign-off behind them.
             </p>
             <div className="flex gap-3">
-              <Button onClick={() => navigate(`/login?next=/accept-supply-invite?token=${token}`)}>
-                Sign in
-              </Button>
+              <Button onClick={() => navigate('/login')}>Sign in</Button>
               <Link to="/register" className="text-sm text-primary-600 hover:underline self-center">
                 Register a company
               </Link>
             </div>
+            {/* LoginPage has no `next` handling, so sending one would silently drop the supplier on
+                the dashboard with no route back. Say what to do instead of pretending. */}
+            <p className="text-[11px] text-navy-500">
+              Keep this email — after signing in, open its link again to accept.
+            </p>
           </>
         ) : (
           <>

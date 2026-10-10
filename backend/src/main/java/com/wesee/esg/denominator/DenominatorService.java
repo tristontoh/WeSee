@@ -69,7 +69,13 @@ public class DenominatorService {
                 });
         figure.setValue(request.value());
         figure.setUnit(figureKey.canonicalUnit());
-        figure.setSourceNote(request.sourceNote());
+        // Only overwrite the note when one was actually sent. The screen does not carry the field,
+        // so an unconditional set erased a note entered through the API the next time anyone
+        // edited the figure's value — the column the spec justifies as the figure's provenance,
+        // silently clearing itself.
+        if (request.sourceNote() != null) {
+            figure.setSourceNote(request.sourceNote());
+        }
         AnnualFigureDto saved = AnnualFigureDto.from(figureRepository.save(figure));
         // In the same transaction: a denominator that moved must move what divides by it, or the
         // screen shows a stale ratio beside its own fresh input.

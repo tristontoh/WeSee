@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calculator, Plus, Trash2, Users, Building, Droplets, Briefcase } from 'lucide-react';
+import { Calculator, CalendarDays, Plus, Trash2, Users, Building, Droplets, Briefcase } from 'lucide-react';
 import {
   denominatorApi,
   ApiError,
@@ -13,6 +13,7 @@ import {
   type BoardMemberDto,
   type FigureCatalogueEntry,
   type FigureGroup,
+  type BoardMeetingDto,
   type ShareCapitalDto,
   type ShareholdingDto,
 } from '../api';
@@ -67,9 +68,13 @@ const DenominatorsView: React.FC = () => {
   const [figures, setFigures] = useState<Record<string, AnnualFigure>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [board, setBoard] = useState<BoardMemberDto[]>([]);
+  const [meetings, setMeetings] = useState<BoardMeetingDto[]>([]);
   const [capital, setCapital] = useState<ShareCapitalDto | null>(null);
   const [holdings, setHoldings] = useState<ShareholdingDto[]>([]);
+  // Only the FIRST load blanks the screen. Refetching after a one-field change used to unmount
+  // every card, lose focus and jump the scroll to the top.
   const [loading, setLoading] = useState(true);
+  const loadedOnce = React.useRef(false);
 
   const yearOptions = useMemo(
     () => Array.from({ length: 8 }, (_, i) => thisYear + 1 - i),
@@ -77,12 +82,15 @@ const DenominatorsView: React.FC = () => {
   );
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!loadedOnce.current) {
+      setLoading(true);
+    }
     try {
-      const [cat, figs, members, cap, holds] = await Promise.all([
+      const [cat, figs, members, mtgs, cap, holds] = await Promise.all([
         denominatorApi.catalogue(),
         denominatorApi.listFigures(fiscalYear),
         denominatorApi.listBoardMembers(fiscalYear),
+        denominatorApi.listBoardMeetings(fiscalYear),
         denominatorApi.getShareCapital(fiscalYear),
         denominatorApi.listHoldings(fiscalYear),
       ]);
@@ -96,18 +104,24 @@ const DenominatorsView: React.FC = () => {
       setFigures(byKey);
       setDrafts(asDrafts);
       setBoard(members);
-      setCapital(cap);
+      setMeetings(mtgs);
+      // The endpoint answers 200 with an empty body when nothing is recorded, which arrives as ''
+      // rather than null. Normalise it, or `capital ?? defaults` never takes the default branch.
+      setCapital(cap && typeof cap === 'object' ? cap : null);
       setHoldings(holds);
     } catch (e) {
       showToast(errorMessage(e), 'error');
     } finally {
+      loadedOnce.current = true;
       setLoading(false);
     }
   }, [fiscalYear, showToast]);
 
   useEffect(() => {
+    // A new financial year shares nothing with the old one, so that one does blank.
+    loadedOnce.current = false;
     void load();
-  }, [load]);
+  }, [fiscalYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveFigure = async (key: AnnualFigureKey) => {
     const raw = drafts[key];
@@ -174,6 +188,30 @@ const DenominatorsView: React.FC = () => {
     }
   };
 
+  const addMeeting = async () => {
+    const heldOn = window.prompt('Date the meeting was held (YYYY-MM-DD)');
+    if (!heldOn || !/^\d{4}-\d{2}-\d{2}$/.test(heldOn.trim())) {
+      if (heldOn !== null) showToast('Enter the date as YYYY-MM-DD', 'error');
+      return;
+    }
+    try {
+      await denominatorApi.addBoardMeeting(fiscalYear, heldOn.trim());
+      void load();
+    } catch (e) {
+      showToast(errorMessage(e), 'error');
+    }
+  };
+
+  const setAttendance = async (meetingId: string, memberId: string, attended: boolean) => {
+    try {
+      await denominatorApi.setAttendance(meetingId, memberId, attended);
+      void load();
+    } catch (e) {
+      // The server refuses attendance at a meeting held outside a director's tenure, by name.
+      showToast(errorMessage(e), 'error');
+    }
+  };
+
   const saveCapital = async (field: keyof ShareCapitalDto, raw: string) => {
     const next: ShareCapitalDto = capital ?? {
       fiscalYear,
@@ -181,6 +219,11 @@ const DenominatorsView: React.FC = () => {
       publicHeldShares: null,
       bumiputeraHeldShares: null,
     };
+    // Tabbing through an empty field on a year with nothing recorded used to POST a zero total
+    // and show an error for a read-only interaction.
+    if (raw.trim() === '' && !capital) {
+      return;
+    }
     const value = raw.trim() === '' ? null : Number(raw);
     if (value !== null && Number.isNaN(value)) {
       showToast('That is not a number', 'error');
@@ -198,6 +241,9 @@ const DenominatorsView: React.FC = () => {
       showToast('Capital structure saved', 'success');
     } catch (e) {
       showToast(errorMessage(e), 'error');
+      // Put the server's number back. Leaving the refused one on screen meant the next save
+      // merged from state and silently discarded it, under a success toast.
+      void load();
     }
   };
 
@@ -394,6 +440,94 @@ const DenominatorsView: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            )}
+          </Card>
+
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <CalendarDays className="w-4 h-4 text-primary-600" />
+                <h2 className="text-sm font-bold text-navy-950">Board meetings</h2>
+              </div>
+              <Button variant="secondary" onClick={() => void addMeeting()} disabled={board.length === 0}>
+                <Plus className="w-4 h-4" /> Add meeting
+              </Button>
+            </div>
+            <p className="text-xs text-navy-500">
+              Tick who sat in each meeting. Attendance is measured against the meetings held while
+              a director actually served, which is why their appointment dates matter above.
+            </p>
+            {board.length === 0 ? (
+              <p className="text-xs text-navy-400">Add directors first — there is nobody to mark present.</p>
+            ) : meetings.length === 0 ? (
+              <p className="text-xs text-navy-400">No meetings recorded for FY{fiscalYear}.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-navy-500 border-b border-navy-100">
+                      <th className="py-2 font-semibold whitespace-nowrap">Director</th>
+                      {meetings.map((m) => (
+                        <th key={m.id} className="py-2 font-semibold text-center whitespace-nowrap px-2">
+                          {m.heldOn}
+                        </th>
+                      ))}
+                      <th className="py-2 font-semibold text-right">Attended</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {board.map((member) => {
+                      const present = meetings.filter((m) =>
+                        m.attendance.some((a) => a.boardMemberId === member.id && a.attended),
+                      ).length;
+                      return (
+                        <tr key={member.id} className="border-b border-navy-50">
+                          <td className="py-2 text-navy-900 whitespace-nowrap">{member.name}</td>
+                          {meetings.map((m) => {
+                            const row = m.attendance.find((a) => a.boardMemberId === member.id);
+                            return (
+                              <td key={m.id} className="py-2 text-center px-2">
+                                <input
+                                  type="checkbox"
+                                  checked={row?.attended ?? false}
+                                  onChange={(e) =>
+                                    void setAttendance(m.id, member.id, e.target.checked)
+                                  }
+                                  aria-label={`${member.name} attended the meeting on ${m.heldOn}`}
+                                />
+                              </td>
+                            );
+                          })}
+                          <td className="py-2 text-right font-mono tabular-nums text-navy-600">
+                            {present}/{meetings.length}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {meetings.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {meetings.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await denominatorApi.deleteBoardMeeting(m.id);
+                        void load();
+                      } catch (e) {
+                        showToast(errorMessage(e), 'error');
+                      }
+                    }}
+                    className="text-[10px] text-navy-400 hover:text-red-600 border border-navy-100 rounded px-2 py-1"
+                  >
+                    Remove {m.heldOn}
+                  </button>
+                ))}
+              </div>
             )}
           </Card>
 

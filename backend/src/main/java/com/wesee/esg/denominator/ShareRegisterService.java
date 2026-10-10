@@ -77,9 +77,11 @@ public class ShareRegisterService {
     public ShareholdingDto upsertHolding(UUID holdingId, int fiscalYear, UpsertShareholdingRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
         FigureValidator.requireSaneFiscalYear(fiscalYear);
-        if (request.sharesHeld() == null || request.sharesHeld().signum() < 0) {
-            throw new IllegalArgumentException("A holding cannot be negative");
-        }
+        ShareCapitalValidator.requireHoldingWithinCapital(
+                request.holderName(), request.sharesHeld(),
+                capitalRepository.findByCompanyIdAndFiscalYear(companyId, fiscalYear)
+                        .map(ShareCapital::getTotalOutstandingShares)
+                        .orElse(null));
 
         Shareholding holding = holdingId == null
                 ? new Shareholding()

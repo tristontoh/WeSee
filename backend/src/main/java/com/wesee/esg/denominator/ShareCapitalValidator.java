@@ -28,6 +28,26 @@ public final class ShareCapitalValidator {
      * bumiputera public shareholder counts in both, so the two summing above the total is
      * ordinary rather than an error.
      */
+    /**
+     * One holder cannot own more shares than exist. A null total means no capital structure has
+     * been recorded yet, and there is nothing to bound against — refusing there would force the
+     * two screens to be filled in one order only.
+     */
+    public static void requireHoldingWithinCapital(String holderName, BigDecimal sharesHeld,
+                                                   BigDecimal totalOutstanding) {
+        if (sharesHeld == null || sharesHeld.signum() < 0) {
+            throw new IllegalArgumentException("A holding cannot be negative");
+        }
+        if (totalOutstanding == null) {
+            return;
+        }
+        if (sharesHeld.compareTo(totalOutstanding) > 0) {
+            throw new IllegalArgumentException(holderName + " is recorded with "
+                    + sharesHeld.toPlainString() + " shares, more than the "
+                    + totalOutstanding.toPlainString() + " outstanding");
+        }
+    }
+
     private static void requireWithin(String label, BigDecimal held, BigDecimal total) {
         if (held == null) {
             return;

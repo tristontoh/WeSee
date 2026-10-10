@@ -66,4 +66,15 @@ public class SupplyLink extends BaseEntity {
 
     @Column(name = "responded_at")
     private Instant respondedAt;
+
+    /**
+     * Who actually accepted, which need not be the mailbox the invitation was sent to — a
+     * supplier's sustainability lead often receives it forwarded. The token is the authorisation;
+     * this is the record of who used it.
+     */
+    @Column(name = "accepted_by_user_id")
+    private UUID acceptedByUserId;
+
+    @Column(name = "accepted_by_email", length = 255)
+    private String acceptedByEmail;
 }

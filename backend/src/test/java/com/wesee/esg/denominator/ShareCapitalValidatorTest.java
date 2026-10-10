@@ -60,6 +60,36 @@ class ShareCapitalValidatorTest {
         assertTrue(e.getMessage().toLowerCase().contains("outstanding"), e.getMessage());
     }
 
+    /**
+     * A single holder cannot own more shares than exist. Without this the concentration ratio the
+     * register feeds computes 500% — the same shape as the 103% in IND-WAT-02, in the one table
+     * where the bound is sitting in the adjacent row.
+     */
+    @Test
+    void aHolderCannotOwnMoreSharesThanExist() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
+                ShareCapitalValidator.requireHoldingWithinCapital(
+                        "Founder Holdings", new BigDecimal("5000000"), new BigDecimal("1000000")));
+        assertTrue(e.getMessage().contains("Founder Holdings"), e.getMessage());
+        assertTrue(e.getMessage().contains("1000000"), e.getMessage());
+    }
+
+    @Test
+    void aHolderOwningTheWholeCompanyIsAccepted() {
+        assertDoesNotThrow(() -> ShareCapitalValidator.requireHoldingWithinCapital(
+                "Sole Owner", new BigDecimal("1000000"), new BigDecimal("1000000")));
+    }
+
+    /**
+     * With no capital structure recorded there is no bound to check against. Refusing here would
+     * force the two screens to be filled in one order only.
+     */
+    @Test
+    void aHoldingIsAcceptedWhenNoCapitalStructureIsRecordedYet() {
+        assertDoesNotThrow(() -> ShareCapitalValidator.requireHoldingWithinCapital(
+                "Early Entry", new BigDecimal("5000000"), null));
+    }
+
     @Test
     void holdingExactlyTheWholeCompanyIsAccepted() {
         assertDoesNotThrow(() -> ShareCapitalValidator.validate(

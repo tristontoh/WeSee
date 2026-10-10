@@ -387,12 +387,15 @@ const SupplyChainView: React.FC = () => {
                     <tr key={a.id} className="border-b border-navy-50">
                       <td className="py-2 text-navy-900">
                         {a.supplierName ?? '-'}
-                        {a.sourceWithdrawn && (
+                        {/* Publishing again revokes the snapshot it supersedes, so a superseded
+                            source is ALSO withdrawn. Asking for "withdrawn and not superseded"
+                            is what distinguishes "your supplier pulled the figure" from "your
+                            supplier re-signed and a newer one is waiting". */}
+                        {a.newerSnapshotAvailable ? (
+                          <span className="ml-2 text-[9px] text-amber-700">newer version available</span>
+                        ) : a.sourceWithdrawn ? (
                           <span className="ml-2 text-[9px] text-amber-700">source withdrawn</span>
-                        )}
-                        {a.newerSnapshotAvailable && !a.sourceWithdrawn && (
-                          <span className="ml-2 text-[9px] text-amber-700">newer version exists</span>
-                        )}
+                        ) : null}
                       </td>
                       <td className="py-2 text-navy-600">FY{a.fiscalYear}</td>
                       <td className="py-2 font-mono text-navy-600 tabular-nums">

@@ -90,8 +90,13 @@ export const supplyChainApi = {
       basisUnit,
     }),
 
+  // The reason is a query param on the server. Passing it as apiClient.delete's second argument
+  // made it a request body, which the controller never reads — the supplier was asked why and
+  // the answer was discarded.
   revokeDisclosure: (disclosureId: string, reason?: string) =>
-    apiClient.delete<void>(`${base}/disclosures/${disclosureId}`, undefined),
+    apiClient.delete<void>(
+      `${base}/disclosures/${disclosureId}` + (reason ? `?reason=${encodeURIComponent(reason)}` : ''),
+    ),
 
   listAllocations: () => apiClient.get<Scope3AllocationDto[]>(`${base}/allocations`),
 

@@ -73,9 +73,33 @@ public class BoardService {
         member.setAppointedAt(request.appointedAt());
         member.setResignedAt(request.resignedAt());
         BoardMemberDto saved = BoardMemberDto.from(memberRepository.save(member));
+
+        // Narrowing a tenure can strand attendance rows that setAttendance would now refuse to
+        // create — the stored row would say the director attended a meeting before being
+        // appointed. Drop exactly those, rather than leaving the roster self-contradictory.
+        dropAttendanceOutsideTenure(companyId, member);
         // The board ratios count this roster, so a changed roster changes them now.
         derivationService.recomputeAllDependents(companyId, fiscalYear);
         return saved;
+    }
+
+    private void dropAttendanceOutsideTenure(UUID companyId, BoardMember member) {
+        List<BoardMeeting> yearMeetings = meetingRepository
+                .findByCompanyIdAndFiscalYearOrderByHeldOnAsc(companyId, member.getFiscalYear());
+        if (yearMeetings.isEmpty()) {
+            return;
+        }
+        Map<UUID, BoardMeeting> byId = new HashMap<>();
+        yearMeetings.forEach(m -> byId.put(m.getId(), m));
+
+        List<BoardMeetingAttendance> stranded = attendanceRepository
+                .findByCompanyIdAndBoardMemberId(companyId, member.getId()).stream()
+                .filter(a -> byId.containsKey(a.getMeetingId()))
+                .filter(a -> !BoardComposition.servedOn(member, byId.get(a.getMeetingId()).getHeldOn()))
+                .toList();
+        if (!stranded.isEmpty()) {
+            attendanceRepository.deleteAll(stranded);
+        }
     }
 
     @Transactional
@@ -156,6 +180,14 @@ public class BoardService {
                 .orElseThrow(() -> new NotFoundException("No such board meeting"));
         BoardMember member = memberRepository.findByIdAndCompanyId(memberId, companyId)
                 .orElseThrow(() -> new NotFoundException("No such director on this board"));
+
+        // A director row belongs to one fiscal year. Marking an FY2024 director present at an
+        // FY2025 meeting rendered as "(former director)" and made attended > directors-on-the-board
+        // reachable, because listMeetings builds its name map from that year's roster alone.
+        if (!member.getFiscalYear().equals(meeting.getFiscalYear())) {
+            throw new ConflictException(member.getName() + " is on the FY" + member.getFiscalYear()
+                    + " board, and that meeting is in FY" + meeting.getFiscalYear());
+        }
 
         // Recording that a director attended a meeting held outside their tenure is a data error,
         // and keeping it would skew every attendance denominator built on this roster.
