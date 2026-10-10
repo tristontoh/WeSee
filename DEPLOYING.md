@@ -117,3 +117,52 @@ Worth alerting on, in this order:
 **This gets you the data, not the alerting.** Nothing here pages anyone. Point Prometheus,
 Grafana Cloud or your platform's scraper at that endpoint, and set the thresholds above. Until you
 do, the first you hear of an outage is still the customer it happened to.
+
+---
+
+## Rolling back a bad release
+
+Two separate things can be wrong, and they have different answers. Decide which one you have
+before you touch anything.
+
+### The code is wrong, the schema is fine
+
+This is the common case and it is quick. Releases are tagged, so redeploy the previous one:
+
+```bash
+git tag -l                      # the releases you can go back to
+git checkout v0.1.0             # or whichever was last good
+# then your normal deploy for that checkout
+```
+
+Flyway is forward-only, so the newer migrations stay applied. That is usually harmless — an
+unused column or table costs nothing — and it is why the old code still runs against the newer
+schema. Check that assumption before you rely on it: if the bad release added a `NOT NULL`
+column with no default, or dropped one the old code reads, the old code will not start. Then you
+are in the next case.
+
+### The migration is wrong
+
+There are no down-migrations. Flyway community cannot undo one, and hand-writing the reverse of a
+destructive migration under pressure is how data is lost. The answer is to restore:
+
+```bash
+./scripts/restore.sh <the dump taken before the deploy> <database>
+```
+
+Then redeploy the previous tag. This is why `BACKUP.md` says to take a dump immediately before
+every deploy that carries a migration — that dump is the only rollback you have, and it has to
+exist *before* you need it.
+
+`V93` drops a column, so at least one migration in this history is genuinely irreversible.
+
+### What to check afterwards
+
+```bash
+curl -fsS http://localhost:8080/actuator/health          # 200
+psql -d <database> -c "select version, description, success
+                       from flyway_schema_history order by installed_rank desc limit 5"
+```
+
+Every row must say `success = t`. A failed migration leaves Flyway refusing to start until it is
+resolved, and the application will not come up until then.

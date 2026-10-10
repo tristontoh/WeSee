@@ -103,11 +103,10 @@ The last two were found by this row and fixed in `53fbd8a`.
 
 | | |
 |---|---|
-| **Status** | **PARTLY** |
-| Evidence | CI now runs the suite, the typecheck and a secret scan on every push and pull request, so a broken commit is caught before it merges. |
-| The gap | No tagged releases, no staging environment, and no rollback procedure. Migrations are forward-only. |
-| How to check | `git tag` — empty. |
-| What done looks like | A tagged release you can redeploy, and a staging environment that has the same migrations applied before production does. |
+| **Status** | **PARTLY — you can roll back, you cannot rehearse** |
+| Evidence | CI runs the suite, the typecheck and a secret scan on every push and pull request. `v0.1.0` is tagged, so there is a release to go back to. `DEPLOYING.md` has the rollback procedure, and it separates the two cases that need different answers: bad code (redeploy the previous tag) and a bad migration (restore, because Flyway is forward-only and `V93` drops a column). |
+| How to check | `git tag -l` lists a release; `grep -A5 "Rolling back" DEPLOYING.md` |
+| **Still yours to do** | A staging environment that gets the same migrations before production does. Without one, every migration's first run anywhere is its run against customer data — and the rollback above is a restore, not an undo. This needs somewhere to run, which is a hosting decision rather than a code one. |
 
 ---
 
@@ -133,7 +132,7 @@ personal data under the PDPA, so it belongs in the retention policy rather than 
 |---|---|---|
 | 1. Backup | Put `backup.sh` on a schedule and ship the output off the machine | You — it needs a host and a cron |
 | 6. Monitoring | Point a scraper at `/actuator/prometheus` and set one alert | You — it needs an account to send to |
-| 7. Rollback | A tagged release and a staging environment | You — staging needs somewhere to run |
+| 7. Rollback | A staging environment (the tag and the procedure now exist) | You — staging needs somewhere to run |
 | 8. PDPA | A lawyer's reading of consent, retention and the Gemini subprocessor | A lawyer, not an engineer |
 
 Everything a test or a guard can settle is settled. What remains needs a server, an account, or a
