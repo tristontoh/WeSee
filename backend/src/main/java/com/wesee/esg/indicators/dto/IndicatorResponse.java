@@ -23,6 +23,10 @@ public record IndicatorResponse(
         TargetDirection effectiveTargetDirection,
         boolean enabled,
         AggregationRule aggregationRule,
+        /** Names the formula in DerivationRegistry. Null unless the rule is DERIVED. */
+        String derivationKey,
+        /** Human-readable, e.g. "(Scope 1 + Scope 2) (tCO2e) / revenue (RM mil)". Null unless DERIVED. */
+        String formula,
         List<IndicatorValuePointDto> values,
         List<IndicatorMonthlyValueDto> monthlyValues,
         List<AuditEntryDto> history

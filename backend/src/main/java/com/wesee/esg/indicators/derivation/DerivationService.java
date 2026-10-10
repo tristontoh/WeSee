@@ -209,6 +209,9 @@ public class DerivationService {
         value.setValue(next);
         value.setComputed(true);
         value.setDerivationState(result.state());
+        value.setDerivationNote(result.state() == DerivationState.COMPUTED
+                ? result.explanation()
+                : "Waiting on: " + String.join("; ", result.missing()));
         if (changed) {
             value.setStatus(statusAfterRecompute());
             value.setApprovedByName(null);

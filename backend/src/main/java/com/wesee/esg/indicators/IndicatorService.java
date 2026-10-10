@@ -12,6 +12,7 @@ import com.wesee.esg.indicators.dto.IndicatorResponse;
 import com.wesee.esg.indicators.dto.IndicatorValuePointDto;
 import com.wesee.esg.indicators.dto.SetIndicatorTargetRequest;
 import com.wesee.esg.indicators.dto.SetIndicatorValueRequest;
+import com.wesee.esg.indicators.derivation.DerivationRegistry;
 import com.wesee.esg.indicators.derivation.DerivationService;
 import com.wesee.esg.reference.AggregationRule;
 import com.wesee.esg.reference.IndicatorDefinition;
@@ -353,10 +354,15 @@ public class IndicatorService {
                 effectiveDirection,
                 enabled,
                 def.getAggregationRule(),
+                def.getDerivationKey(),
+                def.getDerivationKey() == null
+                        ? null
+                        : DerivationRegistry.get(def.getDerivationKey()).formula(),
                 values.stream().map(v -> new IndicatorValuePointDto(
                         v.getFiscalYear(), v.getValue(), v.getStatus(), v.getApprovedByName(), v.getApprovedAt(),
                         Boolean.TRUE.equals(v.getComputed()),
-                        monthsReportedByYear.getOrDefault(v.getFiscalYear(), 0L).intValue()
+                        monthsReportedByYear.getOrDefault(v.getFiscalYear(), 0L).intValue(),
+                        v.getDerivationState(), v.getDerivationNote()
                 )).toList(),
                 monthlyValues.stream()
                         .sorted(Comparator.comparingInt(IndicatorMonthlyValue::getFiscalYear).thenComparingInt(IndicatorMonthlyValue::getMonth))

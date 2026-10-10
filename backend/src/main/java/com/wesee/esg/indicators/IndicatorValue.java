@@ -61,4 +61,12 @@ public class IndicatorValue extends TenantOwnedEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "derivation_state", length = 20)
     private DerivationState derivationState;
+
+    /**
+     * The arithmetic that produced {@link #value}, or which inputs the derivation is waiting on.
+     * Written only by the recompute, which runs whenever an input moves, so it cannot go stale
+     * beside the value it explains.
+     */
+    @Column(name = "derivation_note", columnDefinition = "TEXT")
+    private String derivationNote;
 }

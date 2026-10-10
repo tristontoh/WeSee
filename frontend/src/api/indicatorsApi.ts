@@ -8,7 +8,10 @@ import { MatterCategory, TargetDirection } from './referenceApi';
 
 export type IndicatorValueStatus = 'DRAFT' | 'APPROVED';
 
-export type AggregationRule = 'SUM' | 'LATEST' | 'AVERAGE' | 'COUNT' | 'DIRECT_ANNUAL';
+export type AggregationRule = 'SUM' | 'LATEST' | 'AVERAGE' | 'COUNT' | 'DIRECT_ANNUAL' | 'DERIVED';
+
+/** Where a derived indicator's value came from. Null for every indicator that is not DERIVED. */
+export type DerivationState = 'COMPUTED' | 'AWAITING_INPUTS' | 'SUPERSEDED_MANUAL';
 
 export interface IndicatorValuePoint {
   fiscalYear: number;
@@ -18,6 +21,9 @@ export interface IndicatorValuePoint {
   approvedAt: string | null;
   isComputed: boolean;
   monthsReported: number;
+  derivationState: DerivationState | null;
+  /** The arithmetic that produced the value, or which inputs it is waiting on. */
+  derivationNote: string | null;
 }
 
 export interface IndicatorAuditEntryDto {
@@ -58,6 +64,10 @@ export interface IndicatorResponse {
   effectiveTargetDirection: TargetDirection | null;
   enabled: boolean;
   aggregationRule: AggregationRule;
+  /** Names the formula. Null unless aggregationRule is DERIVED. */
+  derivationKey: string | null;
+  /** e.g. "(Scope 1 + Scope 2) (tCO2e) / revenue (RM mil)". Null unless DERIVED. */
+  formula: string | null;
   values: IndicatorValuePoint[];
   monthlyValues: IndicatorMonthlyValueDto[];
   history: IndicatorAuditEntryDto[];
