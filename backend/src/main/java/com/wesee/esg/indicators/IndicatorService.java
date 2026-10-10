@@ -51,6 +51,11 @@ public class IndicatorService {
     private final AppUserRepository appUserRepository;
     private final DerivationService derivationService;
 
+    /** Said at every door a person could try to write a derived indicator through. */
+    static final String DERIVED_REFUSAL =
+            "This indicator is computed from its inputs — enter the figures it divides by"
+                    + " on the denominators screen, and the value follows";
+
     public IndicatorService(IndicatorDefinitionRepository indicatorDefinitionRepository,
                              TenantIndicatorRepository tenantIndicatorRepository,
                              IndicatorValueRepository indicatorValueRepository,
@@ -129,10 +134,8 @@ public class IndicatorService {
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
         // A derived indicator needs its own sentence: "use the monthly entry endpoint" is wrong
         // advice for a ratio, which has no monthly entries to make.
-        if (def.getAggregationRule() == AggregationRule.DERIVED) {
-            throw new ConflictException(
-                    "This indicator is computed from its inputs — enter the figures it divides by"
-                            + " on the denominators screen, and the value follows");
+        if (!def.getAggregationRule().isHandEntered()) {
+            throw new ConflictException(DERIVED_REFUSAL);
         }
         if (def.getAggregationRule() != AggregationRule.DIRECT_ANNUAL) {
             throw new ConflictException("This indicator's annual value is computed from monthly entries — use the monthly entry endpoint instead");
@@ -186,6 +189,9 @@ public class IndicatorService {
     public IndicatorResponse setMonthlyValue(String indicatorDefinitionId, int fiscalYear, int month, SetIndicatorValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
+        if (!def.getAggregationRule().isHandEntered()) {
+            throw new ConflictException(DERIVED_REFUSAL);
+        }
         if (def.getAggregationRule() == AggregationRule.DIRECT_ANNUAL) {
             throw new ConflictException("This indicator is entered as a direct annual figure, not monthly");
         }

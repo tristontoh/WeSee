@@ -57,7 +57,8 @@ export interface AuditTrailEntry {
 }
 
 export interface IndicatorValueCell {
-  value: number;
+  /** Null when the server holds a row but no number — a derived indicator awaiting its inputs. */
+  value: number | null;
   status: IndicatorValueStatus;
   approvedByName: string | null;
   approvedAt: string | null;
@@ -118,13 +119,15 @@ function toFrontendIndicator(r: IndicatorResponse): Indicator {
   const values: Record<string, IndicatorValueCell | null> = {};
   ownYears.forEach((y) => { values[y] = null; });
   r.values.forEach((v) => {
-    values[`FY${v.fiscalYear}`] = v.value !== null
-      ? {
-          value: v.value, status: v.status, approvedByName: v.approvedByName, approvedAt: v.approvedAt,
-          isComputed: v.isComputed, monthsReported: v.monthsReported,
-          derivationState: v.derivationState, derivationNote: v.derivationNote,
-        }
-      : null;
+    // Build the cell whenever the server returned a point, and gate only the NUMBER on value.
+    // A derived indicator waiting on its inputs is exactly a point whose value is null, and
+    // dropping the whole cell there threw away the derivationState and the "waiting on…" note —
+    // the one thing the user needs in order to fix it.
+    values[`FY${v.fiscalYear}`] = {
+      value: v.value, status: v.status, approvedByName: v.approvedByName, approvedAt: v.approvedAt,
+      isComputed: v.isComputed, monthsReported: v.monthsReported,
+      derivationState: v.derivationState, derivationNote: v.derivationNote,
+    };
   });
 
   const monthlyByYear: Record<string, (number | null)[]> = {};
@@ -325,7 +328,7 @@ export default function IndicatorsView() {
       if (type === 'year' && yearKey) {
         // Same reason as the render: an absent year reads as an empty cell, not a crash.
         const cell = indicator.values[yearKey] ?? null;
-        setEditValue(cell !== null ? String(cell.value) : '');
+        setEditValue(cell !== null && cell.value !== null ? String(cell.value) : '');
       } else {
         const targetVal = indicator.target;
         setEditValue(targetVal !== null ? String(targetVal) : '');
@@ -845,7 +848,7 @@ export default function IndicatorsView() {
                                         className="w-full py-2 text-center rounded-xl cursor-pointer transition-all hover:bg-navy-50"
                                         title="View monthly entries"
                                       >
-                                        {cell !== null ? (
+                                        {cell !== null && cell.value !== null ? (
                                           <div className="flex flex-col items-center gap-1">
                                             <span className="font-bold font-mono text-navy-900">{cell.value}</span>
                                             <span
@@ -895,7 +898,7 @@ export default function IndicatorsView() {
                                           </button>
                                         </div>
                                       </div>
-                                    ) : cell !== null ? (
+                                    ) : cell !== null && cell.value !== null ? (
                                       <div className="flex flex-col items-center gap-1">
                                         <button
                                           onClick={() => startEditing(indicator.id, 'year', y)}

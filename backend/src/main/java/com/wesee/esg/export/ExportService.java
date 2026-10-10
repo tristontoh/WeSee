@@ -90,8 +90,7 @@ public class ExportService {
 
         try (CSVPrinter printer = new CSVPrinter(sw, CSVFormat.DEFAULT.builder().setHeader(headers.toArray(new String[0])).build())) {
             for (IndicatorDefinition def : defs) {
-                Map<Integer, BigDecimal> yearValues = valuesByDef.getOrDefault(def.getId(), List.of()).stream()
-                        .collect(Collectors.toMap(IndicatorValue::getFiscalYear, IndicatorValue::getValue, (a, b) -> b));
+                Map<Integer, BigDecimal> yearValues = yearValues(valuesByDef.getOrDefault(def.getId(), List.of()));
                 TenantIndicator override = overrides.get(def.getId());
                 BigDecimal effectiveTarget = override != null && override.getTarget() != null ? override.getTarget() : def.getDefaultTarget();
 
@@ -200,4 +199,24 @@ public class ExportService {
                 ActivityEventType.EXPORT_SUCCESS,
                 "Successfully generated " + type + " export for FY" + fiscalYear);
     }
+
+    /**
+     * Year to value, skipping rows whose value is null.
+     *
+     * <p>Not {@code Collectors.toMap}: with a merge function it routes through
+     * {@code HashMap.merge}, which throws on a null value. That was unreachable until derived
+     * indicators arrived — one of those stores a NULL-valued row whenever its inputs go missing,
+     * and a single such row would 500 this whole export for everyone in the tenant. The row
+     * renderer below already writes "" for an absent key, so absent is the shape it expects.
+     */
+    static Map<Integer, BigDecimal> yearValues(List<IndicatorValue> values) {
+        Map<Integer, BigDecimal> byYear = new java.util.HashMap<>();
+        for (IndicatorValue v : values) {
+            if (v.getValue() != null) {
+                byYear.put(v.getFiscalYear(), v.getValue());
+            }
+        }
+        return byYear;
+    }
+
 }

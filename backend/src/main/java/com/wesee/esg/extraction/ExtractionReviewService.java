@@ -11,6 +11,7 @@ import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.extraction.dto.AcceptRecordRequest;
 import com.wesee.esg.extraction.dto.ExtractedRecordResponse;
+import com.wesee.esg.indicators.derivation.DerivationService;
 import com.wesee.esg.reference.AggregationRule;
 import com.wesee.esg.indicators.IndicatorAuditEntry;
 import com.wesee.esg.indicators.IndicatorAuditEntryRepository;
@@ -41,6 +42,7 @@ public class ExtractionReviewService {
     private final IndicatorService indicatorService;
     private final AppUserRepository appUserRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final DerivationService derivationService;
 
     public ExtractionReviewService(ExtractedRecordRepository recordRepository,
                                     IndicatorValueRepository indicatorValueRepository,
@@ -49,7 +51,8 @@ public class ExtractionReviewService {
                                     EmissionActivityService emissionActivityService,
                                     IndicatorService indicatorService,
                                     AppUserRepository appUserRepository,
-                                    CurrentUserProvider currentUserProvider) {
+                                    CurrentUserProvider currentUserProvider,
+                                   DerivationService derivationService) {
         this.recordRepository = recordRepository;
         this.indicatorValueRepository = indicatorValueRepository;
         this.auditEntryRepository = auditEntryRepository;
@@ -58,6 +61,7 @@ public class ExtractionReviewService {
         this.indicatorService = indicatorService;
         this.appUserRepository = appUserRepository;
         this.currentUserProvider = currentUserProvider;
+        this.derivationService = derivationService;
     }
 
     @Transactional
@@ -142,6 +146,14 @@ public class ExtractionReviewService {
                             "No annual value after recomputing " + definitionId + " FY" + fiscalYear));
         }
 
+        // A derived indicator is computed from its inputs; accepting a read figure into one would
+        // reopen the free-text hole the derived-indicator work closed, through a different door.
+        if (!record.getIndicatorDefinition().getAggregationRule().isHandEntered()) {
+            throw new ConflictException(
+                    record.getIndicatorDefinition().getName() + " is computed from its inputs —"
+                            + " accept this reading against the figure it divides by instead");
+        }
+
         IndicatorValue indicatorValue = indicatorValueRepository
                 .findByCompanyIdAndIndicatorDefinitionIdAndFiscalYear(companyId, definitionId, fiscalYear)
                 .orElseGet(() -> {
@@ -154,6 +166,11 @@ public class ExtractionReviewService {
         indicatorValue.setValue(value);
         indicatorValue.setComputed(false);
         indicatorValueRepository.save(indicatorValue);
+
+        // This is the one writer of indicator_value that did not recompute. An accepted electricity
+        // reading is an input to the energy-intensity ratio, and leaving it stale would show a
+        // ratio beside its own fresh input — the thing DenominatorService's comment forbids.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
 
         // The audit entry is what makes an extracted value indistinguishable in structure from a
         // manual entry with evidence attached — same fields, same trail, provenance preserved.
@@ -183,7 +200,8 @@ public class ExtractionReviewService {
      * DIRECT_ANNUAL indicator has no ledger at all — setMonthlyValue rejects those outright.
      */
     static boolean routesThroughMonthly(AggregationRule rule, Integer month) {
-        return month != null && rule != null && rule != AggregationRule.DIRECT_ANNUAL;
+        return month != null && rule != null && rule.isHandEntered()
+                && rule != AggregationRule.DIRECT_ANNUAL;
     }
 
     /** WeSeePrincipal carries no name, so the user is looked up — as IndicatorService does. */

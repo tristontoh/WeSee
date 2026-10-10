@@ -21,5 +21,14 @@ public enum AggregationRule {
     AVERAGE,
     COUNT,
     DIRECT_ANNUAL,
-    DERIVED
+    DERIVED;
+
+    /**
+     * Whether a person may write this indicator's value at all. Every write door asks this one
+     * question: {@code IndicatorService.setValue}, {@code setMonthlyValue}, and the extraction
+     * review path. Guarding only one of them is how a ratio becomes a 500 instead of a 409.
+     */
+    public boolean isHandEntered() {
+        return this != DERIVED;
+    }
 }
