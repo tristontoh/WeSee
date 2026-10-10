@@ -29,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.math.BigDecimal;
+import java.util.Map;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -212,33 +214,34 @@ public class AssuranceService {
      * genuine tamper-evidence check: if any indicator value changes after sign-off, recomputing
      * this from current data no longer matches.
      */
+    /**
+     * The figures this year's sign-off attests, and the digest over them.
+     *
+     * <p>The serialisation itself lives in {@link SignOffHash} so it can be tested — it carries
+     * the product's whole claim and had no test at all. Two defects were fixed in moving it:
+     * fields joined by a bare delimiter let a signer name containing that delimiter hash
+     * identically to a different name and title, and hashing the raw scale meant 443.5 and 443.50
+     * — one number — produced different digests.
+     */
     private String generateHash(UUID companyId, int fiscalYear, CreateSignOffRequest request, Instant signedAt) {
-        Company company = companyRepository.findById(companyId).orElseThrow(() -> new NotFoundException("Company not found"));
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new NotFoundException("Company not found"));
         List<String> matterIds = matterSetResolverService.resolveApplicableMatters(company).stream()
                 .map(SustainabilityMatter::getId).toList();
-        List<IndicatorDefinition> defs = indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds);
-        List<IndicatorValue> values = indicatorValueRepository.findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(
-                companyId, defs.stream().map(IndicatorDefinition::getId).toList());
+        List<IndicatorDefinition> defs =
+                indicatorDefinitionRepository.findByMatterIdInOrderByCategoryAscNameAsc(matterIds);
+        List<IndicatorValue> values = indicatorValueRepository
+                .findByCompanyIdAndIndicatorDefinitionIdInOrderByFiscalYearAsc(
+                        companyId, defs.stream().map(IndicatorDefinition::getId).toList());
 
-        String canonicalValues = values.stream()
-                .filter(v -> v.getFiscalYear() == fiscalYear && v.getValue() != null)
-                .sorted(Comparator.comparing(v -> v.getIndicatorDefinition().getId()))
-                .map(v -> v.getIndicatorDefinition().getId() + ":" + v.getValue().toPlainString())
-                .collect(Collectors.joining("|"));
-
-        String content = canonicalValues + "||" + companyId + "|" + fiscalYear + "|"
-                + request.signerName() + "|" + request.signerTitle() + "|" + signedAt;
-
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(content.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hashBytes) {
-                hex.append(String.format("%02x", b));
+        Map<String, BigDecimal> signed = new java.util.LinkedHashMap<>();
+        for (IndicatorValue v : values) {
+            if (v.getFiscalYear() != null && v.getFiscalYear() == fiscalYear && v.getValue() != null) {
+                signed.put(v.getIndicatorDefinition().getId(), v.getValue());
             }
-            return hex.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
         }
+
+        return SignOffHash.of(signed, companyId, fiscalYear,
+                request.signerName(), request.signerTitle(), signedAt);
     }
 }

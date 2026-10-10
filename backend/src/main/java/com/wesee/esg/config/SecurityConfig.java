@@ -40,10 +40,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private final String[] allowedOrigins;
+    private final boolean apiDocsPublic;
 
     public SecurityConfig(org.springframework.core.env.Environment env) {
         String raw = env.getProperty("wesee.cors.allowed-origins", "http://localhost:3000");
         this.allowedOrigins = raw.split(",");
+        // Swagger describes every endpoint, its parameters and its shapes. That is a map for
+        // anyone probing the API, and it was readable without signing in. Open in development,
+        // authenticated everywhere else.
+        this.apiDocsPublic = java.util.Arrays.stream(env.getActiveProfiles())
+                .anyMatch(pr -> pr.equals("dev") || pr.equals("local") || pr.equals("docker"));
     }
 
     /** Every GET that is not one of the server's own routes: the client and its assets. */
@@ -106,7 +112,10 @@ public class SecurityConfig {
                         // is not already printed on a public page.
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
+                            .access((principal, ctx) -> new org.springframework.security.authorization.AuthorizationDecision(
+                                    apiDocsPublic
+                                            || (principal.get() != null && principal.get().isAuthenticated())))
                         // The client itself. It is HTML and JavaScript with no figures in it —
                         // everything it displays comes from an API call that authenticates on its
                         // own — so the shell has to be readable before anyone has signed in, or the

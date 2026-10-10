@@ -4,12 +4,10 @@
  */
 package com.wesee.esg.climate;
 
+import com.wesee.esg.assurance.SignOffLock;
 import com.wesee.esg.climate.dto.EmissionActivityEntryResponse;
 import com.wesee.esg.climate.dto.EmissionFactorResponse;
 import com.wesee.esg.climate.dto.SetEmissionValueRequest;
-import com.wesee.esg.assurance.SignOffRecord;
-import com.wesee.esg.assurance.SignOffRecordRepository;
-import com.wesee.esg.assurance.SignOffStatus;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.extraction.SignOffGuard;
 import java.util.Set;
@@ -21,33 +19,30 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class EmissionActivityService {
 
-    private static final BigDecimal KG_PER_TONNE = BigDecimal.valueOf(1000);
-
     private final EmissionFactorRepository factorRepository;
     private final EmissionActivityEntryRepository entryRepository;
     private final EmissionsService emissionsService;
     private final CurrentUserProvider currentUserProvider;
-    private final SignOffRecordRepository signOffRepository;
+    private final SignOffLock signOffLock;
     private final Scope3CategoryRepository scope3CategoryRepository;
 
     public EmissionActivityService(EmissionFactorRepository factorRepository,
                                     EmissionActivityEntryRepository entryRepository,
                                     EmissionsService emissionsService,
                                     CurrentUserProvider currentUserProvider,
-                                  SignOffRecordRepository signOffRepository,
+                                  SignOffLock signOffLock,
                                   Scope3CategoryRepository scope3CategoryRepository) {
         this.factorRepository = factorRepository;
         this.entryRepository = entryRepository;
         this.emissionsService = emissionsService;
         this.currentUserProvider = currentUserProvider;
-        this.signOffRepository = signOffRepository;
+        this.signOffLock = signOffLock;
         this.scope3CategoryRepository = scope3CategoryRepository;
     }
 
@@ -100,7 +95,7 @@ public class EmissionActivityService {
         entry.setEmissionFactor(factor);
         entry.setScope3Category(category);
         entry.setQuantity(quantity);
-        entry.setCalculatedTco2e(quantity.multiply(factor.getFactorValue()).divide(KG_PER_TONNE, 4, RoundingMode.HALF_UP));
+        entry.setCalculatedTco2e(EmissionMath.tco2e(quantity, factor.getFactorValue()));
 
         return EmissionActivityEntryResponse.from(entryRepository.save(entry));
     }
@@ -140,15 +135,8 @@ public class EmissionActivityService {
      * verifying because it covers the indicator values rather than these rows.
      */
     private void requireYearOpen(int fiscalYear) {
-        UUID companyId = currentUserProvider.requireCompanyId();
-        Set<Integer> signedYears = signOffRepository.findByCompanyIdOrderByFiscalYearDesc(companyId).stream()
-                .filter(r -> r.getStatus() == SignOffStatus.SIGNED)
-                .map(SignOffRecord::getFiscalYear)
-                .collect(java.util.stream.Collectors.toSet());
-        if (SignOffGuard.isYearLocked(fiscalYear, signedYears)) {
-            throw new ConflictException("FY" + fiscalYear + " has been signed off — revoke the"
-                    + " sign-off before changing the emissions behind it");
-        }
+        signOffLock.requireYearOpen(currentUserProvider.requireCompanyId(), fiscalYear,
+                "changing the activity behind it");
     }
 
 }

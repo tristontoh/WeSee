@@ -70,6 +70,14 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Metrics in a format something can scrape. Without this the only thing the outside
+             world could ask the application was whether it was up — so the first you heard of a
+             rising error rate was a customer telling you. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>

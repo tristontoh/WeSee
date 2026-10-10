@@ -10,6 +10,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.core.env.Environment;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -29,7 +31,10 @@ public class JwtService {
     private final JwtProperties properties;
     private final SecretKey key;
 
-    public JwtService(JwtProperties properties) {
+    public JwtService(JwtProperties properties, Environment environment) {
+        // Before anything else: a signing key that cannot be trusted stops the application here,
+        // rather than silently minting valid tokens for every tenant. See JwtSecretGuard.
+        JwtSecretGuard.verify(properties.getSecret(), Set.of(environment.getActiveProfiles()));
         this.properties = properties;
         this.key = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
     }

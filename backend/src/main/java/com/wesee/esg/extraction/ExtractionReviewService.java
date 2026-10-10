@@ -4,8 +4,7 @@
  */
 package com.wesee.esg.extraction;
 
-import com.wesee.esg.assurance.SignOffRecord;
-import com.wesee.esg.assurance.SignOffRecordRepository;
+import com.wesee.esg.assurance.SignOffLock;
 import com.wesee.esg.climate.EmissionActivityService;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
@@ -37,7 +36,7 @@ public class ExtractionReviewService {
     private final ExtractedRecordRepository recordRepository;
     private final IndicatorValueRepository indicatorValueRepository;
     private final IndicatorAuditEntryRepository auditEntryRepository;
-    private final SignOffRecordRepository signOffRepository;
+    private final SignOffLock signOffLock;
     private final EmissionActivityService emissionActivityService;
     private final IndicatorService indicatorService;
     private final AppUserRepository appUserRepository;
@@ -47,7 +46,7 @@ public class ExtractionReviewService {
     public ExtractionReviewService(ExtractedRecordRepository recordRepository,
                                     IndicatorValueRepository indicatorValueRepository,
                                     IndicatorAuditEntryRepository auditEntryRepository,
-                                    SignOffRecordRepository signOffRepository,
+                                    SignOffLock signOffLock,
                                     EmissionActivityService emissionActivityService,
                                     IndicatorService indicatorService,
                                     AppUserRepository appUserRepository,
@@ -56,7 +55,7 @@ public class ExtractionReviewService {
         this.recordRepository = recordRepository;
         this.indicatorValueRepository = indicatorValueRepository;
         this.auditEntryRepository = auditEntryRepository;
-        this.signOffRepository = signOffRepository;
+        this.signOffLock = signOffLock;
         this.emissionActivityService = emissionActivityService;
         this.indicatorService = indicatorService;
         this.appUserRepository = appUserRepository;
@@ -79,13 +78,7 @@ public class ExtractionReviewService {
                 ? null
                 : request.month() != null ? request.month() : record.getMonth();
 
-        Set<Integer> signedYears = signOffRepository.findByCompanyIdOrderByFiscalYearDesc(companyId).stream()
-                .map(SignOffRecord::getFiscalYear)
-                .collect(Collectors.toSet());
-        if (SignOffGuard.isYearLocked(fiscalYear, signedYears)) {
-            throw new ConflictException("FY" + fiscalYear + " has already been signed off — "
-                    + "accepting this would invalidate its assurance hash. Revoke the sign-off first.");
-        }
+        signOffLock.requireYearOpen(companyId, fiscalYear, "accepting this record");
 
         UUID committedId = record.getTargetType() == ExtractionTargetType.EMISSION_ACTIVITY
                 ? commitEmissionActivity(record, fiscalYear, value)

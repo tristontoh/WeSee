@@ -4,6 +4,7 @@
  */
 package com.wesee.esg.indicators;
 
+import com.wesee.esg.assurance.SignOffLock;
 import com.wesee.esg.common.exceptions.ConflictException;
 import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.indicators.dto.AuditEntryDto;
@@ -50,6 +51,7 @@ public class IndicatorService {
     private final CompanyRepository companyRepository;
     private final AppUserRepository appUserRepository;
     private final DerivationService derivationService;
+    private final SignOffLock signOffLock;
 
     /** Said at every door a person could try to write a derived indicator through. */
     static final String DERIVED_REFUSAL =
@@ -65,7 +67,8 @@ public class IndicatorService {
                              CurrentUserProvider currentUserProvider,
                              CompanyRepository companyRepository,
                              AppUserRepository appUserRepository,
-                             DerivationService derivationService) {
+                             DerivationService derivationService,
+                             SignOffLock signOffLock) {
         this.indicatorDefinitionRepository = indicatorDefinitionRepository;
         this.tenantIndicatorRepository = tenantIndicatorRepository;
         this.indicatorValueRepository = indicatorValueRepository;
@@ -76,6 +79,7 @@ public class IndicatorService {
         this.companyRepository = companyRepository;
         this.appUserRepository = appUserRepository;
         this.derivationService = derivationService;
+        this.signOffLock = signOffLock;
     }
 
     @Transactional(readOnly = true)
@@ -131,6 +135,7 @@ public class IndicatorService {
     @Transactional
     public IndicatorResponse setValue(String indicatorDefinitionId, int fiscalYear, SetIndicatorValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
+        signOffLock.requireYearOpen(companyId, fiscalYear, "changing this figure");
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
         // A derived indicator needs its own sentence: "use the monthly entry endpoint" is wrong
         // advice for a ratio, which has no monthly entries to make.
@@ -188,6 +193,7 @@ public class IndicatorService {
     @Transactional
     public IndicatorResponse setMonthlyValue(String indicatorDefinitionId, int fiscalYear, int month, SetIndicatorValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
+        signOffLock.requireYearOpen(companyId, fiscalYear, "changing this figure");
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
         if (!def.getAggregationRule().isHandEntered()) {
             throw new ConflictException(DERIVED_REFUSAL);

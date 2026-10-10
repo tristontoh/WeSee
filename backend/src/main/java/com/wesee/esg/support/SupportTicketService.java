@@ -76,8 +76,7 @@ public class SupportTicketService {
 
     @Transactional
     public SupportTicketResponse updateMyTicket(UUID id, UpdateSupportTicketRequest request) {
-        SupportTicket ticket = supportTicketRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Ticket not found"));
+        SupportTicket ticket = requireReachable(id);
 
         UUID userId = currentUserProvider.getPrincipal().userId();
         if (!ticket.getSubmittedBy().getId().equals(userId)) {
@@ -99,8 +98,7 @@ public class SupportTicketService {
 
     @Transactional
     public SupportTicketResponse updateStatus(UUID id, UpdateTicketStatusRequest request) {
-        SupportTicket ticket = supportTicketRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Ticket not found"));
+        SupportTicket ticket = requireReachable(id);
         ticket.setStatus(request.status());
         return toResponse(supportTicketRepository.save(ticket));
     }
@@ -108,10 +106,28 @@ public class SupportTicketService {
     /** The note is shared between the company and platform admin — either side may edit it. */
     @Transactional
     public SupportTicketResponse updateNote(UUID id, UpdateTicketNoteRequest request) {
-        SupportTicket ticket = supportTicketRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Ticket not found"));
+        SupportTicket ticket = requireReachable(id);
         ticket.setNote(request.note());
         return toResponse(supportTicketRepository.save(ticket));
+    }
+
+    /**
+     * The ticket, if this caller may reach it.
+     *
+     * <p>{@code findById} does not consult the Hibernate companyFilter — a filter applies to a
+     * query, and a primary-key load never builds one — so a tenant-owned row fetched by id alone
+     * carries no tenant check at all. Platform staff legitimately reach every ticket; a company
+     * reaches only its own.
+     */
+    private SupportTicket requireReachable(UUID id) {
+        SupportTicket ticket = supportTicketRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Ticket not found"));
+        var principal = currentUserProvider.getPrincipal();
+        if (!TicketAccessGuard.canReach(ticket.getCompanyId(), principal.companyId(), principal.role())) {
+            // Not found, not forbidden: "it exists but isn't yours" is itself a disclosure.
+            throw new NotFoundException("Ticket not found");
+        }
+        return ticket;
     }
 
     private SupportTicketResponse toResponse(SupportTicket ticket) {
