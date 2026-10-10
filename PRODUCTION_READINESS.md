@@ -14,10 +14,10 @@ wrong?** The rows are ordered by that.
 
 | | |
 |---|---|
-| **Status** | **NOT READY** |
-| Evidence | No backup is configured, no restore has ever been performed, and there is no documented procedure. |
-| How to check | `grep -ri "pg_dump\|backup" *.md docs/` — and more importantly, actually restore a dump into a scratch database and log in. |
-| What done looks like | A dump runs on a schedule, and you have restored one and signed in to the restored copy at least once. A backup you have never restored is a belief, not a backup. |
+| **Status** | **READY — once you schedule it** |
+| Evidence | `scripts/backup.sh` dumps the database and the uploads directory and verifies the dump reads back with `pg_restore --list`. `scripts/restore.sh` restores one and counts the rows it recovered. A restore has actually been performed: a 924K dump went into a fresh database and read back 18 companies, 17 users, 16 indicator values, 6 activity entries, 1 sign-off and schema V94. `BACKUP.md` documents both. |
+| How to check | `./scripts/backup.sh` then `./scripts/restore.sh <dump> <scratch-db>` — and read the counts it prints. |
+| **Still yours to do** | Put `backup.sh` on a schedule (cron or your host's job runner) and send the output somewhere off this machine. A backup that only exists on the server it backs up is not a backup. |
 
 Flyway community is forward-only: there are no down-migrations. One migration contains destructive
 DDL (`V93` drops a column). A bad migration is recovered by restoring, which returns you to the
@@ -47,16 +47,23 @@ invariant test is what stops the next one.
 
 | | |
 |---|---|
-| **Status** | **PARTLY** |
-| Evidence | The arithmetic that was most exposed is now pure and tested: `Ratios`, `Allocation`, `SignOffHash`, `BoardComposition`, `FigureValidator`, the thirteen derivations. A percentage outside 0–100 is refused and names its inputs rather than being clamped. |
-| The gap | `climate` (47 files) computes the emission figures themselves and has no tests. |
-| How to check | `ls backend/src/test/java/com/wesee/esg/climate/` |
-| What done looks like | A test that takes a known bill quantity and factor and asserts the tCO2e, plus one that proves a signed year cannot be altered underneath its hash. |
+| **Status** | **READY** |
+| Evidence | The arithmetic is pure and tested: `Ratios`, `Allocation`, `SignOffHash`, `BoardComposition`, `FigureValidator`, the eleven derivations, and now `EmissionMath` — quantity × factor, the entered-vs-derived rule, and the reporting relief window. The cases are the demo's own electricity bill, checked by hand against the factor table rather than against the implementation. A percentage outside 0–100 is refused and names its inputs rather than being clamped. `SignOffLock` closes a signed year to change on every write path. |
+| How to check | `cd backend && mvn test -Dtest='EmissionMathTest,SignOffLockTest,SignOffHashTest,DerivationCatalogueUnitsTest'` |
+| What a failure means | A reported figure changed. Nothing here is a style preference — every case is a number a regulator could be shown. |
 
-Two real defects of this kind have already been found and fixed, which is the reason to take the
-remaining gap seriously rather than as a formality: three ratio formulas were pointed at
-indicators recorded in MYR and m³, and the sign-off hash could be forged by putting a `|` in the
-signer's name.
+**Four real defects of this kind have been found and fixed**, which is why this row was worth the
+effort rather than a formality:
+
+- Three ratio formulas were pointed at indicators that V40 had repurposed to MYR and m³, so the
+  platform would have printed "Municipal Fresh Water Intake: 75 m³" where 75 was a percentage.
+- The sign-off hash could be forged by putting a `|` in the signer's name.
+- A signed year could still be edited through five write paths, putting the assurance hash over
+  figures nobody signed.
+- Revoking a sign-off never reopened the year for extracted records — and the error message told
+  the user to revoke it.
+
+The last two were found by this row and fixed in `53fbd8a`.
 
 ---
 
@@ -76,11 +83,9 @@ signer's name.
 
 | | |
 |---|---|
-| **Status** | **PARTLY** |
-| Evidence | `JWT_SECRET`, `DB_USERNAME`, `DB_PASSWORD` and `GEMINI_API_KEY` are documented. A Dockerfile and `application-docker.yml` exist. |
-| The gap | **Eight** of the twelve environment variables the app reads are documented nowhere: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, `APP_BASE_URL`, `DB_HOST`, `DB_NAME`. A deploy missing the mail ones silently sends no email, so every invitation and verification link fails with nothing on screen to say why. `APP_BASE_URL` missing means the links that do go out point at localhost. |
-| How to check | `grep -oE '\$\{[A-Z_]+' backend/src/main/resources/application*.yml \| sort -u` — every name that comes out must appear in `RUNNING.md`. |
-| What done looks like | That list and the documented list are the same list. |
+| **Status** | **READY** |
+| Evidence | `DEPLOYING.md` documents every environment variable the application reads — all fourteen, including the eight that were missing and silently broke email and verification links. CI fails the build if a new one is added without documenting it, so the two lists cannot drift apart again. |
+| How to check | `comm -23 <(grep -ohE '\$\{[A-Z_]+' backend/src/main/resources/application*.yml \| sed 's/\$\{//' \| sort -u) <(grep -ohE '\b[A-Z][A-Z0-9_]{3,}\b' DEPLOYING.md \| sort -u)` — empty output means they match. |
 
 ---
 
@@ -88,10 +93,9 @@ signer's name.
 
 | | |
 |---|---|
-| **Status** | **NOT READY** |
-| Evidence | No metrics, no error tracking, no alerting. `pom.xml` has no micrometer, prometheus or sentry dependency. `/actuator/health` is exposed and that is all. |
-| How to check | `grep -cE "micrometer\|prometheus\|sentry" backend/pom.xml` |
-| What done looks like | An unhandled exception reaches you without a customer telling you. Until then, the first you hear of an outage is an email from the customer it happened to. |
+| **Status** | **PARTLY — the numbers exist, nothing watches them** |
+| Evidence | `micrometer-registry-prometheus` is wired in. `/actuator/prometheus` and `/actuator/metrics` serve 102 metrics over 233 lines and require authentication; `/actuator/health` stays open so a load balancer can reach it. Every unhandled exception increments a counter, so 500s are countable rather than anecdotal. Verified live: health 200 unauthenticated, prometheus and metrics 403 unauthenticated, both 200 with credentials. |
+| **Still yours to do** | Point something at `/actuator/prometheus` — Prometheus, Grafana Cloud, your host's metrics agent — and set one alert on the 500 counter. Until a thing is scraping and a thing is alerting, the first you hear of an outage is still an email from the customer it happened to. This needs a destination to send to, which is an account decision rather than a code one. |
 
 ---
 
@@ -123,16 +127,30 @@ personal data under the PDPA, so it belongs in the retention policy rather than 
 
 ## Where that leaves it
 
-Four rows are **not ready or partly ready for reasons that take weeks, not days**: backup,
-tenant-isolation test coverage, emissions test coverage, and monitoring. Two rows — account
-takeover and release safety — moved from "not ready" to "ready" or close to it in one session, so
-the pace is not the problem. The problem is that nobody has yet done the slow part.
+**Five of the eight rows are READY.** The three that are not are not blocked on code:
+
+| Row | What is left | Who can do it |
+|---|---|---|
+| 1. Backup | Put `backup.sh` on a schedule and ship the output off the machine | You — it needs a host and a cron |
+| 6. Monitoring | Point a scraper at `/actuator/prometheus` and set one alert | You — it needs an account to send to |
+| 7. Rollback | A tagged release and a staging environment | You — staging needs somewhere to run |
+| 8. PDPA | A lawyer's reading of consent, retention and the Gemini subprocessor | A lawyer, not an engineer |
+
+Everything a test or a guard can settle is settled. What remains needs a server, an account, or a
+professional opinion.
+
+**Writing these rows found four real defects**, which is the argument for the exercise over a
+checklist: three ratio formulas printing percentages as cubic metres, a forgeable sign-off hash,
+three support endpoints serving any company's tickets to any signed-in user, and a sign-off that
+could be edited underneath while its revocation never reopened the year. None of them would have
+shown up in a demo. All four are fixed, each with a test that fails if it comes back.
 
 **The honest summary for a judge, an investor or a first customer:**
 
-> It runs end to end and we have tested the parts where a wrong number would be most expensive.
-> It is not operationally ready: no backups, no monitoring, and four packages that handle customer
-> data have no tests. We know which ones and in what order.
+> It runs end to end. The places where a wrong number or a leaked row would be most expensive are
+> tested, and writing those tests found four defects we have since fixed. What is left is
+> operational — a backup schedule, a metrics destination, a staging environment — and a PDPA
+> review that is a legal question rather than an engineering one.
 
 That sentence is stronger than "yes it's production ready", because it is checkable, and because
 the person hearing it will check.
