@@ -89,3 +89,31 @@ curl -fsS "$APP_BASE_URL/actuator/health" | grep -q '"status":"UP"' && echo ok
 # Send yourself an invitation. If no email arrives, SMTP is not configured —
 # the application will not tell you.
 ```
+
+
+---
+
+## Monitoring
+
+`/actuator/health` is public — that is what a load balancer probes.
+
+`/actuator/metrics` and `/actuator/prometheus` **require authentication**: they name every route,
+its traffic and its error rate, which is a map for anyone probing. Scrape them with credentials,
+or from inside the network.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "$APP_BASE_URL/actuator/prometheus"
+```
+
+Worth alerting on, in this order:
+
+| Metric | Alert when |
+|---|---|
+| `wesee_unhandled_exceptions_total` | it moves at all — every increment is a 500 somebody saw |
+| `http_server_requests_seconds_count{status="5.."}` | the rate rises above its normal floor |
+| `hikaricp_connections_pending` | above zero for more than a few seconds — the pool is exhausted |
+| `jvm_memory_used_bytes{area="heap"}` | approaching the max for minutes rather than seconds |
+
+**This gets you the data, not the alerting.** Nothing here pages anyone. Point Prometheus,
+Grafana Cloud or your platform's scraper at that endpoint, and set the thresholds above. Until you
+do, the first you hear of an outage is still the customer it happened to.

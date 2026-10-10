@@ -13,6 +13,10 @@ import com.wesee.esg.tenant.CompanyRepository;
 import com.wesee.esg.tenant.SubscriptionPlan;
 import com.wesee.esg.tenant.dto.PlanPricingResponse;
 import jakarta.persistence.EntityManager;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +52,17 @@ class PublicReferenceControllerTest {
 
     // Leaf dependencies of the filters SecurityConfig builds. None of them are reached by an
     // unauthenticated GET, but the chain will not assemble without them.
+    // GlobalExceptionHandler counts unhandled exceptions, and a @WebMvcTest slice has no
+    // registry of its own. A real one rather than a mock, so a counter call that is wrong
+    // fails here instead of in production.
+    @TestConfiguration
+    static class Metrics {
+        @Bean
+        MeterRegistry meterRegistry() {
+            return new SimpleMeterRegistry();
+        }
+    }
+
     @MockBean private JwtService jwtService;
     @MockBean private AppUserRepository appUserRepository;
     @MockBean private UserSessionRepository userSessionRepository;

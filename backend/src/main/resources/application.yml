@@ -30,7 +30,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # prometheus is NOT permitAll in SecurityConfig — it names every route and its traffic,
+        # which is a map for anyone probing. Scrape it with credentials or from inside the network.
+        include: health,info,metrics,prometheus
   health:
     mail:
       enabled: false

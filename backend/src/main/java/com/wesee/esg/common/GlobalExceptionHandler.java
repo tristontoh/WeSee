@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.validation.ConstraintViolationException;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,12 @@ import java.util.Objects;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final MeterRegistry meterRegistry;
+
+    public GlobalExceptionHandler(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiError> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
@@ -179,6 +186,11 @@ public class GlobalExceptionHandler {
         // The client is told nothing useful by design; without this the cause was lost entirely,
         // which made every 500 undiagnosable from the logs.
         log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), ex);
+        // Counted as well as logged: a log line is something you read after someone complains,
+        // a counter is something that can page you before they do.
+        meterRegistry.counter("wesee.unhandled_exceptions",
+                "method", request.getMethod(),
+                "exception", ex.getClass().getSimpleName()).increment();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiError.of(500, "Internal Server Error", "An unexpected error occurred", request.getRequestURI()));
     }
