@@ -1,0 +1,139 @@
+# The deployable stack: one command on a fresh server.
+#
+#   cp infra/env.example infra/.env   &&   edit it
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env up -d --build
+#
+# Only Caddy publishes ports. The database, the application, Prometheus and Grafana are reachable
+# on the compose network and nowhere else, so the only way in from the internet is through TLS.
+
+name: wesee
+
+services:
+  db:
+    # pgvector, not stock postgres. V78 does CREATE EXTENSION vector and builds an ivfflat index
+    # on a vector(768) column, so a plain postgres:16 fails the migration with
+    # 'extension "vector" is not available' and the application never starts. This image is
+    # postgres:16 with pgvector compiled in; nothing else about it differs.
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_NAME:?set DB_NAME in infra/.env}"
+      POSTGRES_USER: "${DB_USERNAME:?set DB_USERNAME in infra/.env}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD in infra/.env}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # docker is a PRODUCTION profile: JwtSecretGuard refuses the published default key here and
+      # Swagger is not public. It defaults only DB_HOST, which is not a credential.
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: "${JWT_SECRET:?generate one with openssl rand -base64 48}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:?required - the application will not start without it}"
+      METRICS_SCRAPE_TOKEN: "${METRICS_SCRAPE_TOKEN:?generate one with openssl rand -hex 32}"
+      APP_BASE_URL: "https://${DOMAIN:?set DOMAIN in infra/.env}"
+      CORS_ALLOWED_ORIGINS: "https://${DOMAIN}"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@wesee.my}
+    volumes:
+      - uploads:/data/uploads
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: "${ACME_EMAIL:?an address Let's Encrypt can reach about expiring certificates}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates. Losing this volume means re-issuing, and Let's Encrypt rate-limits that.
+      - caddy_data:/data
+      - caddy_config:/config
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    depends_on: [app]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom_data:/prometheus
+    environment:
+      METRICS_SCRAPE_TOKEN: ${METRICS_SCRAPE_TOKEN}
+    # Prometheus does not expand environment variables in its config, so the token is substituted
+    # into a copy at start. The mounted file stays read-only and carries only the placeholder,
+    # which means the real token is never written to the host.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        sed "s|__SCRAPE_TOKEN__|$${METRICS_SCRAPE_TOKEN}|" /etc/prometheus/prometheus.yml > /tmp/prometheus.yml
+        exec /bin/prometheus --config.file=/tmp/prometheus.yml --storage.tsdb.retention.time=90d
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    restart: unless-stopped
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:?generate one with openssl rand -base64 24}"
+      GF_SERVER_ROOT_URL: "https://${DOMAIN}/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      # Nobody signs up for your monitoring.
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      PGPASSWORD: ${DB_PASSWORD}
+      BACKUP_DIR: /backups
+      UPLOADS_DIR: /data/uploads
+      RETAIN_DAYS: ${BACKUP_RETAIN_DAYS:-30}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      # Runs after each dump with the dump's path as $1. Without it the backup never leaves this
+      # machine, which means it does not survive the thing most likely to destroy the data.
+      BACKUP_UPLOAD_CMD: ${BACKUP_UPLOAD_CMD:-}
+    volumes:
+      - ../scripts:/scripts:ro
+      - uploads:/data/uploads:ro
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
+    entrypoint: ["/bin/sh", "/scripts/backup-loop.sh"]
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:
+  prom_data:
+  grafana_data:

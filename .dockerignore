@@ -1,0 +1,26 @@
+# Build output and dependencies — every stage builds its own.
+**/target
+**/target.nosync
+**/node_modules
+**/dist
+
+# The client build that used to leak into the image from the builder's disk. The web stage in
+# Dockerfile produces it; anything here is stale by definition.
+backend/src/main/resources/static
+
+# Never in an image: credentials, customer data, git history.
+backend/src/main/resources/application-local.properties
+**/.env
+backups
+data
+.git
+ESGPlatform-main
+
+# Noise that only slows the build context upload.
+*.pptx
+*.pdf
+*.png
+*.jpeg
+wesee-demo-takes
+WeSee-Logo
+.playwright-mcp

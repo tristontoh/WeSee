@@ -64,3 +64,6 @@ backend/src/main/resources/static/
 # remove it.
 backups/
 data/uploads/
+
+# Deployment secrets. Never committed.
+infra/.env

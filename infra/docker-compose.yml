@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgres:16
+    # pgvector, not stock postgres — V78 needs the vector extension. A plain postgres:16 here
+    # fails that migration and the backend never starts.
+    image: pgvector/pgvector:pg16
     environment:
       # Defaults must match application-dev.yml (DB_USERNAME:postgres / DB_PASSWORD:root)
       # so `make infra && make backend` works with no env vars set.

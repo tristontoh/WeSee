@@ -14,10 +14,11 @@ wrong?** The rows are ordered by that.
 
 | | |
 |---|---|
-| **Status** | **READY — once you schedule it** |
+| **Status** | **READY — once the backups leave the machine** |
 | Evidence | `scripts/backup.sh` dumps the database and the uploads directory and verifies the dump reads back with `pg_restore --list`. `scripts/restore.sh` restores one and counts the rows it recovered. A restore has actually been performed: a 924K dump went into a fresh database and read back 18 companies, 17 users, 16 indicator values, 6 activity entries, 1 sign-off and schema V94. `BACKUP.md` documents both. |
 | How to check | `./scripts/backup.sh` then `./scripts/restore.sh <dump> <scratch-db>` — and read the counts it prints. |
-| **Still yours to do** | Put `backup.sh` on a schedule (cron or your host's job runner) and send the output somewhere off this machine. A backup that only exists on the server it backs up is not a backup. |
+| Scheduled | `infra/docker-compose.prod.yml` runs `backup-loop.sh` as a service — a dump every `BACKUP_INTERVAL_HOURS` (24 by default), keeping `BACKUP_RETAIN_DAYS`. Verified in the running stack: it wrote a dump and an uploads tarball to the host on start. |
+| **Still yours to do** | Set `BACKUP_UPLOAD_CMD` so the dumps leave the machine. Until you do, they sit on the same disk as the database they protect, and the service says so in its log on every start. |
 
 Flyway community is forward-only: there are no down-migrations. One migration contains destructive
 DDL (`V93` drops a column). A bad migration is recovered by restoring, which returns you to the
@@ -72,10 +73,17 @@ The last two were found by this row and fixed in `53fbd8a`.
 | | |
 |---|---|
 | **Status** | **READY, with one caveat** |
-| Evidence | The app refuses to start with the development JWT secret outside a dev profile — verified by booting with `--spring.profiles.active=prod` and getting exit 1. Login locks an address after five failures in fifteen minutes — verified live. MFA exists. Swagger is no longer public. |
+| Evidence | The app refuses to start with the development JWT secret outside a dev profile — verified in a real container under the `docker` profile. Login locks an address after five failures in fifteen minutes — verified live. MFA exists. Swagger and `/v3/api-docs` return 403 unauthenticated outside development — verified against the deployed container. |
 | Caveat | The throttle is in memory and per instance. Behind two instances an attacker gets five attempts each, and a restart clears the counts. `LoginThrottle`'s own comment says so. |
 | How to check | `mvn spring-boot:run -Dspring-boot.run.profiles=prod` must fail. Then POST six wrong passwords to `/api/v1/auth/login`. |
 | What done looks like | The above, plus the throttle moved to a shared store once there is more than one instance. |
+
+**"Swagger is no longer public" was false when this row first claimed it.** The rule guarding it
+read `principal.isAuthenticated()`, and Spring Security's anonymous token answers *true* to that —
+so `/swagger-ui` and `/v3/api-docs`, a complete description of every endpoint and its shapes, were
+readable by anyone in every profile. Reasoning about the rule would not have found it; requesting
+the URL against the deployed container did. Fixed with `SignedInCheck`, and the claim above is now
+the result of that request rather than a reading of the code.
 
 ---
 
@@ -117,9 +125,10 @@ line back and building it — the claim had been reasoned, not run.
 
 | | |
 |---|---|
-| **Status** | **PARTLY — the numbers exist, nothing watches them** |
+| **Status** | **PARTLY — something scrapes them, nothing alerts** |
 | Evidence | `micrometer-registry-prometheus` is wired in. `/actuator/prometheus` and `/actuator/metrics` serve 102 metrics over 233 lines and require authentication; `/actuator/health` stays open so a load balancer can reach it. Every unhandled exception increments a counter, so 500s are countable rather than anecdotal. Verified live: health 200 unauthenticated, prometheus and metrics 403 unauthenticated, both 200 with credentials. |
-| **Still yours to do** | Point something at `/actuator/prometheus` — Prometheus, Grafana Cloud, your host's metrics agent — and set one alert on the 500 counter. Until a thing is scraping and a thing is alerting, the first you hear of an outage is still an email from the customer it happened to. This needs a destination to send to, which is an account decision rather than a code one. |
+| Scraping | `infra/docker-compose.prod.yml` runs Prometheus and Grafana. Prometheus authenticates with `METRICS_SCRAPE_TOKEN` (`MetricsAccessGuard`), reaches the application inside the compose network, and keeps 90 days. Verified in the running stack: the `wesee` target reports `up`. Caddy returns 404 for `/actuator/*` from the internet, so the endpoint is not a public map of every route. |
+| **Still yours to do** | A contact point in Grafana and one alert rule on `wesee_unhandled_exceptions_total`. Metrics nobody looks at are not monitoring, and the address to send to is yours, not something code can supply. |
 
 ---
 
@@ -154,8 +163,8 @@ personal data under the PDPA, so it belongs in the retention policy rather than 
 
 | Row | What is left | Who can do it |
 |---|---|---|
-| 1. Backup | Put `backup.sh` on a schedule and ship the output off the machine | You — it needs a host and a cron |
-| 6. Monitoring | Point a scraper at `/actuator/prometheus` and set one alert | You — it needs an account to send to |
+| 1. Backup | Set `BACKUP_UPLOAD_CMD` so dumps leave the machine | You — it needs somewhere to send them |
+| 6. Monitoring | One Grafana contact point and one alert rule | You — it needs an address to alert |
 | 7. Rollback | A staging environment (the tag, the procedure and `migration-dryrun.sh` now exist) | You — staging needs somewhere to run |
 | 8. PDPA | A lawyer's reading of consent, retention and the Gemini subprocessor | A lawyer, not an engineer |
 

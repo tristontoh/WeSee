@@ -1,0 +1,22 @@
+# Scrapes the application over the compose network, where nothing else can reach it.
+#
+# The bearer token is the one in METRICS_SCRAPE_TOKEN; MetricsAccessGuard refuses the request
+# without it, and refuses everything if the application has no token configured at all.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: wesee
+    metrics_path: /actuator/prometheus
+    authorization:
+      type: Bearer
+      # Substituted at container start — Prometheus does not expand environment variables in its
+      # own config, so the entrypoint in docker-compose.prod.yml seds this placeholder.
+      credentials: __SCRAPE_TOKEN__
+    static_configs:
+      - targets: ["app:8080"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

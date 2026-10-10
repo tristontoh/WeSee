@@ -1,0 +1,39 @@
+# TLS is automatic: Caddy obtains and renews a Let's Encrypt certificate for {$DOMAIN}.
+# For a local smoke test set DOMAIN=localhost, where Caddy serves plain HTTP and asks for no
+# certificate.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	# Not from the internet. The metrics endpoints already require a bearer token
+	# (MetricsAccessGuard), and /actuator/prometheus names every route and its traffic — a map
+	# for anyone probing. Prometheus reaches them on the compose network instead, where this
+	# rule does not apply. /actuator/health stays reachable so an external uptime check works.
+	handle /actuator/health* {
+		reverse_proxy app:8080
+	}
+	handle /actuator/* {
+		respond 404
+	}
+
+	handle /grafana/* {
+		reverse_proxy grafana:3000
+	}
+
+	# Everything else: the API and the client, which the application serves itself.
+	handle {
+		reverse_proxy app:8080
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}

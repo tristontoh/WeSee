@@ -41,6 +41,7 @@ public class SecurityConfig {
 
     private final String[] allowedOrigins;
     private final boolean apiDocsPublic;
+    private final String metricsScrapeToken;
 
     public SecurityConfig(org.springframework.core.env.Environment env) {
         String raw = env.getProperty("wesee.cors.allowed-origins", "http://localhost:3000");
@@ -48,8 +49,12 @@ public class SecurityConfig {
         // Swagger describes every endpoint, its parameters and its shapes. That is a map for
         // anyone probing the API, and it was readable without signing in. Open in development,
         // authenticated everywhere else.
-        this.apiDocsPublic = java.util.Arrays.stream(env.getActiveProfiles())
-                .anyMatch(pr -> pr.equals("dev") || pr.equals("local") || pr.equals("docker"));
+        // Same rule as the JWT guard, from the same place. These two used to disagree: docker
+        // counted as development here, so a compose deploy published the whole API map.
+        this.apiDocsPublic = com.wesee.esg.security.DeploymentProfiles.isDevelopment(env.getActiveProfiles());
+        // Empty unless a monitoring stack is deployed. MetricsAccessGuard refuses everything when
+        // it is unset, so the endpoints stay closed until someone sets it on purpose.
+        this.metricsScrapeToken = env.getProperty("wesee.metrics.scrape-token", "");
     }
 
     /** Every GET that is not one of the server's own routes: the client and its assets. */
@@ -112,10 +117,21 @@ public class SecurityConfig {
                         // is not already printed on a public page.
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
+                        // Prometheus cannot use a session JWT (they expire daily and belong to a
+                        // person) or an API token (those only reach /api/external/v1), so the
+                        // scraper carries a bearer token of its own. Closed unless one is set.
+                        .requestMatchers("/actuator/prometheus", "/actuator/metrics/**")
+                            .access((principal, ctx) -> new org.springframework.security.authorization.AuthorizationDecision(
+                                    com.wesee.esg.security.MetricsAccessGuard.permits(
+                                            metricsScrapeToken,
+                                            ctx.getRequest().getHeader("Authorization"))))
+                        // isSignedIn, not isAuthenticated: Spring's anonymous token answers
+                        // true to isAuthenticated, so the previous check here let everybody read
+                        // the whole API description in every profile.
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
                             .access((principal, ctx) -> new org.springframework.security.authorization.AuthorizationDecision(
                                     apiDocsPublic
-                                            || (principal.get() != null && principal.get().isAuthenticated())))
+                                            || com.wesee.esg.security.SignedInCheck.isSignedIn(principal.get())))
                         // The client itself. It is HTML and JavaScript with no figures in it —
                         // everything it displays comes from an API call that authenticates on its
                         // own — so the shell has to be readable before anyone has signed in, or the

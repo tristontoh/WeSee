@@ -55,6 +55,70 @@ key stop verifying.
 
 ---
 
+## Deploying the whole stack
+
+One command on a fresh server with Docker installed. It brings up the database (with pgvector),
+the application, Caddy for TLS, Prometheus, Grafana and a backup loop.
+
+```bash
+git clone <this repo> && cd WeSee
+cp infra/env.example infra/.env
+# fill it in — every required value has the command that generates it beside it
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env up -d --build
+```
+
+Point `DOMAIN`'s DNS at the server **before** the first start: Caddy asks Let's Encrypt for a
+certificate on boot, and failed attempts count against a rate limit.
+
+Only Caddy publishes ports. The database, the application, Prometheus and Grafana are reachable
+on the compose network and nowhere else, so the only way in from outside is through TLS.
+
+| URL | What |
+|---|---|
+| `https://$DOMAIN/` | The product. The application serves the client itself. |
+| `https://$DOMAIN/actuator/health` | Open, for an external uptime check. |
+| `https://$DOMAIN/grafana/` | Grafana, username `admin`, password `GRAFANA_PASSWORD`. |
+| `https://$DOMAIN/actuator/prometheus` | **404 on purpose.** Prometheus reaches it inside the network, where the Caddy rule does not apply. It lists every route and its traffic. |
+
+### Checking it actually came up
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env ps
+curl -fsS https://$DOMAIN/actuator/health
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env logs backup | tail -5
+```
+
+All six services `Up`, health `200`, and the backup log showing a dump with a size. A backup
+service that has never written a file is the failure this stack is most likely to hide.
+
+### Before you call it done
+
+- **`BACKUP_UPLOAD_CMD` is empty by default**, and the backup service says so in its log on every
+  start. Until you set it, the backups sit on the same disk as the database they protect.
+- **Set a Grafana contact point** (Alerting → Contact points) and one alert on
+  `wesee_unhandled_exceptions_total`. Prometheus collecting metrics nobody looks at is not
+  monitoring.
+
+---
+
+## The database needs pgvector
+
+Not any Postgres 16 — one with the `vector` extension available. `V78__evidence_chunk.sql` runs
+`CREATE EXTENSION vector` and builds an ivfflat index on a `vector(768)` column. Without it that
+migration fails with `extension "vector" is not available` and the application never starts.
+
+The compose files use `pgvector/pgvector:pg16`, which is stock Postgres 16 with the extension
+compiled in. On a managed database, check that pgvector is offered before you commit to it —
+most offer it, some do not, and finding out after migrating is expensive.
+
+```bash
+psql -d <database> -c "SELECT * FROM pg_available_extensions WHERE name = 'vector'"
+```
+
+One row means you are fine. No rows means the deploy will fail at V78.
+
+---
+
 ## Profiles
 
 | Profile | Use |
