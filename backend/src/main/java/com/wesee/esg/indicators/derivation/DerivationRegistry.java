@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * The thirteen formulas, as named functions. Not an expression parsed at runtime: an evaluator
+ * The eleven formulas, as named functions. Not an expression parsed at runtime: an evaluator
  * would be a new attack surface and a new class of silent wrong answers, for formulas that change
  * about once a decade. These are pure — no repository, no clock — so every one is unit-tested
  * against a worked example.
@@ -68,6 +68,11 @@ public final class DerivationRegistry {
             public String formula() {
                 return "Electricity consumed (MWh) / revenue (RM mil)";
             }
+
+            @Override
+            public String outputUnit() {
+                return "MWh/RM mil";
+            }
         });
 
         m.put("CARBON_INTENSITY_REVENUE", new Derivation() {
@@ -104,6 +109,11 @@ public final class DerivationRegistry {
             public String formula() {
                 return "(Scope 1 + Scope 2) (tCO2e) / revenue (RM mil)";
             }
+
+            @Override
+            public String outputUnit() {
+                return "tCO2e/RM mil";
+            }
         });
 
         m.put("FEMALE_BOARD_RATIO", new Derivation() {
@@ -124,6 +134,11 @@ public final class DerivationRegistry {
             @Override
             public String formula() {
                 return "Female directors / all directors × 100";
+            }
+
+            @Override
+            public String outputUnit() {
+                return "%";
             }
         });
 
@@ -155,36 +170,10 @@ public final class DerivationRegistry {
             public String formula() {
                 return "Lost time injuries × 200,000 / total hours worked";
             }
-        });
-
-        m.put("WASTE_DIVERTED_RATE", new Derivation() {
-            @Override
-            public DerivationResult compute(DerivationInputs in) {
-                BigDecimal generated = in.indicator("IND-WST-01", "Tonnes");
-                BigDecimal landfilled = in.indicator("IND-WST-02", "Tonnes");
-                List<String> missing = new ArrayList<>();
-                if (generated == null) {
-                    missing.add("Scheduled hazardous waste generated (IND-WST-01)");
-                }
-                if (landfilled == null) {
-                    missing.add("Solid non-hazardous waste landfilled (IND-WST-02)");
-                }
-                if (!missing.isEmpty()) {
-                    return DerivationResult.awaiting(missing);
-                }
-                BigDecimal diverted = generated.subtract(landfilled);
-                BigDecimal value = Ratios.percentage(diverted, generated);
-                if (value == null) {
-                    return DerivationResult.awaiting(List.of("Waste generated is zero"));
-                }
-                return DerivationResult.computed(value,
-                        "(" + generated.toPlainString() + " − " + landfilled.toPlainString() + ") ÷ "
-                                + generated.toPlainString() + " × 100 = " + value.toPlainString() + "%");
-            }
 
             @Override
-            public String formula() {
-                return "(Waste generated − waste landfilled) / waste generated × 100";
+            public String outputUnit() {
+                return "Rate";
             }
         });
 
@@ -219,40 +208,40 @@ public final class DerivationRegistry {
             public String formula() {
                 return "Recycled water / (recycled + fresh intake) × 100";
             }
+
+            @Override
+            public String outputUnit() {
+                return "%";
+            }
         });
 
         m.put("ANTICORRUPTION_TRAINING_RATE", figureRatio(
-                "Employees trained on anti-corruption / average headcount × 100",
+                "Employees trained on anti-corruption / average headcount × 100", "%",
                 AnnualFigureKey.EMPLOYEES_TRAINED_ANTICORRUPTION, "Employees trained on anti-corruption",
                 AnnualFigureKey.AVERAGE_HEADCOUNT, "Average headcount", true));
 
         m.put("SUPPLIER_ASSESSMENT_RATE", figureRatio(
-                "Tier-1 suppliers assessed / tier-1 suppliers × 100",
+                "Tier-1 suppliers assessed / tier-1 suppliers × 100", "%",
                 AnnualFigureKey.TIER1_SUPPLIERS_ASSESSED, "Tier-1 suppliers assessed for ESG compliance",
                 AnnualFigureKey.TIER1_SUPPLIERS, "Tier-1 suppliers", true));
 
         m.put("CLIMATE_RISK_SITE_COVERAGE", figureRatio(
-                "Sites assessed for physical climate risk / operational sites × 100",
+                "Sites assessed for physical climate risk / operational sites × 100", "% sites",
                 AnnualFigureKey.SITES_CLIMATE_RISK_ASSESSED, "Sites assessed for physical climate risk",
                 AnnualFigureKey.OPERATIONAL_SITES, "Operational sites", true));
 
-        m.put("HCV_SITE_PROXIMITY", figureRatio(
-                "Sites near high conservation value areas / operational sites × 100",
-                AnnualFigureKey.SITES_NEAR_HIGH_CONSERVATION_VALUE, "Sites near high conservation value areas",
-                AnnualFigureKey.OPERATIONAL_SITES, "Operational sites", true));
-
         m.put("TRAINING_HOURS_PER_EMPLOYEE", figureRatio(
-                "Total training hours / average headcount",
+                "Total training hours / average headcount", "Hours",
                 AnnualFigureKey.TOTAL_TRAINING_HOURS, "Total training hours delivered",
                 AnnualFigureKey.AVERAGE_HEADCOUNT, "Average headcount", false));
 
         m.put("VOLUNTARY_TURNOVER_RATE", figureRatio(
-                "Voluntary departures / average headcount × 100",
+                "Voluntary departures / average headcount × 100", "%",
                 AnnualFigureKey.EMPLOYEE_DEPARTURES, "Voluntary departures",
                 AnnualFigureKey.AVERAGE_HEADCOUNT, "Average headcount", true));
 
         m.put("MATERIAL_CONVERSION_RATE", figureRatio(
-                "Raw material converted / raw material input × 100",
+                "Raw material converted / raw material input × 100", "%",
                 AnnualFigureKey.RAW_MATERIAL_CONVERTED, "Raw material converted to finished goods",
                 AnnualFigureKey.RAW_MATERIAL_INPUT, "Raw material input", true));
 
@@ -260,7 +249,7 @@ public final class DerivationRegistry {
     }
 
     /** Two figures in, one ratio out — the shape seven of the thirteen derivations take. */
-    private static Derivation figureRatio(String formulaText,
+    private static Derivation figureRatio(String formulaText, String outputUnit,
                                           AnnualFigureKey numeratorKey, String numeratorLabel,
                                           AnnualFigureKey denominatorKey, String denominatorLabel,
                                           boolean asPercentage) {
@@ -288,6 +277,11 @@ public final class DerivationRegistry {
             @Override
             public String formula() {
                 return formulaText;
+            }
+
+            @Override
+            public String outputUnit() {
+                return outputUnit;
             }
         };
     }

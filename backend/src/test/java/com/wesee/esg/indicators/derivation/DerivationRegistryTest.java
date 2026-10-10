@@ -37,8 +37,20 @@ class DerivationRegistryTest {
     }
 
     @Test
-    void theRegistryHoldsThirteenDerivations() {
-        assertEquals(13, DerivationRegistry.keys().size());
+    void theRegistryHoldsElevenDerivations() {
+        assertEquals(11, DerivationRegistry.keys().size());
+    }
+
+    /**
+     * Every formula must say what unit it produces, so DerivationCatalogueUnitsTest can refuse a
+     * percentage formula pointed at an indicator recorded in MYR.
+     */
+    @Test
+    void everyDerivationDeclaresTheUnitItProduces() {
+        for (String key : DerivationRegistry.keys()) {
+            String unit = DerivationRegistry.get(key).outputUnit();
+            assertTrue(unit != null && !unit.isBlank(), key + " does not say what unit it produces");
+        }
     }
 
     /** Review Focus 5. A key in a migration that names nothing must fail loudly. */
@@ -140,23 +152,7 @@ class DerivationRegistryTest {
         assertEquals(new BigDecimal("0.5000"), r.value());
     }
 
-    @Test
-    void wasteDivertedSubtractsLandfilledFromGenerated() {
-        DerivationResult r = DerivationRegistry.get("WASTE_DIVERTED_RATE").compute(inputs(
-                Map.of("IND-WST-01", new BigDecimal("200"), "IND-WST-02", new BigDecimal("50")),
-                Map.of("IND-WST-01", "Tonnes", "IND-WST-02", "Tonnes"),
-                Map.of(), List.of()));
-        assertEquals(new BigDecimal("75.00"), r.value());
-    }
 
-    @Test
-    void wasteDivertedRefusesWhenMoreWasLandfilledThanGenerated() {
-        assertThrows(IllegalArgumentException.class, () ->
-                DerivationRegistry.get("WASTE_DIVERTED_RATE").compute(inputs(
-                        Map.of("IND-WST-01", new BigDecimal("50"), "IND-WST-02", new BigDecimal("200")),
-                        Map.of("IND-WST-01", "Tonnes", "IND-WST-02", "Tonnes"),
-                        Map.of(), List.of())));
-    }
 
     @Test
     void voluntaryTurnoverDividesDeparturesByHeadcount() {
@@ -245,15 +241,6 @@ class DerivationRegistryTest {
         assertEquals(new BigDecimal("88.00"), r.value());
     }
 
-    @Test
-    void highConservationValueProximityDividesBySites() {
-        DerivationResult r = DerivationRegistry.get("HCV_SITE_PROXIMITY").compute(inputs(
-                Map.of(), Map.of(),
-                Map.of(AnnualFigureKey.SITES_NEAR_HIGH_CONSERVATION_VALUE, new BigDecimal("1"),
-                       AnnualFigureKey.OPERATIONAL_SITES, new BigDecimal("4")),
-                List.of()));
-        assertEquals(new BigDecimal("25.00"), r.value());
-    }
 
     @Test
     void everyDerivationWithNoInputsAtAllIsAwaitingRatherThanThrowing() {
