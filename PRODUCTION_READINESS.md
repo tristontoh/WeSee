@@ -128,7 +128,7 @@ line back and building it — the claim had been reasoned, not run.
 | | |
 |---|---|
 | **Status** | **PARTLY — you can roll back, you cannot rehearse** |
-| Evidence | CI runs the suite, the typecheck and a secret scan on every push and pull request. `v0.1.0` is tagged, so there is a release to go back to. `DEPLOYING.md` has the rollback procedure, and it separates the two cases that need different answers: bad code (redeploy the previous tag) and a bad migration (restore, because Flyway is forward-only and `V93` drops a column). |
+| Evidence | CI runs the suite, the typecheck and a secret scan on every push and pull request. `v0.1.1` is the release to roll back to — **not `v0.1.0`**, which is tagged but carries the five deploy defects in row 5 and cannot start in its own documented production configuration. `DEPLOYING.md` has the rollback procedure, and it separates the two cases that need different answers: bad code (redeploy the previous tag) and a bad migration (restore, because Flyway is forward-only and `V93` drops a column). |
 | How to check | `git tag -l` lists a release; `grep -A5 "Rolling back" DEPLOYING.md` |
 | **Still yours to do** | A staging environment that gets the same migrations before production does. Without one, every migration's first run anywhere is its run against customer data — and the rollback above is a restore, not an undo. This needs somewhere to run, which is a hosting decision rather than a code one. |
 
