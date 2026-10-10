@@ -99,3 +99,14 @@ jobs:
             echo "A secret-looking literal is committed."; exit 1
           fi
           echo "clean"
+
+      # A variable added to application.yml and not to DEPLOYING.md is a deploy that fails
+      # silently — the SMTP ones send no email and say nothing. Catch it here instead.
+      - name: Every environment variable is documented
+        run: |
+          missing=0
+          for v in $(grep -ohE '\$\{[A-Z_]+' backend/src/main/resources/application*.yml | tr -d '${' | sort -u); do
+            grep -q "$v" DEPLOYING.md || { echo "undocumented in DEPLOYING.md: $v"; missing=1; }
+          done
+          [ "$missing" = "0" ] && echo "all documented"
+          exit $missing
