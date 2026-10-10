@@ -7,6 +7,7 @@ package com.wesee.esg.security;
 import com.wesee.esg.user.AppUser;
 import com.wesee.esg.user.Role;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.mock.env.MockEnvironment;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -24,7 +25,9 @@ class JwtServiceTest {
         JwtProperties properties = new JwtProperties();
         properties.setSecret("test-only-secret-key-1234567890-abcdefghijklmnop");
         properties.setExpirationMinutes(60);
-        jwtService = new JwtService(properties);
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("test");
+        jwtService = new JwtService(properties, environment);
     }
 
     @Test

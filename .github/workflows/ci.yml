@@ -1,0 +1,101 @@
+# Nothing was stopping a broken commit reaching main. This is that.
+#
+# Postgres is a service rather than an afterthought because the test that decides whether supply
+# chain sharing ships — a buyer must not be able to read another buyer's disclosure — needs a real
+# database: it exercises a partial unique index and an enum-qualified JPQL predicate, neither of
+# which H2 can reproduce. CI=true makes that test FAIL rather than skip when the database is
+# missing, so a green run here always means it actually ran.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: wesee_esg_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CI: 'true'
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Tests
+        working-directory: backend
+        run: mvn -B test
+
+      - name: Where the failures are, if any
+        if: failure()
+        working-directory: backend
+        run: |
+          for f in target/surefire-reports/*.txt; do
+            grep -q "Failures: 0, Errors: 0" "$f" || { echo "=== $f ==="; cat "$f"; }
+          done
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      # tsc is the only thing standing between a rename and a runtime crash: `vite build`
+      # transpiles without type-checking, so a build that succeeds proves nothing about types.
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Gemini key lives in an ignored application-local.properties. This fails the build if
+      # one ever stops being ignored, rather than discovering it after a push.
+      - name: No secrets in tracked files
+        run: |
+          if git ls-files | grep -E '(^|/)application-local\.properties$|\.env$'; then
+            echo "A file that should hold secrets is tracked."; exit 1
+          fi
+          if git grep -nE '(api[-_]?key|secret)\s*[=:]\s*["'"'"']?[A-Za-z0-9_.-]{24,}' \
+               -- ':!*.md' ':!.github/*' | grep -v '\${'; then
+            echo "A secret-looking literal is committed."; exit 1
+          fi
+          echo "clean"

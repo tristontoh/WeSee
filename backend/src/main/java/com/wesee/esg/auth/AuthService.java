@@ -60,6 +60,7 @@ public class AuthService {
     private final TeamInviteRepository teamInviteRepository;
     private final CustomRoleRepository customRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoginThrottle loginThrottle;
     private final JwtService jwtService;
     private final CurrentUserProvider currentUserProvider;
     private final MfaService mfaService;
@@ -105,13 +106,15 @@ public class AuthService {
                         PlatformSettingsService platformSettingsService,
                         PasswordResetService passwordResetService,
                         PlatformActivityLogService activityLogService,
-                        JwtProperties jwtProperties) {
+                        JwtProperties jwtProperties,
+                       LoginThrottle loginThrottle) {
         this.appUserRepository = appUserRepository;
         this.companyRepository = companyRepository;
         this.sectorRepository = sectorRepository;
         this.teamInviteRepository = teamInviteRepository;
         this.customRoleRepository = customRoleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.loginThrottle = loginThrottle;
         this.jwtService = jwtService;
         this.currentUserProvider = currentUserProvider;
         this.mfaService = mfaService;
@@ -182,12 +185,20 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request, SessionMetadata meta) {
-        AppUser user = appUserRepository.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+        // Checked before the lookup, so a locked address costs an attacker nothing to learn and
+        // tells them nothing about whether the account exists.
+        loginThrottle.requireNotLocked(request.email(), Instant.now());
 
-        if (!Boolean.TRUE.equals(user.getActive()) || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        AppUser user = appUserRepository.findByEmailIgnoreCase(request.email()).orElse(null);
+
+        if (user == null
+                || !Boolean.TRUE.equals(user.getActive())
+                || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginThrottle.recordFailure(request.email(), Instant.now());
             throw new BadCredentialsException("Invalid email or password");
         }
+
+        loginThrottle.recordSuccess(request.email());
 
         if (!Boolean.TRUE.equals(user.getEmailVerified())) {
             return new LoginResponse(false, null, true, null);
