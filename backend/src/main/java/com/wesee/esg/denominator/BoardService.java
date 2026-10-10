@@ -11,6 +11,7 @@ import com.wesee.esg.denominator.dto.BoardMemberDto;
 import com.wesee.esg.denominator.dto.SetAttendanceRequest;
 import com.wesee.esg.denominator.dto.UpsertBoardMeetingRequest;
 import com.wesee.esg.denominator.dto.UpsertBoardMemberRequest;
+import com.wesee.esg.indicators.derivation.DerivationService;
 import com.wesee.esg.security.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,15 +33,18 @@ public class BoardService {
     private final BoardMeetingRepository meetingRepository;
     private final BoardMeetingAttendanceRepository attendanceRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final DerivationService derivationService;
 
     public BoardService(BoardMemberRepository memberRepository,
                         BoardMeetingRepository meetingRepository,
                         BoardMeetingAttendanceRepository attendanceRepository,
-                        CurrentUserProvider currentUserProvider) {
+                        CurrentUserProvider currentUserProvider,
+                        DerivationService derivationService) {
         this.memberRepository = memberRepository;
         this.meetingRepository = meetingRepository;
         this.attendanceRepository = attendanceRepository;
         this.currentUserProvider = currentUserProvider;
+        this.derivationService = derivationService;
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +72,10 @@ public class BoardService {
         member.setGender(request.gender());
         member.setAppointedAt(request.appointedAt());
         member.setResignedAt(request.resignedAt());
-        return BoardMemberDto.from(memberRepository.save(member));
+        BoardMemberDto saved = BoardMemberDto.from(memberRepository.save(member));
+        // The board ratios count this roster, so a changed roster changes them now.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
+        return saved;
     }
 
     @Transactional
@@ -80,7 +87,11 @@ public class BoardService {
         // persistence context does not hand back rows the database has already dropped.
         attendanceRepository.deleteAll(
                 attendanceRepository.findByCompanyIdAndBoardMemberId(companyId, memberId));
+        Integer fiscalYear = member.getFiscalYear();
         memberRepository.delete(member);
+        if (fiscalYear != null) {
+            derivationService.recomputeAllDependents(companyId, fiscalYear);
+        }
     }
 
     @Transactional(readOnly = true)

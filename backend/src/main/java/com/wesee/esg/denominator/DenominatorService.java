@@ -8,6 +8,7 @@ import com.wesee.esg.common.exceptions.NotFoundException;
 import com.wesee.esg.denominator.dto.AnnualFigureDto;
 import com.wesee.esg.denominator.dto.FigureCatalogueEntryDto;
 import com.wesee.esg.denominator.dto.SetAnnualFigureRequest;
+import com.wesee.esg.indicators.derivation.DerivationService;
 import com.wesee.esg.security.CurrentUserProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +27,14 @@ public class DenominatorService {
 
     private final CompanyAnnualFigureRepository figureRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final DerivationService derivationService;
 
     public DenominatorService(CompanyAnnualFigureRepository figureRepository,
-                              CurrentUserProvider currentUserProvider) {
+                              CurrentUserProvider currentUserProvider,
+                              DerivationService derivationService) {
         this.figureRepository = figureRepository;
         this.currentUserProvider = currentUserProvider;
+        this.derivationService = derivationService;
     }
 
     /** The form's shape, straight off the enum, so the screen cannot drift from the catalogue. */
@@ -66,7 +70,11 @@ public class DenominatorService {
         figure.setValue(request.value());
         figure.setUnit(figureKey.canonicalUnit());
         figure.setSourceNote(request.sourceNote());
-        return AnnualFigureDto.from(figureRepository.save(figure));
+        AnnualFigureDto saved = AnnualFigureDto.from(figureRepository.save(figure));
+        // In the same transaction: a denominator that moved must move what divides by it, or the
+        // screen shows a stale ratio beside its own fresh input.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
+        return saved;
     }
 
     @Transactional
@@ -77,5 +85,6 @@ public class DenominatorService {
                 .orElseThrow(() -> new NotFoundException(
                         figureKey.label() + " has no value recorded for FY" + fiscalYear));
         figureRepository.delete(figure);
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
     }
 }

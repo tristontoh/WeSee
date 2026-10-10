@@ -12,6 +12,7 @@ import com.wesee.esg.indicators.dto.IndicatorResponse;
 import com.wesee.esg.indicators.dto.IndicatorValuePointDto;
 import com.wesee.esg.indicators.dto.SetIndicatorTargetRequest;
 import com.wesee.esg.indicators.dto.SetIndicatorValueRequest;
+import com.wesee.esg.indicators.derivation.DerivationService;
 import com.wesee.esg.reference.AggregationRule;
 import com.wesee.esg.reference.IndicatorDefinition;
 import com.wesee.esg.reference.IndicatorDefinitionRepository;
@@ -47,6 +48,7 @@ public class IndicatorService {
     private final CurrentUserProvider currentUserProvider;
     private final CompanyRepository companyRepository;
     private final AppUserRepository appUserRepository;
+    private final DerivationService derivationService;
 
     public IndicatorService(IndicatorDefinitionRepository indicatorDefinitionRepository,
                              TenantIndicatorRepository tenantIndicatorRepository,
@@ -56,7 +58,8 @@ public class IndicatorService {
                              MatterSetResolverService matterSetResolverService,
                              CurrentUserProvider currentUserProvider,
                              CompanyRepository companyRepository,
-                             AppUserRepository appUserRepository) {
+                             AppUserRepository appUserRepository,
+                             DerivationService derivationService) {
         this.indicatorDefinitionRepository = indicatorDefinitionRepository;
         this.tenantIndicatorRepository = tenantIndicatorRepository;
         this.indicatorValueRepository = indicatorValueRepository;
@@ -66,6 +69,7 @@ public class IndicatorService {
         this.currentUserProvider = currentUserProvider;
         this.companyRepository = companyRepository;
         this.appUserRepository = appUserRepository;
+        this.derivationService = derivationService;
     }
 
     @Transactional(readOnly = true)
@@ -122,6 +126,13 @@ public class IndicatorService {
     public IndicatorResponse setValue(String indicatorDefinitionId, int fiscalYear, SetIndicatorValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
         IndicatorDefinition def = requireDefinition(indicatorDefinitionId);
+        // A derived indicator needs its own sentence: "use the monthly entry endpoint" is wrong
+        // advice for a ratio, which has no monthly entries to make.
+        if (def.getAggregationRule() == AggregationRule.DERIVED) {
+            throw new ConflictException(
+                    "This indicator is computed from its inputs — enter the figures it divides by"
+                            + " on the denominators screen, and the value follows");
+        }
         if (def.getAggregationRule() != AggregationRule.DIRECT_ANNUAL) {
             throw new ConflictException("This indicator's annual value is computed from monthly entries — use the monthly entry endpoint instead");
         }
@@ -154,6 +165,11 @@ public class IndicatorService {
         entry.setSourceDocName(request.sourceDocName());
         entry.setComment(request.comment());
         auditEntryRepository.save(entry);
+
+        // Several indicators are inputs to the derived ratios (electricity to energy intensity,
+        // waste generated to the diversion rate). Recompute in the same transaction so the two
+        // never disagree on screen.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
 
         return getIndicator(indicatorDefinitionId);
     }
@@ -229,6 +245,9 @@ public class IndicatorService {
         value.setApprovedByName(null);
         value.setApprovedAt(null);
         indicatorValueRepository.save(value);
+
+        // A monthly correction changes the annual figure, which may itself be a ratio's input.
+        derivationService.recomputeAllDependents(companyId, fiscalYear);
     }
 
     /** SUM and COUNT are the same arithmetic (sum of entered months) — COUNT is a presentational label for event-count indicators. */
