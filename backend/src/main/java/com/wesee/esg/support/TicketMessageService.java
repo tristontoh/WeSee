@@ -59,8 +59,19 @@ public class TicketMessageService {
         return TicketMessageResponse.from(ticketMessageRepository.save(message));
     }
 
+    /**
+     * The ticket, if this caller may reach it.
+     *
+     * <p>Not found rather than forbidden on a mismatch: telling a caller that a ticket exists but
+     * belongs to someone else is itself a disclosure, and a ticket id is a guessable path variable.
+     */
     private SupportTicket requireTicket(UUID ticketId) {
-        return supportTicketRepository.findById(ticketId)
+        SupportTicket ticket = supportTicketRepository.findById(ticketId)
                 .orElseThrow(() -> new NotFoundException("Ticket not found"));
+        var principal = currentUserProvider.getPrincipal();
+        if (!TicketAccessGuard.canReach(ticket.getCompanyId(), principal.companyId(), principal.role())) {
+            throw new NotFoundException("Ticket not found");
+        }
+        return ticket;
     }
 }
