@@ -58,3 +58,9 @@ backend/src/main/resources/static/
 
 # Plan-execution scratch (ledger, briefs, review packages) — git history is the real record
 .superpowers/
+
+# Database dumps and uploaded evidence. A dump is a complete copy of every customer's data —
+# committing one would put it in the history permanently, where deleting the file does not
+# remove it.
+backups/
+data/uploads/
