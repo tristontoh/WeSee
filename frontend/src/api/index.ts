@@ -15,6 +15,7 @@ export * from './supportTicketAdminApi';
 export * from './referenceApi';
 export * from './indicatorsApi';
 export * from './denominatorApi';
+export * from './supplyChainApi';
 export * from './materialityApi';
 export * from './governanceApi';
 export * from './targetsApi';
