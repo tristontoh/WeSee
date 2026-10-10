@@ -56,7 +56,10 @@ public class EmailService {
     public void sendInviteEmail(UUID companyId, String toEmail, String toName, String companyName, String inviterName, Object role, String inviteUrl) {
         Sender sender = resolveSender(companyId);
         if (sender == null) {
-            log.info("No SMTP configured for company {} or the platform — skipping invite email to {}; share the invite link manually.", companyId, toEmail);
+            // The link is logged, as the verification and reset paths already do. A supply-chain
+            // invite stores only the token's hash, so without this line the invitation is
+            // unrecoverable the moment the request ends and can never be accepted.
+            log.info("No SMTP configured for company {} or the platform — skipping invite email to {}; invite link: {}", companyId, toEmail, inviteUrl);
             return;
         }
         try {
