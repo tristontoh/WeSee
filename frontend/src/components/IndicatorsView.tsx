@@ -3,6 +3,7 @@
  * See LICENSE at the repository root — visibility is not a licence to use.
  */
 
+import { ApiError } from '../api/client';
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   Check,
@@ -369,7 +370,10 @@ export default function IndicatorsView() {
       if (selectedIndicatorForHistory && selectedIndicatorForHistory.id === indicatorId) {
         setSelectedIndicatorForHistory(converted);
       }
-    });
+    }).catch((err: ApiError) => showToast(
+      // The cell keeps its old value either way, since it is only replaced on success. Without
+      // this the edit just quietly does not take, which reads as the app ignoring you.
+      err?.message || 'Could not save that change.', 'error'));
 
     setEditingCell(null);
   };
@@ -428,7 +432,14 @@ export default function IndicatorsView() {
           setNewAuditMonth(nextOpenMonth >= 0 ? nextOpenMonth + 1 : 1);
         }
       })
-      .catch(() => showToast('Failed to save — check your value and evidence file, then try again.', 'error'))
+      // A sign-off lock, a derived indicator and a wrong-shaped entry all come back as 409 with
+      // a message that says what to do. Telling someone to check their value and evidence file
+      // when the real answer is "this year is signed off" sends them round the same loop.
+      .catch((err: ApiError) => showToast(
+        err?.status === 409 && err.message
+          ? err.message
+          : 'Failed to save — check your value and evidence file, then try again.',
+        'error'))
       .finally(() => setIsSavingAudit(false));
 
     setNewAuditVal('');

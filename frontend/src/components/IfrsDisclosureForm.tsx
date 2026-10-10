@@ -42,6 +42,7 @@ import {
 import { targetsApi, PerformanceTargetResponse } from '../api/targetsApi';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { ApiError } from '../api/client';
 import DraftWithAiButton from './ai/DraftWithAiButton';
 import FindEvidenceButton from './evidence/FindEvidenceButton';
 import { fiscalYearKeys } from '../utils/fiscalYears';
@@ -1092,6 +1093,10 @@ export function IfrsS2Form() {
     if (isNaN(num)) return;
     const fiscalYear = yearKeyToFiscalYear(year);
 
+    // Kept so typing stays responsive, and put back below if the server refuses. A signed-off
+    // year is refused now, and showing the new number over a save that never happened would be
+    // worse than the edit simply not taking.
+    const previous = emissions[type][year];
     setEmissions(prev => ({
       ...prev,
       [type]: {
@@ -1099,23 +1104,34 @@ export function IfrsS2Form() {
         [year]: num
       }
     }));
-    if (type === 'scope1') {
-      climateApi.setScope1(fiscalYear, num);
-    } else {
-      climateApi.setScope2(fiscalYear, num);
-    }
+
+    const save = type === 'scope1'
+      ? climateApi.setScope1(fiscalYear, num)
+      : climateApi.setScope2(fiscalYear, num);
+    save.catch((err: ApiError) => {
+      setEmissions(prev => ({ ...prev, [type]: { ...prev[type], [year]: previous } }));
+      showToast(err.message || 'Could not save that figure.', 'error');
+    });
   };
 
   const updateScope3Value = (categoryId: string, index: number, year: string, value: string) => {
     const num = value.trim() === '' ? 0 : Number(value);
     if (isNaN(num)) return;
     const fiscalYear = yearKeyToFiscalYear(year);
+    const previous = emissions.scope3[index]?.values[year];
     setEmissions(prev => {
       const updatedScope3 = [...prev.scope3];
       updatedScope3[index] = { ...updatedScope3[index], values: { ...updatedScope3[index].values, [year]: num } };
       return { ...prev, scope3: updatedScope3 };
     });
-    climateApi.setScope3Value(categoryId, fiscalYear, num);
+    climateApi.setScope3Value(categoryId, fiscalYear, num).catch((err: ApiError) => {
+      setEmissions(prev => {
+        const reverted = [...prev.scope3];
+        reverted[index] = { ...reverted[index], values: { ...reverted[index].values, [year]: previous } };
+        return { ...prev, scope3: reverted };
+      });
+      showToast(err.message || 'Could not save that figure.', 'error');
+    });
   };
 
   const addScope3Category = () => {
@@ -1130,8 +1146,22 @@ export function IfrsS2Form() {
   };
 
   const handleDeleteScope3Category = (categoryId: string) => {
+    // Put the category back if the server refuses — it is mandatory for a financial institution,
+    // or it reports a figure in a year that has been signed off. Removing it from the screen over
+    // a delete that did not happen means it reappears on the next load with no explanation.
+    const removed = emissions.scope3.find(c => c.id === categoryId);
+    const removedAt = emissions.scope3.findIndex(c => c.id === categoryId);
     setEmissions(prev => ({ ...prev, scope3: prev.scope3.filter(c => c.id !== categoryId) }));
-    climateApi.deleteScope3Category(categoryId);
+    climateApi.deleteScope3Category(categoryId).catch((err: ApiError) => {
+      if (removed) {
+        setEmissions(prev => {
+          const restored = [...prev.scope3];
+          restored.splice(removedAt, 0, removed);
+          return { ...prev, scope3: restored };
+        });
+      }
+      showToast(err.message || 'Could not delete that category.', 'error');
+    });
     setConfirmDeleteCategoryId(null);
   };
 
