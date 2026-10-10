@@ -4,6 +4,7 @@
  */
 package com.wesee.esg.climate;
 
+import com.wesee.esg.assurance.SignOffLock;
 import com.wesee.esg.climate.dto.CreateScope3CategoryRequest;
 import com.wesee.esg.climate.dto.EmissionPointDto;
 import com.wesee.esg.climate.dto.EmissionsResponse;
@@ -25,6 +26,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -62,6 +64,7 @@ public class EmissionsService {
     private final TransitionReliefRuleRepository transitionReliefRuleRepository;
     private final CurrentUserProvider currentUserProvider;
     private final CompanyRepository companyRepository;
+    private final SignOffLock signOffLock;
 
     public EmissionsService(EmissionValueRepository emissionValueRepository,
                              EmissionActivityEntryRepository activityEntryRepository,
@@ -69,7 +72,9 @@ public class EmissionsService {
                              Scope3ValueRepository scope3ValueRepository,
                              TransitionReliefRuleRepository transitionReliefRuleRepository,
                              CurrentUserProvider currentUserProvider,
-                             CompanyRepository companyRepository) {
+                             CompanyRepository companyRepository,
+                            SignOffLock signOffLock) {
+        this.signOffLock = signOffLock;
         this.emissionValueRepository = emissionValueRepository;
         this.activityEntryRepository = activityEntryRepository;
         this.scope3CategoryRepository = scope3CategoryRepository;
@@ -207,6 +212,7 @@ public class EmissionsService {
     @Transactional
     public EmissionsResponse setScopeValue(EmissionScope scope, int fiscalYear, SetEmissionValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
+        signOffLock.requireYearOpen(companyId, fiscalYear, "changing this scope total");
         EmissionValue value = emissionValueRepository.findByCompanyIdAndScopeAndFiscalYear(companyId, scope, fiscalYear)
                 .orElseGet(() -> {
                     EmissionValue v = new EmissionValue();
@@ -234,6 +240,7 @@ public class EmissionsService {
     @Transactional
     public EmissionsResponse setScope3Value(UUID categoryId, int fiscalYear, SetEmissionValueRequest request) {
         UUID companyId = currentUserProvider.requireCompanyId();
+        signOffLock.requireYearOpen(companyId, fiscalYear, "changing this category total");
         Scope3Category category = scope3CategoryRepository.findByIdAndCompanyId(categoryId, companyId)
                 .orElseThrow(() -> new NotFoundException("Scope 3 category not found"));
 
@@ -256,6 +263,19 @@ public class EmissionsService {
         Company company = companyRepository.findById(companyId).orElseThrow(() -> new NotFoundException("Company not found"));
         Scope3Category category = scope3CategoryRepository.findByIdAndCompanyId(categoryId, companyId)
                 .orElseThrow(() -> new NotFoundException("Scope 3 category not found"));
+
+        // Deleting a category removes its figure from every year at once, so the lock has to be
+        // checked against all of them rather than against one.
+        Set<Integer> locked = signOffLock.lockedYears(companyId);
+        scope3ValueRepository.findByCategoryIdOrderByFiscalYearAsc(categoryId).stream()
+                .map(Scope3Value::getFiscalYear)
+                .filter(locked::contains)
+                .findFirst()
+                .ifPresent(year -> {
+                    throw new ConflictException("FY" + year + " has been signed off and reports a"
+                            + " figure in this category — deleting it would put that year's"
+                            + " assurance hash over figures nobody signed. Revoke the sign-off first.");
+                });
 
         boolean isFinancialInstitution = company.getSector() != null && "FINANCIAL_SERVICES".equals(company.getSector().getCode());
         if (isMandatory(category, isFinancialInstitution)) {

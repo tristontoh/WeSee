@@ -4,8 +4,7 @@
  */
 package com.wesee.esg.supplychain;
 
-import com.wesee.esg.assurance.SignOffRecordRepository;
-import com.wesee.esg.assurance.SignOffStatus;
+import com.wesee.esg.assurance.SignOffLock;
 import com.wesee.esg.climate.EmissionsService;
 import com.wesee.esg.climate.Scope3Category;
 import com.wesee.esg.climate.Scope3Value;
@@ -47,7 +46,7 @@ public class Scope3AllocationService {
     private final Scope3ValueRepository scope3ValueRepository;
     private final CompanyRepository companyRepository;
     private final CurrentUserProvider currentUserProvider;
-    private final SignOffRecordRepository signOffRepository;
+    private final SignOffLock signOffLock;
 
     public Scope3AllocationService(Scope3AllocationRepository allocationRepository,
                                    SharedDisclosureRepository disclosureRepository,
@@ -56,7 +55,7 @@ public class Scope3AllocationService {
                                    Scope3ValueRepository scope3ValueRepository,
                                    CompanyRepository companyRepository,
                                    CurrentUserProvider currentUserProvider,
-                                   SignOffRecordRepository signOffRepository) {
+                                   SignOffLock signOffLock) {
         this.allocationRepository = allocationRepository;
         this.disclosureRepository = disclosureRepository;
         this.supplyLinkRepository = supplyLinkRepository;
@@ -64,7 +63,7 @@ public class Scope3AllocationService {
         this.scope3ValueRepository = scope3ValueRepository;
         this.companyRepository = companyRepository;
         this.currentUserProvider = currentUserProvider;
-        this.signOffRepository = signOffRepository;
+        this.signOffLock = signOffLock;
     }
 
     @Transactional(readOnly = true)
@@ -165,13 +164,7 @@ public class Scope3AllocationService {
     }
 
     private void requireYearOpen(UUID companyId, int fiscalYear) {
-        boolean signed = signOffRepository.findByCompanyIdOrderByFiscalYearDesc(companyId).stream()
-                .anyMatch(r -> r.getStatus() == SignOffStatus.SIGNED
-                        && Integer.valueOf(fiscalYear).equals(r.getFiscalYear()));
-        if (signed) {
-            throw new ConflictException("FY" + fiscalYear + " has been signed off — revoke the"
-                    + " sign-off before changing what it reports");
-        }
+        signOffLock.requireYearOpen(companyId, fiscalYear, "changing what it reports");
     }
 
     /** Pure, so the summing is testable without a database. */
