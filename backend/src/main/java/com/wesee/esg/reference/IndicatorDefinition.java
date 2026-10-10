@@ -62,4 +62,12 @@ public class IndicatorDefinition {
     @Enumerated(EnumType.STRING)
     @Column(name = "aggregation_rule", nullable = false, length = 20)
     private AggregationRule aggregationRule = AggregationRule.DIRECT_ANNUAL;
+
+    /**
+     * Names the formula in {@code DerivationRegistry} that computes this indicator. Non-null
+     * exactly when {@link #aggregationRule} is {@code DERIVED}, enforced by a table check so the
+     * two cannot disagree.
+     */
+    @Column(name = "derivation_key", length = 50)
+    private String derivationKey;
 }

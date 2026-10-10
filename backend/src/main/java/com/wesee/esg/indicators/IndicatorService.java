@@ -250,6 +250,10 @@ public class IndicatorService {
                     .map(IndicatorMonthlyValue::getValue)
                     .orElse(null);
             case DIRECT_ANNUAL -> throw new IllegalStateException("DIRECT_ANNUAL indicators don't aggregate from monthly values");
+            // A derived indicator is computed from other indicators and from the denominator
+            // figures, never from its own monthly entries — it has none. Same shape of mistake as
+            // DIRECT_ANNUAL reaching here, so it fails the same loud way.
+            case DERIVED -> throw new IllegalStateException("DERIVED indicators are computed from their inputs, not from monthly values");
         };
     }
 

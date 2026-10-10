@@ -52,4 +52,13 @@ public class IndicatorValue extends TenantOwnedEntity {
     /** True when this value was rolled up from IndicatorMonthlyValue rows rather than hand-entered. */
     @Column(name = "is_computed", nullable = false)
     private Boolean computed = false;
+
+    /**
+     * Only set for indicators whose rule is {@code DERIVED}. {@link #computed} means "not typed by
+     * hand" and covers monthly aggregation too; this says which of the three derived situations a
+     * value is in. Null for every other indicator.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "derivation_state", length = 20)
+    private DerivationState derivationState;
 }
