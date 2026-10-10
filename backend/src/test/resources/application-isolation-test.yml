@@ -1,0 +1,24 @@
+# The supply-chain isolation test runs against a real Postgres, not the H2 profile.
+#
+# Two things make H2 wrong here. V89 creates a PARTIAL unique index
+# (... WHERE status = 'ACTIVE'), which H2 does not support, so the migration would not even
+# apply. And the predicate under test is a JPQL query with an enum-qualified comparison, whose
+# whole point is to behave in production exactly as it behaves here.
+#
+# The database is created once with: createdb wesee_esg_test
+# The test skips itself, with a stated reason, when Postgres is not reachable.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/wesee_esg_test
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
