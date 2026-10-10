@@ -29,11 +29,17 @@ row above.
 
 | | |
 |---|---|
-| **Status** | **PARTLY** |
-| Evidence | Every tenant-owned table sits behind the Hibernate `companyFilter`. The three tables that deliberately sit outside it (`supply_link`, `shared_disclosure`, `shared_disclosure_line`) are covered by `SupplyChainIsolationTest`, which was mutation-checked — breaking the predicate makes it fail. |
-| The gap | The `tenant` package (34 files) has no tests. The filter is a safety net under explicit checks, and the explicit checks are untested. |
-| How to check | `grep -rn "disableFilter" backend/src/main/java` must return nothing. Then: for each service, does every finder take a company id? |
-| What done looks like | A test per service that proves a request authenticated as company A cannot read company B's rows — the shape `SupplyChainIsolationTest` already uses. |
+| **Status** | **READY** |
+| Evidence | `TenantScopingInvariantTest` enforces two rules over every repository by reflection: no repository over tenant-owned data may offer a finder that names no company, and no raw `findById` on one may sit in a method that never mentions the tenant. Deliberate exceptions are listed by name with their reason. `TenantFilterCoverageTest` pins down what the `companyFilter` does and does not cover, against a real database. `SupplyChainIsolationTest` covers the three tables that sit outside the filter on purpose. All three were mutation-checked — breaking the guard makes them fail. |
+| How to check | `cd backend && mvn test -Dtest='Tenant*Test,SupplyChainIsolationTest'` |
+| What a failure means | The message names the repository and method. Either add the company id to the signature, bind it in `@Query`, or add the name to `DELIBERATE_EXCEPTIONS` with a comment saying why it is safe. |
+
+**This row found a real hole.** A Hibernate `@Filter` is applied when Hibernate builds a query; a
+load by primary key does not build one. So `findById` was never filtered, and three tenant-facing
+support endpoints — read messages, post a message, edit the note — resolved a ticket id from the
+URL with `findById` alone. Any signed-in user with a ticket id could read another company's support
+thread, post into it, and overwrite its note. Fixed in `ffb7b11` with `TicketAccessGuard`; the
+invariant test is what stops the next one.
 
 ---
 
