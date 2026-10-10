@@ -42,6 +42,27 @@ class JwtSecretGuardTest {
         assertThrows(IllegalStateException.class, () -> JwtSecretGuard.verify(DEV_DEFAULT, Set.of()));
     }
 
+    /**
+     * Compose is a way to deploy, not a way to develop.
+     *
+     * <p>{@code docker} counted as development until 2026-10-11, which meant the obvious way to
+     * run this in production — docker compose on a server — accepted the signing key published in
+     * this repository. Local development uses the {@code dev} profile and is unaffected: nothing
+     * in this repository starts the application under {@code docker} on a developer's machine.
+     */
+    @Test
+    void composeIsAProductionProfileAndRefusesTheDevelopmentDefault() {
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> JwtSecretGuard.verify(DEV_DEFAULT, Set.of("docker")));
+        assertTrue(e.getMessage().contains("JWT_SECRET"), e.getMessage());
+    }
+
+    /** A real secret under compose is fine — it is the published default that is refused. */
+    @Test
+    void composeAcceptsARealSecret() {
+        assertDoesNotThrow(() -> JwtSecretGuard.verify("x".repeat(48), Set.of("docker")));
+    }
+
     @Test
     void aRealSecretIsAcceptedAnywhere() {
         assertDoesNotThrow(() -> JwtSecretGuard.verify(REAL, Set.of("prod")));

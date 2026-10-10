@@ -14,7 +14,9 @@ verification email is simply never sent, with nothing on screen to say so.
 | Variable | Why | What happens if you don't |
 |---|---|---|
 | `JWT_SECRET` | Signs every session token. At least 48 bytes — HMAC-SHA384. | **The application refuses to start** outside a dev profile. That is deliberate: the default is published in this repository, so anyone could mint a token for any tenant. |
-| `DB_PASSWORD` | Postgres. | Falls back to a development password and fails to connect. |
+| `DB_PASSWORD` | Postgres. | **The application refuses to start.** There is no default outside the dev profile — a default here would let a deploy with a missing variable connect somewhere unintended. |
+| `DB_HOST`, `DB_NAME`, `DB_USERNAME` | Which database, and as whom. | **The application refuses to start**, naming the variable. |
+| `GEMINI_API_KEY` | Document extraction. | **The application refuses to start.** This is not an optional feature flag: `GeminiEmbedder` is constructed at boot and throws without a key. It was listed below as "silently off" until 2026-10-11, which is the opposite of what happens. |
 
 Generate a signing secret with:
 
@@ -37,7 +39,6 @@ key stop verifying.
 | `SMTP_PASSWORD` | *(empty)* | As above. |
 | `MAIL_FROM` | `no-reply@wesee.my` | Mail is sent from a domain you may not control, so it lands in spam or is rejected outright. |
 | `APP_BASE_URL` | `http://localhost:4210` | **Every link in every email points at localhost.** Invitations and verification links are unusable, and nothing reports an error. |
-| `GEMINI_API_KEY` | *(empty)* | Document extraction returns an error to the user. Everything else works. |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:4210` | The browser blocks the client's API calls, which looks like the server being down. |
 
 ---
@@ -46,9 +47,8 @@ key stop verifying.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DB_USERNAME` | `postgres` (dev) / `wesee` (docker) | |
-| `DB_HOST` | `db` | Docker profile only. |
-| `DB_NAME` | `wesee_esg` | Docker profile only. |
+| `DB_PORT` | `5432` | |
+| `DB_HOST` | `db` under the `docker` profile only; **required** otherwise | `db` is the compose service name, which is safe to default because it is not a credential. |
 | `GEMINI_MODEL` | `gemini-3.7-flash` | |
 | `GEMINI_BASE_URL` | *(empty)* | Set only to point at a proxy. |
 | `UPLOADS_DIR` | `./data/uploads` | **Must be on persistent storage.** On a container filesystem the evidence documents behind every figure vanish on restart, and the audit trail then points at files that no longer exist. |
@@ -59,13 +59,19 @@ key stop verifying.
 
 | Profile | Use |
 |---|---|
-| *(none)* | Production. The JWT guard is strict here. |
-| `dev` | Local, against a Postgres on localhost. |
-| `docker` | Compose. |
+| *(none)* | Production. Everything is required and nothing is defaulted. |
+| `docker` | Compose — also production. Defaults only `DB_HOST` to the compose service name. |
+| `dev` | Local, against a Postgres on localhost. Defaults the database credentials. |
 | `test`, `isolation-test` | Tests only. |
 
-The JWT guard treats `dev`, `local`, `test`, `isolation-test` and `docker` as development. Anything
-else — including no profile at all — is production, and the development secret is refused.
+The JWT guard treats `dev`, `local`, `test` and `isolation-test` as development. Anything else —
+including `docker` and including no profile at all — is production, and the development secret is
+refused.
+
+**`docker` counted as development until 2026-10-11.** Compose is how this is deployed to a
+server, so that meant the obvious production setup accepted the signing key published in this
+repository, and defaulted the database password to `wesee`. Both are fixed; a compose deploy now
+requires `JWT_SECRET`, `DB_NAME`, `DB_USERNAME` and `DB_PASSWORD` like any other.
 
 ---
 

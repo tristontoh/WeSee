@@ -5,6 +5,29 @@ spring:
     # local last so it wins: it holds credentials that must not be committed, and Spring
     # tolerates the file being absent — a fresh clone starts without one.
     active: dev,local
+  # Production configuration. Every profile that needs different values overrides these, so
+  # what is written here is what a deploy with no profile gets — which is what DEPLOYING.md
+  # calls production.
+  #
+  # No defaults on the four that identify the database. A default here would let a deploy with a
+  # missing variable start anyway and connect somewhere unintended; without one it stops at
+  # startup naming the variable. The dev, docker and test profiles each supply their own, so this
+  # strictness never reaches a developer's machine.
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Checks every entity against the schema Flyway just produced and refuses to start if they
+      # disagree. This lived only in the dev, docker and test profiles until 2026-10-11, so a
+      # production start did no validation at all and a mismatched column failed at the first
+      # query that touched it instead of at boot.
+      ddl-auto: validate
+    open-in-view: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   jackson:
     default-property-inclusion: non_null
   servlet:

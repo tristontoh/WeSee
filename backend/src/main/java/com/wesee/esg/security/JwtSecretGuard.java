@@ -26,8 +26,16 @@ public final class JwtSecretGuard {
     /** HMAC-SHA384, which JwtService uses, requires a 48-byte key. */
     static final int MIN_BYTES = 48;
 
+    /**
+     * Profiles where the published default key is tolerated.
+     *
+     * <p>{@code docker} is deliberately NOT here. Compose is how this gets deployed to a server,
+     * so treating it as development meant the obvious production setup accepted a key anyone can
+     * read in this repository. Local development runs under {@code dev}; nothing here starts the
+     * application under {@code docker} on a developer's machine.
+     */
     private static final Set<String> DEVELOPMENT_PROFILES =
-            Set.of("dev", "local", "test", "isolation-test", "docker");
+            Set.of("dev", "local", "test", "isolation-test");
 
     private JwtSecretGuard() {
     }

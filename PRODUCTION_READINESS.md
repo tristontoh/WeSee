@@ -83,26 +83,33 @@ The last two were found by this row and fixed in `53fbd8a`.
 
 | | |
 |---|---|
-| **Status** | **NOT READY — there is no working production configuration** |
-| Evidence | Every environment variable is documented and CI keeps that list honest. That is not enough: nobody has ever started this application in the configuration `DEPLOYING.md` describes, and when `migration-dryrun.sh` tried, it could not. |
-| How to check | `./scripts/migration-dryrun.sh <a dump>` — it starts the real artifact the way production would. |
+| **Status** | **READY** |
+| Evidence | The container builds, and the application starts in a real container against real data under both production profiles — `docker` and no profile at all. Every variable is required rather than defaulted, so a missing one stops the deploy by name instead of connecting somewhere unintended. Verified in both directions: with `JWT_SECRET` unset under `docker` it refuses and says why, and with a deliberately dropped column it refuses with `Schema-validation: missing column`. |
+| How to check | `docker build -t wesee backend/`, then run it with the variables `DEPLOYING.md` lists. Or `./scripts/migration-dryrun.sh <a dump>`, which does the equivalent against a copy of real data. |
 
 **This row was marked READY on 2026-10-10 and that was wrong.** It was judged on
 environment-variable documentation, which was the only gap the row happened to name. Writing
-`migration-dryrun.sh` required knowing which profile production runs, and the answer is that
-none of them works:
+`migration-dryrun.sh` required knowing which profile production runs, and the answer was that
+none of them worked. All five are fixed as of 2026-10-11; the table is kept because the shape of
+the mistake is worth remembering:
 
 | | What is wrong | Effect |
 |---|---|---|
-| 1 | `pom.xml` declares `<packaging>war</packaging>`; `backend/Dockerfile` copies `target/esg-backend-*.jar` | `docker build` fails at that line. The container has never been built. |
+| 1 | `pom.xml` declares `<packaging>war</packaging>`; `backend/Dockerfile` copies `target/esg-backend-*.jar` | The build **succeeds** — BuildKit's `COPY` accepts a glob matching no file — and produces an image with an empty `/app` that dies at startup with "Unable to access jarfile". Tagged, pushed and deployed before anything notices. |
 | 2 | No profile (what `DEPLOYING.md` calls production) has no `datasource` block — only `application-dev.yml` and `application-docker.yml` define one | The application cannot start at all. `DB_HOST` and `DB_NAME` are documented but read by nothing. |
 | 3 | `ddl-auto: validate` is in the dev, docker and test profiles but not in `application.yml` | Production does **no** schema validation. A migration that disagrees with the entities fails at the first query that touches the column instead of at startup. |
 | 4 | `JwtSecretGuard` counts `docker` as a development profile | Deploying with compose — the obvious way to deploy this — accepts the signing key that is published in this repository. |
 | 5 | `GEMINI_API_KEY` is listed under "set these or the feature is silently off" | It is a hard startup requirement. Without it the application refuses to boot, with a clear message, but not the one the documentation led you to expect. |
 
 Numbers 3 and 5 were found by running the dry-run script. Numbers 1, 2 and 4 were found looking
-for which profile it should run under. None of them would appear in local development, because
-local development uses the `dev` profile, where all five are configured correctly.
+for which profile it should run under. **None of them would appear in local development**, because
+local development uses the `dev` profile, where all five were already configured correctly — which
+is exactly why a row about deploying cannot be answered by reading the code.
+
+Number 1 is worth a second look. The first version of this entry said `docker build` fails at
+that line. It does not: BuildKit accepts a `COPY` glob that matches no file, so the image built
+clean, contained nothing, and died at startup. That was found by deliberately putting the broken
+line back and building it — the claim had been reasoned, not run.
 
 ---
 
@@ -143,12 +150,10 @@ personal data under the PDPA, so it belongs in the retention policy rather than 
 
 ## Where that leaves it
 
-**Four of the eight rows are READY.** Row 5 was READY and is not: see the table there for why.
-Of the four that remain, one is code and three are not:
+**Five of the eight rows are READY.** The three that remain are not blocked on code:
 
 | Row | What is left | Who can do it |
 |---|---|---|
-| 5. Deploy config | Five concrete defects, all small, none yet fixed | Code — this one is doable now |
 | 1. Backup | Put `backup.sh` on a schedule and ship the output off the machine | You — it needs a host and a cron |
 | 6. Monitoring | Point a scraper at `/actuator/prometheus` and set one alert | You — it needs an account to send to |
 | 7. Rollback | A staging environment (the tag, the procedure and `migration-dryrun.sh` now exist) | You — staging needs somewhere to run |
