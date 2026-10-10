@@ -119,7 +119,8 @@ public final class DerivationRegistry {
         m.put("FEMALE_BOARD_RATIO", new Derivation() {
             @Override
             public DerivationResult compute(DerivationInputs in) {
-                List<BoardMember> roster = in.board();
+                // The board as it stood at the fiscal year end, not everyone who ever sat on it.
+                List<BoardMember> roster = BoardComposition.servingOn(in.board(), in.asOf());
                 int directors = BoardComposition.directorCount(roster);
                 if (directors == 0) {
                     return DerivationResult.awaiting(List.of("Board roster for this financial year"));
@@ -157,7 +158,7 @@ public final class DerivationRegistry {
                 if (!missing.isEmpty()) {
                     return DerivationResult.awaiting(missing);
                 }
-                BigDecimal value = Ratios.perHundredThousandHours(injuries, hours);
+                BigDecimal value = Ratios.perTwoHundredThousandHours(injuries, hours);
                 if (value == null) {
                     return DerivationResult.awaiting(List.of("Total hours worked is zero"));
                 }

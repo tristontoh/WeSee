@@ -60,6 +60,14 @@ class SupplyChainIsolationTest {
                 System.getenv().getOrDefault("DB_PASSWORD", "root"))) {
             return true;
         } catch (Exception e) {
+            // Skipping is the right default on a developer's laptop and the wrong one in CI,
+            // where a green suite would mean the test the design document says decides whether
+            // this ships simply did not run.
+            if (Boolean.parseBoolean(System.getenv().getOrDefault("CI", "false"))) {
+                throw new IllegalStateException(
+                        "CI is set but no Postgres is reachable at wesee_esg_test — the supply"
+                                + " chain isolation test cannot be skipped here", e);
+            }
             return false;
         }
     }

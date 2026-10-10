@@ -20,7 +20,9 @@ public record DerivationInputs(
         Map<String, BigDecimal> indicatorValues,
         Map<String, String> indicatorUnits,
         Map<AnnualFigureKey, BigDecimal> figures,
-        List<BoardMember> board
+        List<BoardMember> board,
+        /** The date point-in-time figures are read at: the last day of the fiscal year. */
+        java.time.LocalDate asOf
 ) {
 
     /**

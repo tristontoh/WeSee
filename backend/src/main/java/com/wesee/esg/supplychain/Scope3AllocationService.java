@@ -4,6 +4,8 @@
  */
 package com.wesee.esg.supplychain;
 
+import com.wesee.esg.assurance.SignOffRecordRepository;
+import com.wesee.esg.assurance.SignOffStatus;
 import com.wesee.esg.climate.EmissionsService;
 import com.wesee.esg.climate.Scope3Category;
 import com.wesee.esg.climate.Scope3Value;
@@ -45,6 +47,7 @@ public class Scope3AllocationService {
     private final Scope3ValueRepository scope3ValueRepository;
     private final CompanyRepository companyRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final SignOffRecordRepository signOffRepository;
 
     public Scope3AllocationService(Scope3AllocationRepository allocationRepository,
                                    SharedDisclosureRepository disclosureRepository,
@@ -52,7 +55,8 @@ public class Scope3AllocationService {
                                    EmissionsService emissionsService,
                                    Scope3ValueRepository scope3ValueRepository,
                                    CompanyRepository companyRepository,
-                                   CurrentUserProvider currentUserProvider) {
+                                   CurrentUserProvider currentUserProvider,
+                                   SignOffRecordRepository signOffRepository) {
         this.allocationRepository = allocationRepository;
         this.disclosureRepository = disclosureRepository;
         this.supplyLinkRepository = supplyLinkRepository;
@@ -60,6 +64,7 @@ public class Scope3AllocationService {
         this.scope3ValueRepository = scope3ValueRepository;
         this.companyRepository = companyRepository;
         this.currentUserProvider = currentUserProvider;
+        this.signOffRepository = signOffRepository;
     }
 
     @Transactional(readOnly = true)
@@ -81,6 +86,10 @@ public class Scope3AllocationService {
             throw new ConflictException("Your supplier has withdrawn that disclosure,"
                     + " so it cannot be newly cited");
         }
+
+        // The allocation moves a reported Scope 3 figure now, so a signed year refuses it — the
+        // same rule extraction and the activity ledger already apply.
+        requireYearOpen(buyerCompanyId, disclosure.getFiscalYear());
 
         BigDecimal share = Allocation.share(request.purchasedQuantity(), disclosure.getBasisQuantity());
         BigDecimal allocated = Allocation.allocate(
@@ -118,6 +127,7 @@ public class Scope3AllocationService {
         Scope3Allocation allocation = allocationRepository.findByIdAndCompanyId(allocationId, companyId)
                 .orElseThrow(() -> new NotFoundException("No such allocation"));
         int fiscalYear = allocation.getFiscalYear();
+        requireYearOpen(companyId, fiscalYear);
         allocationRepository.delete(allocation);
         allocationRepository.flush();
         publishCategoryTotal(companyId, fiscalYear);
@@ -152,6 +162,16 @@ public class Scope3AllocationService {
                 });
         value.setValue(total);
         scope3ValueRepository.save(value);
+    }
+
+    private void requireYearOpen(UUID companyId, int fiscalYear) {
+        boolean signed = signOffRepository.findByCompanyIdOrderByFiscalYearDesc(companyId).stream()
+                .anyMatch(r -> r.getStatus() == SignOffStatus.SIGNED
+                        && Integer.valueOf(fiscalYear).equals(r.getFiscalYear()));
+        if (signed) {
+            throw new ConflictException("FY" + fiscalYear + " has been signed off — revoke the"
+                    + " sign-off before changing what it reports");
+        }
     }
 
     /** Pure, so the summing is testable without a database. */

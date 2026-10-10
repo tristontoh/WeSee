@@ -35,17 +35,20 @@ public class EmissionActivityService {
     private final EmissionsService emissionsService;
     private final CurrentUserProvider currentUserProvider;
     private final SignOffRecordRepository signOffRepository;
+    private final Scope3CategoryRepository scope3CategoryRepository;
 
     public EmissionActivityService(EmissionFactorRepository factorRepository,
                                     EmissionActivityEntryRepository entryRepository,
                                     EmissionsService emissionsService,
                                     CurrentUserProvider currentUserProvider,
-                                  SignOffRecordRepository signOffRepository) {
+                                  SignOffRecordRepository signOffRepository,
+                                  Scope3CategoryRepository scope3CategoryRepository) {
         this.factorRepository = factorRepository;
         this.entryRepository = entryRepository;
         this.emissionsService = emissionsService;
         this.currentUserProvider = currentUserProvider;
         this.signOffRepository = signOffRepository;
+        this.scope3CategoryRepository = scope3CategoryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -62,14 +65,40 @@ public class EmissionActivityService {
 
     @Transactional
     public EmissionActivityEntryResponse addEntry(int fiscalYear, String factorId, BigDecimal quantity) {
+        return addEntry(fiscalYear, factorId, quantity, null);
+    }
+
+    /**
+     * @param scope3CategoryId which of the fifteen Scope 3 categories this belongs to. Required
+     *                         when the factor is Scope 3 and meaningless otherwise: without it the
+     *                         entry can be stored but never reported, which is what used to happen
+     *                         to every business-travel and freight entry anyone recorded.
+     */
+    @Transactional
+    public EmissionActivityEntryResponse addEntry(int fiscalYear, String factorId, BigDecimal quantity,
+                                                  UUID scope3CategoryId) {
         requireYearOpen(fiscalYear);
+        UUID companyId = currentUserProvider.requireCompanyId();
         EmissionFactor factor = factorRepository.findById(factorId)
                 .orElseThrow(() -> new NotFoundException("Unknown emission factor: " + factorId));
 
+        Scope3Category category = null;
+        if (factor.getScope() == EmissionScope.SCOPE_3) {
+            if (scope3CategoryId == null) {
+                throw new ConflictException(factor.getName() + " is a Scope 3 activity — say which"
+                        + " category it belongs to, or it cannot be reported anywhere");
+            }
+            category = scope3CategoryRepository.findByIdAndCompanyId(scope3CategoryId, companyId)
+                    .orElseThrow(() -> new NotFoundException("Scope 3 category not found"));
+        } else if (scope3CategoryId != null) {
+            throw new ConflictException("Only a Scope 3 activity belongs to a category");
+        }
+
         EmissionActivityEntry entry = new EmissionActivityEntry();
-        entry.setCompanyId(currentUserProvider.requireCompanyId());
+        entry.setCompanyId(companyId);
         entry.setFiscalYear(fiscalYear);
         entry.setEmissionFactor(factor);
+        entry.setScope3Category(category);
         entry.setQuantity(quantity);
         entry.setCalculatedTco2e(quantity.multiply(factor.getFactorValue()).divide(KG_PER_TONNE, 4, RoundingMode.HALF_UP));
 

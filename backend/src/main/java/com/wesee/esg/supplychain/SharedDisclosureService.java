@@ -93,10 +93,9 @@ public class SharedDisclosureService {
             throw new ConflictException("That link is not active, so there is nobody to publish to");
         }
 
-        PublishGuard.requirePublishable(
-                signOffRepository.findByCompanyIdAndFiscalYear(supplierCompanyId, fiscalYear).orElse(null),
-                fiscalYear);
-        var signOff = signOffRepository.findByCompanyIdAndFiscalYear(supplierCompanyId, fiscalYear).orElseThrow();
+        var signOff = signOffRepository.findByCompanyIdAndFiscalYear(supplierCompanyId, fiscalYear)
+                .orElse(null);
+        PublishGuard.requirePublishable(signOff, fiscalYear);
 
         List<EmissionActivityEntry> entries = activityRepository
                 .findByCompanyIdAndFiscalYearOrderByCreatedAtAscIdAsc(supplierCompanyId, fiscalYear);

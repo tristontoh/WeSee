@@ -25,7 +25,7 @@ class DerivationRegistryTest {
                                            Map<String, String> units,
                                            Map<AnnualFigureKey, BigDecimal> figures,
                                            List<BoardMember> board) {
-        return new DerivationInputs(indicators, units, figures, board);
+        return new DerivationInputs(indicators, units, figures, board, java.time.LocalDate.of(2025, 12, 31));
     }
 
     private static BoardMember director(String name, String gender) {
@@ -132,6 +132,21 @@ class DerivationRegistryTest {
                 Map.of(), Map.of(), Map.of(),
                 List.of(director("A", "FEMALE"), director("B", "MALE"),
                         director("C", "MALE"), director("D", "FEMALE"))));
+        assertEquals(new BigDecimal("50.00"), r.value());
+    }
+
+    /**
+     * Board composition is a point-in-time disclosure. Counting a director who resigned in March
+     * describes a board that never sat at year end.
+     */
+    @Test
+    void aDirectorWhoResignedBeforeYearEndIsNotCounted() {
+        BoardMember resigned = director("C", "FEMALE");
+        resigned.setResignedAt(java.time.LocalDate.of(2025, 3, 1));
+        DerivationResult r = DerivationRegistry.get("FEMALE_BOARD_RATIO").compute(inputs(
+                Map.of(), Map.of(), Map.of(),
+                List.of(director("A", "FEMALE"), director("B", "MALE"), resigned)));
+        // Two still serving at 31 Dec, one of them female.
         assertEquals(new BigDecimal("50.00"), r.value());
     }
 

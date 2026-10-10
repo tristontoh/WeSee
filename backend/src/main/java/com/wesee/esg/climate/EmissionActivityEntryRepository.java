@@ -39,4 +39,18 @@ public interface EmissionActivityEntryRepository extends JpaRepository<EmissionA
              order by e.fiscalYear asc
             """)
     List<Object[]> sumTco2eByFiscalYear(@Param("companyId") UUID companyId, @Param("scope") EmissionScope scope);
+
+    /**
+     * Scope 3 activity, summed per category and year. Scope 1 and 2 need no category dimension
+     * because each is a single series; Scope 3 is fifteen, and an entry that cannot name its
+     * category is an entry nothing can report.
+     */
+    @Query("""
+            SELECT e.scope3Category.id, e.fiscalYear, SUM(e.calculatedTco2e)
+              FROM EmissionActivityEntry e
+             WHERE e.companyId = :companyId
+               AND e.scope3Category IS NOT NULL
+             GROUP BY e.scope3Category.id, e.fiscalYear
+            """)
+    List<Object[]> sumScope3TcoByCategoryAndYear(@Param("companyId") UUID companyId);
 }

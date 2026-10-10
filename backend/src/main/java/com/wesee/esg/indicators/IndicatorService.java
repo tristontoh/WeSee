@@ -310,6 +310,17 @@ public class IndicatorService {
         IndicatorValue value = indicatorValueRepository
                 .findByCompanyIdAndIndicatorDefinitionIdAndFiscalYear(companyId, indicatorDefinitionId, fiscalYear)
                 .orElseThrow(() -> new NotFoundException("No value recorded for this indicator and fiscal year"));
+
+        // A derived indicator's value is only approvable once it is actually computed. Approving a
+        // SUPERSEDED_MANUAL row would put a Company Admin's name on a number typed in before the
+        // indicator became computed — the 103% this whole change exists to stop endorsing.
+        if (value.getDerivationState() == DerivationState.SUPERSEDED_MANUAL) {
+            throw new ConflictException("This figure was typed in before the indicator became"
+                    + " computed — enter the inputs it divides by, then approve what it computes");
+        }
+        if (value.getValue() == null) {
+            throw new ConflictException("There is no figure here to approve");
+        }
         if (value.getStatus() == IndicatorValueStatus.APPROVED) {
             throw new ConflictException("This value has already been approved");
         }

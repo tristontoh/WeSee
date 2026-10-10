@@ -41,4 +41,13 @@ public class EmissionActivityEntry extends TenantOwnedEntity {
 
     @Column(name = "calculated_tco2e", nullable = false, precision = 18, scale = 4)
     private BigDecimal calculatedTco2e;
+
+    /**
+     * Which Scope 3 category this belongs to. Null for scopes 1 and 2, which are a single series
+     * each; required for Scope 3, which is fifteen, and without which the entry can be stored but
+     * never reported.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "scope3_category_id")
+    private Scope3Category scope3Category;
 }

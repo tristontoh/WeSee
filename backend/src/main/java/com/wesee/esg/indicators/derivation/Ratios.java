@@ -52,7 +52,7 @@ public final class Ratios {
         return numerator.divide(denominator, RATE_SCALE, RoundingMode.HALF_UP);
     }
 
-    public static BigDecimal perHundredThousandHours(BigDecimal injuries, BigDecimal hoursWorked) {
+    public static BigDecimal perTwoHundredThousandHours(BigDecimal injuries, BigDecimal hoursWorked) {
         if (injuries == null || hoursWorked == null || hoursWorked.signum() == 0) {
             return null;
         }

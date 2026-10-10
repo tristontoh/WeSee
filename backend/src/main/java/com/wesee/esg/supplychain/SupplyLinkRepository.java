@@ -11,9 +11,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Every method names the acting company. There is deliberately no {@code findById} here: this
- * table is outside the tenant filter, so an id-only lookup would be a cross-tenant read with
- * nothing standing in its way.
+ * Every method declared here names the acting company. {@code findById} is inherited from
+ * {@link JpaRepository} and cannot be removed — never call it with an id that came from a request.
+ * This table is outside the tenant filter, so an id-only lookup on request input would be a
+ * cross-tenant read with nothing standing in its way.
  */
 public interface SupplyLinkRepository extends JpaRepository<SupplyLink, UUID> {
 

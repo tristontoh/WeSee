@@ -13,6 +13,8 @@ import java.math.BigDecimal;
 public record AddActivityEntryRequest(
         @NotNull Integer fiscalYear,
         @NotBlank String factorId,
-        @NotNull @DecimalMin(value = "0", inclusive = false, message = "must be positive") BigDecimal quantity
+        @NotNull @DecimalMin(value = "0", inclusive = false, message = "must be positive") BigDecimal quantity,
+        /** Required when the factor is Scope 3, which is fifteen categories rather than one series. */
+        java.util.UUID scope3CategoryId
 ) {
 }

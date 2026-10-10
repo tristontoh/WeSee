@@ -168,7 +168,10 @@ public class DerivationService {
         List<BoardMember> board =
                 boardMemberRepository.findByCompanyIdAndFiscalYearOrderByNameAsc(companyId, fiscalYear);
 
-        return new DerivationInputs(indicatorValues, indicatorUnits, figures, board);
+        // Point-in-time figures are read at the fiscal year end, which is the date a board
+        // composition disclosure describes.
+        return new DerivationInputs(indicatorValues, indicatorUnits, figures, board,
+                java.time.LocalDate.of(fiscalYear, 12, 31));
     }
 
     /** @return true when the stored value moved. */
@@ -180,7 +183,8 @@ public class DerivationService {
         } catch (IllegalArgumentException e) {
             // A refused ratio is a data problem the user must see on the indicator, not a 500.
             // The refusal names the two numbers that disagree; carry it through as the reason.
-            result = DerivationResult.awaiting(List.of(e.getMessage()));
+            result = DerivationResult.awaiting(java.util.Collections.singletonList(
+                    e.getMessage() != null ? e.getMessage() : "One of this indicator's inputs is wrong"));
         }
 
         IndicatorValue stored = valueRepository

@@ -53,7 +53,7 @@ class RatiosTest {
     void lostTimeIncidentRateUsesTheTwoHundredThousandHourBase() {
         // 3 injuries over 1,200,000 hours = 0.5 per 200,000 hours
         assertEquals(new BigDecimal("0.5000"),
-                Ratios.perHundredThousandHours(new BigDecimal("3"), new BigDecimal("1200000")));
+                Ratios.perTwoHundredThousandHours(new BigDecimal("3"), new BigDecimal("1200000")));
     }
 
     @Test

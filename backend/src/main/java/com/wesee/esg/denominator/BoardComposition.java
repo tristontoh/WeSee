@@ -22,6 +22,18 @@ public final class BoardComposition {
         return roster == null ? 0 : roster.size();
     }
 
+    /**
+     * The roster as it stood on one date. Board composition is a point-in-time disclosure — a
+     * director who resigned in March is not on the board at year end, and counting them makes the
+     * ratio describe a board that never sat.
+     */
+    public static List<BoardMember> servingOn(List<BoardMember> roster, LocalDate date) {
+        if (roster == null) {
+            return List.of();
+        }
+        return roster.stream().filter(m -> servedOn(m, date)).toList();
+    }
+
     public static int femaleCount(List<BoardMember> roster) {
         if (roster == null) {
             return 0;
