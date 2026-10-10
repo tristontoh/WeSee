@@ -129,7 +129,7 @@ public class EmissionsService {
                             .map(year -> new Scope3ValuePointDto(
                                     year,
                                     entered.containsKey(year) ? entered.get(year) : fromActivity.get(year),
-                                    isInRelief(year, firstReportingYear, reliefYears)))
+                                    EmissionMath.isInRelief(year, firstReportingYear, reliefYears)))
                             .toList();
                     boolean mandatory = isMandatory(cat, isFinancialInstitution);
                     return new Scope3CategoryResponse(cat.getId(), cat.getName(), cat.getTooltip(), cat.getStandardCategoryNumber(), mandatory, values);
@@ -187,6 +187,8 @@ public class EmissionsService {
      *
      * Where both exist the derived total is not lost — it is on the Emission Activity screen, and
      * the difference between the two is exactly what a reviewer should be looking at.
+     *
+     * <p>This method reads the two sources; {@link EmissionMath#mergeSeries} decides between them.
      */
     private List<EmissionPointDto> scopeSeries(UUID companyId, EmissionScope scope) {
         Map<Integer, BigDecimal> entered = new HashMap<>();
@@ -199,17 +201,7 @@ public class EmissionsService {
             derived.put((Integer) row[0], (BigDecimal) row[1]);
         }
 
-        return Stream.concat(entered.keySet().stream(), derived.keySet().stream())
-                .distinct()
-                .sorted()
-                .map(year -> entered.containsKey(year)
-                        ? new EmissionPointDto(year, entered.get(year), false)
-                        : new EmissionPointDto(year, derived.get(year), true))
-                .toList();
-    }
-
-    private boolean isInRelief(int fiscalYear, int firstReportingYear, int reliefYears) {
-        return reliefYears > 0 && fiscalYear >= firstReportingYear && (fiscalYear - firstReportingYear) < reliefYears;
+        return EmissionMath.mergeSeries(entered, derived);
     }
 
     @Transactional

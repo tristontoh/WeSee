@@ -21,14 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 public class EmissionActivityService {
-
-    private static final BigDecimal KG_PER_TONNE = BigDecimal.valueOf(1000);
 
     private final EmissionFactorRepository factorRepository;
     private final EmissionActivityEntryRepository entryRepository;
@@ -100,7 +97,7 @@ public class EmissionActivityService {
         entry.setEmissionFactor(factor);
         entry.setScope3Category(category);
         entry.setQuantity(quantity);
-        entry.setCalculatedTco2e(quantity.multiply(factor.getFactorValue()).divide(KG_PER_TONNE, 4, RoundingMode.HALF_UP));
+        entry.setCalculatedTco2e(EmissionMath.tco2e(quantity, factor.getFactorValue()));
 
         return EmissionActivityEntryResponse.from(entryRepository.save(entry));
     }
