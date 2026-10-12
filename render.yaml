@@ -26,6 +26,12 @@ services:
       #   jdbc:postgresql://<endpoint>.<region>.aws.neon.tech/neondb?sslmode=require
       - key: SPRING_FLYWAY_URL
         sync: false
+      # Flyway's own URL gives it its own connection, which does not inherit the datasource's
+      # credentials — without these it fails with "SCRAM-based authentication, but no password".
+      - key: SPRING_FLYWAY_USER
+        sync: false
+      - key: SPRING_FLYWAY_PASSWORD
+        sync: false
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
