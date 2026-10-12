@@ -1,0 +1,52 @@
+# The Render image. Same build as ./Dockerfile — client and API in one .war, built from source
+# here — with the four things Render needs that the compose image does not:
+#
+#   1. A profile. application.yml defaults to `dev,local`, which on a server means a localhost
+#      datasource and the development JWT secret that is published in this repository. `prod`
+#      has no profile file of its own, so every value comes from the environment and nothing is
+#      defaulted — see DEPLOYING.md.
+#   2. $PORT. Render tells the service which port to bind (10000 unless overridden) and routes
+#      only to that one.
+#   3. A heap sized to the instance. Without a cap the JVM sizes itself off host memory, not the
+#      container's, and Render kills it for exceeding the plan.
+#   4. No HEALTHCHECK. Render ignores it; it probes healthCheckPath in render.yaml instead.
+#
+# Render builds from the repository, so the .war in backend/target is never used — and must not
+# be: its client was built without VITE_API_BASE_URL and calls http://localhost:8080.
+
+FROM node:22-alpine AS web
+WORKDIR /web
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+# Empty base URL: the client calls /api/v1/... on its own origin, which is the API serving it.
+ENV VITE_API_BASE_URL=""
+RUN npm run build
+
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY backend/pom.xml ./
+RUN mvn -q -B dependency:go-offline
+COPY backend/src/ src/
+RUN rm -rf src/main/resources/static
+COPY --from=web /web/dist/ src/main/resources/static/
+RUN mvn -q -B -DskipTests package
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/esg-backend-*.war app.war
+
+# Mount a Render disk here (render.yaml does). Without one, evidence documents are lost on every
+# deploy and restart, and the audit trail points at files that no longer exist.
+RUN mkdir -p /data/uploads
+ENV UPLOADS_DIR=/data/uploads
+
+RUN addgroup -S wesee && adduser -S wesee -G wesee && chown -R wesee:wesee /data
+USER wesee
+
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+
+EXPOSE 10000
+# Shell form so $PORT and $JAVA_OPTS expand; exec so java is PID 1 and receives SIGTERM.
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Dserver.port=${PORT:-8080} -jar app.war"]

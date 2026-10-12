@@ -1,0 +1,52 @@
+# Render Blueprint. New → Blueprint in the Render dashboard, point it at this repository.
+# Every `sync: false` value is prompted for on first deploy and never stored in git — this
+# repository is public.
+services:
+  - type: web
+    name: wesee
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    # Ohio: the Neon database is in AWS us-east-2, so the app sits next to it.
+    region: ohio
+    # Not free: the free plan cannot attach a disk, and spins down after 15 idle minutes —
+    # a Spring Boot cold start then runs Flyway's checks before the first page loads.
+    plan: starter
+    healthCheckPath: /actuator/health
+    disk:
+      name: uploads
+      mountPath: /data/uploads
+      sizeGB: 1
+    envVars:
+      # Neon. The app uses the pooler; Flyway uses the direct endpoint (no "-pooler"), because
+      # its advisory locks need a session the pooler does not guarantee.
+      #   jdbc:postgresql://<endpoint>-pooler.<region>.aws.neon.tech/neondb?sslmode=require
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      #   jdbc:postgresql://<endpoint>.<region>.aws.neon.tech/neondb?sslmode=require
+      - key: SPRING_FLYWAY_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # At least 48 bytes: openssl rand -base64 48
+      # (Render's generateValue makes 32, which the app rejects.)
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # The service's own URL, e.g. https://wesee.onrender.com — every email link uses it.
+      - key: APP_BASE_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      # Without these no email is sent, and nothing on screen says so. See DEPLOYING.md.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
